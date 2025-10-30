@@ -39,6 +39,16 @@ class BubbleBackground {
         el.style.setProperty('--opacity', opacity);
 
         el.addEventListener('click', () => this.pop(el));
+
+        // soft spawn animation using opacity only (avoid conflicting with rise transform)
+        requestAnimationFrame(() => {
+            try {
+                el.animate([
+                    { opacity: 0 },
+                    { opacity: 1 }
+                ], { duration: 1000, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'both' });
+            } catch (_) {}
+        });
         return el;
     }
 
@@ -48,7 +58,7 @@ class BubbleBackground {
         el.style.pointerEvents = 'none';
         // audio combo on click
         this.playCombo();
-        setTimeout(() => el.remove(), 340);
+        setTimeout(() => el.remove(), 500);
         // regenerate after a delay
         setTimeout(() => {
             if (!this.isDestroyed) this.container.appendChild(this.createBubble());
@@ -99,6 +109,7 @@ class BubbleBackground {
         const now = performance.now();
         if (!this.lastClickTime || now - this.lastClickTime > this.comboWindowMs) {
             this.combo = 0;
+            this.updateScoreboard();
         }
         this.lastClickTime = now;
         this.combo += 1;
@@ -112,7 +123,10 @@ class BubbleBackground {
         }
 
         clearTimeout(this.comboResetTimer);
-        this.comboResetTimer = setTimeout(() => { this.combo = 0; }, this.comboWindowMs);
+        this.comboResetTimer = setTimeout(() => this.resetCombo(), this.comboWindowMs);
+
+        // update scoreboard
+        this.updateScoreboard();
     }
 
     playTone(frequency, duration = 0.25, volume = 0.08) {
@@ -154,12 +168,125 @@ class BubbleBackground {
             osc.stop(t + duration + 0.02);
         });
     }
+
+    updateScoreboard() {
+        const currentEl = document.getElementById('score-current');
+        const bestEl = document.getElementById('score-best');
+        if (!currentEl || !bestEl) return;
+        currentEl.textContent = String(this.combo);
+        if (!this.bestCombo) {
+            const saved = Number(localStorage.getItem('bestCombo') || '0');
+            this.bestCombo = saved;
+        }
+        if (this.combo > this.bestCombo) {
+            this.bestCombo = this.combo;
+            localStorage.setItem('bestCombo', String(this.bestCombo));
+        }
+        bestEl.textContent = String(this.bestCombo);
+    }
+
+    resetCombo() {
+        this.combo = 0;
+        this.updateScoreboard();
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('bg');
     if (container) {
-        new BubbleBackground(container, { count: 26 });
+        const bg = new BubbleBackground(container, { count: 26 });
+
+        // Menu wiring
+        const hamburger = document.getElementById('hamburger');
+        const menu = document.getElementById('menu');
+        const toggleMute = document.getElementById('toggle-mute');
+        const toggleInfo = document.getElementById('toggle-info');
+        const infoBox = document.querySelector('.content-box');
+
+        function setMenuVisible(visible) {
+            hamburger.setAttribute('aria-expanded', String(visible));
+            if (visible) {
+                menu.removeAttribute('hidden');
+                // allow transition on next frame
+                requestAnimationFrame(() => menu.classList.add('open'));
+                document.addEventListener('click', onDocClick);
+                document.addEventListener('keydown', onKeyDown);
+            } else {
+                menu.classList.remove('open');
+                const onEnd = () => {
+                    menu.setAttribute('hidden', '');
+                    menu.removeEventListener('transitionend', onEnd);
+                };
+                menu.addEventListener('transitionend', onEnd);
+                document.removeEventListener('click', onDocClick);
+                document.removeEventListener('keydown', onKeyDown);
+            }
+        }
+
+        function onDocClick(e) {
+            if (e.target === hamburger || hamburger.contains(e.target)) return;
+            if (e.target === menu || menu.contains(e.target)) return;
+            setMenuVisible(false);
+        }
+
+        function onKeyDown(e) {
+            if (e.key === 'Escape') setMenuVisible(false);
+        }
+
+        hamburger.addEventListener('click', () => {
+            const open = hamburger.getAttribute('aria-expanded') === 'true';
+            setMenuVisible(!open);
+        });
+
+        // Persist mute state
+        const savedMute = localStorage.getItem('muted') === 'true';
+        if (savedMute) {
+            bg.ensureAudio();
+            bg.masterGain.gain.value = 0.0;
+            toggleMute.setAttribute('aria-pressed', 'true');
+            const i = toggleMute.querySelector('i');
+            if (i) { i.className = 'fa-solid fa-volume-xmark'; }
+            toggleMute.setAttribute('aria-label', 'Unmute sound');
+        }
+
+        toggleMute.addEventListener('click', () => {
+            bg.ensureAudio();
+            const isPressed = toggleMute.getAttribute('aria-pressed') === 'true';
+            const i = toggleMute.querySelector('i');
+            if (isPressed) {
+                bg.masterGain.gain.value = 0.6; // restore
+                toggleMute.setAttribute('aria-pressed', 'false');
+                if (i) { i.className = 'fa-solid fa-volume-high'; }
+                toggleMute.setAttribute('aria-label', 'Mute sound');
+                localStorage.setItem('muted', 'false');
+            } else {
+                bg.masterGain.gain.value = 0.0;
+                toggleMute.setAttribute('aria-pressed', 'true');
+                if (i) { i.className = 'fa-solid fa-volume-xmark'; }
+                toggleMute.setAttribute('aria-label', 'Unmute sound');
+                localStorage.setItem('muted', 'true');
+            }
+        });
+
+        // Toggle info visibility
+        const scoreboard = document.getElementById('scoreboard');
+        toggleInfo.addEventListener('click', () => {
+            const isHidden = infoBox.classList.toggle('hidden');
+            toggleInfo.setAttribute('aria-pressed', String(isHidden));
+            const i = toggleInfo.querySelector('i');
+            if (i) { i.className = isHidden ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye'; }
+            toggleInfo.setAttribute('aria-label', isHidden ? 'Show info' : 'Hide info');
+            if (scoreboard) {
+                if (isHidden) {
+                    scoreboard.removeAttribute('hidden');
+                    requestAnimationFrame(() => scoreboard.classList.add('show'));
+                } else {
+                    scoreboard.classList.remove('show');
+                    const end = () => { scoreboard.setAttribute('hidden',''); scoreboard.removeEventListener('transitionend', end); };
+                    scoreboard.addEventListener('transitionend', end);
+                }
+            }
+        });
     }
 });
 

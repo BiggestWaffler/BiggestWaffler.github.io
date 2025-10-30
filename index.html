@@ -10,6 +10,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <header class="site-header" aria-label="site controls">
+        <button class="hamburger" id="hamburger" aria-expanded="false" aria-controls="menu" aria-label="Open menu">
+            <span></span><span></span><span></span>
+        </button>
+        <nav class="menu" id="menu" hidden>
+            <button class="menu-item" id="toggle-mute" aria-pressed="false" aria-label="Mute sound">
+                <i class="fa-solid fa-volume-high"></i>
+            </button>
+            <button class="menu-item" id="toggle-info" aria-pressed="false" aria-label="Hide info">
+                <i class="fa-regular fa-eye"></i>
+            </button>
+        </nav>
+    </header>
     <div class="container">
         <div class="content-box">
             <div class="profile-section">
@@ -53,6 +66,13 @@
     </div>
 
     <div class="background-animation" id="bg"></div>
+    <div id="scoreboard" class="scoreboard" hidden>
+        <span class="label">Combo</span>
+        <span id="score-current">0</span>
+        <span class="dot">•</span>
+        <span class="label">Best</span>
+        <span id="score-best">0</span>
+    </div>
     <script defer src="main.js"></script>
 </body>
 </html>
