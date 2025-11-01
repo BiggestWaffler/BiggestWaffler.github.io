@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetris</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/game/styles/tetris.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="wrap">
+        <header class="topbar">
+            <h1>Tetris</h1>
+            <div class="stats">
+                <div>Score: <span id="score">0</span></div>
+                <div>Lines: <span id="lines">0</span></div>
+                <div>Level: <span id="level">1</span></div>
+            </div>
+        </header>
+        <main class="board">
+            <canvas id="game" width="300" height="600" aria-label="Tetris board"></canvas>
+            <aside class="side">
+                <div class="next">
+                    <h2>Next</h2>
+                    <canvas id="next" width="120" height="120"></canvas>
+                </div>
+                <div class="controls">
+                    <h2>Controls</h2>
+                    <ul>
+                        <li>← →: Move</li>
+                        <li>↑: Rotate</li>
+                        <li>↓: Soft drop</li>
+                        <li>Space: Hard drop</li>
+                        <li>P: Pause</li>
+                    </ul>
+                </div>
+            </aside>
+        </main>
+        <footer class="footer">Built for ethanyqliu.com</footer>
+    </div>
+    <script src="/game/src/tetris.js"></script>
+</body>
+</html>
+
