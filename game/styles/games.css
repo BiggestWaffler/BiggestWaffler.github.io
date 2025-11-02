@@ -1,5 +1,5 @@
 * { box-sizing: border-box; }
-body { margin: 0; font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #e3f2fd; background: linear-gradient(135deg,#0c0c0c,#1a1a2e 25%,#16213e 50%,#0f3460 75%,#533483 100%); }
+body { margin: 0; font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #e3f2fd; background: linear-gradient(135deg,#0c0c0c,#1a1a2e 25%,#16213e 50%,#0f3460 75%,#533483 100%); background-attachment: fixed; background-size: 100% 100%; min-height: 100vh; }
 .wrap { max-width: 960px; margin: 0 auto; padding: 20px; }
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .topbar h1 { margin: 0; font-size: 26px; }

@@ -21,6 +21,10 @@
         <main class="board">
             <canvas id="game" width="300" height="600" aria-label="Tetris board"></canvas>
             <aside class="side">
+                <div class="hold">
+                    <h2>Hold</h2>
+                    <canvas id="hold" width="120" height="120"></canvas>
+                </div>
                 <div class="next">
                     <h2>Next</h2>
                     <canvas id="next" width="120" height="120"></canvas>
@@ -32,6 +36,7 @@
                         <li>↑: Rotate</li>
                         <li>↓: Soft drop</li>
                         <li>Space: Hard drop</li>
+                        <li>C: Hold/Swap</li>
                         <li>P: Pause</li>
                     </ul>
                 </div>

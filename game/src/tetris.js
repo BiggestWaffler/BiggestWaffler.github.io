@@ -6,6 +6,8 @@
   const ctx = canvas.getContext('2d');
   const nextCanvas = document.getElementById('next');
   const nctx = nextCanvas.getContext('2d');
+  const holdCanvas = document.getElementById('hold');
+  const hctx = holdCanvas.getContext('2d');
 
   const scoreEl = document.getElementById('score');
   const linesEl = document.getElementById('lines');
@@ -67,9 +69,11 @@
       this.acc = 0; this.last = 0; this.paused = false;
       this.current = new Piece(randomType());
       this.next = new Piece(randomType());
+      this.held = null;
+      this.canHold = true;
       this.bindKeys();
       requestAnimationFrame(t => this.loop(t));
-      this.draw(); this.drawNext(); this.updateHUD();
+      this.draw(); this.drawNext(); this.drawHold(); this.updateHUD();
     }
 
     bindKeys() {
@@ -81,6 +85,7 @@
           case 'ArrowDown': this.drop(); break;
           case 'ArrowUp': this.rotate(); break;
           case ' ': e.preventDefault(); this.hardDrop(); break;
+          case 'c': case 'C': this.hold(); break;
           case 'p': case 'P': this.togglePause(); break;
         }
       });
@@ -116,13 +121,17 @@
       }
       this.clearLines();
       this.current = this.next; this.next = new Piece(randomType());
+      this.canHold = true; // Reset hold flag when piece is placed
       this.drawNext();
       if (this.collide(this.current.shape, this.current.y, this.current.x)) this.reset();
     }
 
     reset() {
       this.grid = createMatrix(ROWS, COLS, 0);
-      this.score = 0; this.lines = 0; this.level = 1; this.dropInterval = 1000; this.updateHUD();
+      this.score = 0; this.lines = 0; this.level = 1; this.dropInterval = 1000;
+      this.held = null; this.canHold = true;
+      this.drawHold();
+      this.updateHUD();
     }
 
     clearLines() {
@@ -170,6 +179,26 @@
       this.merge();
     }
 
+    hold() {
+      if (!this.canHold) return; // Can only hold once per piece
+      
+      if (this.held === null) {
+        // First hold: store current piece and get next piece
+        this.held = this.current.type;
+        this.current = this.next;
+        this.next = new Piece(randomType());
+      } else {
+        // Swap held piece with current piece
+        const temp = this.current.type;
+        this.current = new Piece(this.held);
+        this.held = temp;
+      }
+      
+      this.canHold = false; // Prevent holding again until piece is placed
+      this.drawHold();
+      this.drawNext();
+    }
+
     drawCell(gx, gy, type) {
       const x = gx * cell, y = gy * cell; const col = COLORS[type] || '#90a4ae';
       ctx.fillStyle = col; ctx.fillRect(x, y, cell, cell);
@@ -191,18 +220,50 @@
       }
     }
 
-    drawNext() {
-      nctx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
-      const s = this.next.shape; const size = Math.max(s.length, s[0].length);
-      const cellN = Math.floor(Math.min(nextCanvas.width, nextCanvas.height) / (size + 1));
-      const offsetX = ((nextCanvas.width - cellN * s[0].length) / 2) | 0;
-      const offsetY = ((nextCanvas.height - cellN * s.length) / 2) | 0;
-      for (let y = 0; y < s.length; y++) for (let x = 0; x < s[y].length; x++) {
-        if (!s[y][x]) continue; const col = COLORS[this.next.type];
-        nctx.fillStyle = col; nctx.fillRect(offsetX + x * cellN, offsetY + y * cellN, cellN, cellN);
-        nctx.strokeStyle = 'rgba(255,255,255,0.25)';
-        nctx.strokeRect(offsetX + x * cellN + 0.5, offsetY + y * cellN + 0.5, cellN - 1, cellN - 1);
+    drawCenteredPiece(ctx, canvasWidth, canvasHeight, shape, type) {
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+      
+      // Calculate actual bounding box of the piece
+      let minX = shape[0].length, maxX = -1, minY = shape.length, maxY = -1;
+      for (let y = 0; y < shape.length; y++) {
+        for (let x = 0; x < shape[y].length; x++) {
+          if (shape[y][x]) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
       }
+      
+      const width = maxX - minX + 1;
+      const height = maxY - minY + 1;
+      const size = Math.max(width, height);
+      
+      const cellN = Math.floor(Math.min(canvasWidth, canvasHeight) / (size + 2));
+      const totalWidth = cellN * width;
+      const totalHeight = cellN * height;
+      const offsetX = (canvasWidth - totalWidth) / 2 - minX * cellN;
+      const offsetY = (canvasHeight - totalHeight) / 2 - minY * cellN;
+      
+      for (let y = 0; y < shape.length; y++) for (let x = 0; x < shape[y].length; x++) {
+        if (!shape[y][x]) continue; const col = COLORS[type];
+        ctx.fillStyle = col; ctx.fillRect(offsetX + x * cellN, offsetY + y * cellN, cellN, cellN);
+        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+        ctx.strokeRect(offsetX + x * cellN + 0.5, offsetY + y * cellN + 0.5, cellN - 1, cellN - 1);
+      }
+    }
+
+    drawNext() {
+      this.drawCenteredPiece(nctx, nextCanvas.width, nextCanvas.height, this.next.shape, this.next.type);
+    }
+
+    drawHold() {
+      if (this.held === null) {
+        hctx.clearRect(0, 0, holdCanvas.width, holdCanvas.height);
+        return;
+      }
+      this.drawCenteredPiece(hctx, holdCanvas.width, holdCanvas.height, SHAPES[this.held], this.held);
     }
 
     updateHUD() {
