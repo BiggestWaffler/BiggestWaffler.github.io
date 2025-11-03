@@ -9,6 +9,21 @@ body {
 .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .topbar h1 { margin: 0; font-size: 24px; }
+.settings-btn {
+  width: 42px;
+  height: 38px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  color: #e3f2fd;
+  backdrop-filter: blur(10px);
+}
+.settings-btn i { font-size: 18px; }
+.settings-btn:hover { background: rgba(100,181,246,0.18); color: #ffffff; }
 .board-container { display: grid; grid-template-columns: 140px 1fr 140px; gap: 16px 50px; align-items: start; }
 canvas { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; }
 .left-side h2, .right-side h2 { margin: 8px 0; font-size: 16px; color: #bcdcff; }
@@ -115,9 +130,100 @@ canvas { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,
   height: 100px;
 }
 
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal.open { display: flex; }
+.modal-backdrop {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+}
+.modal-content {
+  position: relative;
+  background: rgba(20, 22, 40, 0.98);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 12px;
+  width: min(640px, 92vw);
+  max-height: 85vh;
+  overflow: auto;
+  padding: 16px 18px;
+  color: #e3f2fd;
+}
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.modal-header h2 { margin: 0; font-size: 18px; }
+.close-btn {
+  background: transparent; border: none; color: #e3f2fd; font-size: 18px; cursor: pointer;
+}
+.modal-body { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.controls ul { margin: 0; padding-left: 18px; line-height: 1.6; }
+.settings .setting { margin: 8px 0; }
+.setting-inline { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+
+/* Nicer sliders */
+.settings input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 24px; /* provide vertical room for centered thumb */
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  outline: none;
+}
+.settings input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 999px;
+}
+.settings input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(180deg, #90caf9, #64b5f6);
+  border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  cursor: pointer;
+  margin-top: -7px; /* micro nudge upward for optical centering */
+}
+.settings input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(180deg, #90caf9, #64b5f6);
+  border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  cursor: pointer;
+}
+.settings input[type="range"]::-moz-range-track {
+  height: 6px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 999px;
+}
+.settings input[type="range"]::-ms-track { height: 6px; background: transparent; border-color: transparent; color: transparent; }
+.settings input[type="range"]::-ms-fill-lower, .settings input[type="range"]::-ms-fill-upper {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 999px;
+}
+.settings label { display: block; margin-bottom: 6px; color: #bcdcff; }
+.settings .setting span[id$="Value"] { color: #e3f2fd; font-weight: 600; }
+
+/* Toggle switch */
+/* switch styles removed (we now use slider max for infinity) */
+
 @media (max-width: 800px) {
   .board-container { grid-template-columns: 1fr; }
   .left-side, .right-side { order: 2; }
   .board-area { order: 1; }
+  .modal-body { grid-template-columns: 1fr; }
 }
 

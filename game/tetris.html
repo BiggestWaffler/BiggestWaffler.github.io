@@ -7,31 +7,19 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="stylesheet" href="/game/styles/tetris.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <div class="wrap">
         <header class="topbar">
             <h1>Tetris</h1>
+            <button id="settingsBtn" class="settings-btn" aria-label="Open settings"><i class="fa-solid fa-gear"></i></button>
         </header>
         <main class="board-container">
             <aside class="left-side">
                 <div class="hold">
                     <h2>Hold</h2>
                     <canvas id="hold" width="120" height="120"></canvas>
-                </div>
-                <div class="controls">
-                    <h2>Controls</h2>
-                    <ul>
-                        <li>← →: Move</li>
-                        <li>↑: Rotate (CW)</li>
-                        <li>Ctrl: Rotate (CCW)</li>
-                        <li>A: Rotate 180°</li>
-                        <li>↓: Soft drop</li>
-                        <li>Space: Hard drop</li>
-                        <li>C: Hold/Swap</li>
-                        <li>R (Hold): Restart</li>
-                        <li>P: Pause</li>
-                    </ul>
                 </div>
             </aside>
             <div class="board-area">
@@ -59,6 +47,46 @@
                 </div>
             </aside>
         </main>
+        <div id="settingsModal" class="modal" aria-hidden="true">
+            <div class="modal-backdrop" data-close="modal"></div>
+            <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+                <div class="modal-header">
+                    <h2 id="settingsTitle">Settings</h2>
+                    <button id="settingsClose" class="close-btn" aria-label="Close settings">✕</button>
+                </div>
+                <div class="modal-body">
+                    <section class="controls">
+                        <h3>Controls</h3>
+                        <ul>
+                            <li>← →: Move</li>
+                            <li>↑: Rotate (CW)</li>
+                            <li>Ctrl: Rotate (CCW)</li>
+                            <li>A: Rotate 180°</li>
+                            <li>↓: Soft drop</li>
+                            <li>Space: Hard drop</li>
+                            <li>C: Hold/Swap</li>
+                            <li>R (Hold): Restart</li>
+                            <li>P: Pause</li>
+                        </ul>
+                    </section>
+                    <section class="settings">
+                        <h3>Handling</h3>
+                        <div class="setting">
+                            <label for="dasRange">DAS: <span id="dasValue">160</span> ms</label>
+                            <input id="dasRange" type="range" min="0" max="300" step="10" value="160" />
+                        </div>
+                        <div class="setting">
+                            <label for="arrRange">ARR: <span id="arrValue">30</span> ms (0 = Instant)</label>
+                            <input id="arrRange" type="range" min="0" max="100" step="5" value="30" />
+                        </div>
+                        <div class="setting">
+                            <label for="sdcRange">Soft Drop: <span id="sdcValue">20</span> cps</label>
+                            <input id="sdcRange" type="range" min="1" max="40" step="1" value="20" />
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
     </div>
     <script src="/game/src/tetris.js"></script>
 </body>

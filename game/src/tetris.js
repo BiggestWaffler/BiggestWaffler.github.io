@@ -37,6 +37,37 @@
     S: '#81c784', T: '#ce93d8', Z: '#e57373'
   };
 
+  // Handling settings
+  const SETTINGS = {
+    // Delayed Auto Shift (ms before auto-repeat starts)
+    das: 160,
+    // Auto Repeat Rate (ms between repeats); 0 => Instant to wall
+    arr: 30,
+    // Soft drop speed (cells per second). Infinity => instant sonic drop
+    softDropCps: 20,
+    // Lock delay (ms)
+    lockDelay: 1000,
+  };
+
+  // Load persisted values (excluding lockDelay which is dev-only)
+  (function loadSettings() {
+    try {
+      const das = localStorage.getItem('tetris.das');
+      const arr = localStorage.getItem('tetris.arr');
+      const sdc = localStorage.getItem('tetris.softDropCps');
+      if (das !== null) SETTINGS.das = Math.max(0, parseInt(das, 10) || 0);
+      if (arr !== null) SETTINGS.arr = Math.max(0, parseInt(arr, 10) || 0);
+      if (sdc !== null) {
+        if (sdc === 'inf') {
+          SETTINGS.softDropCps = Infinity;
+        } else {
+          const v = Math.max(1, parseInt(sdc, 10) || 1);
+          SETTINGS.softDropCps = v;
+        }
+      }
+    } catch {}
+  })();
+
   // Tetromino definitions (4x4 matrices)
   const SHAPES = {
     I: [ [0,0,0,0], [1,1,1,1], [0,0,0,0], [0,0,0,0] ],
@@ -74,6 +105,37 @@
     return rotate(rotate(matrix));
   }
 
+  // SRS kick tables (dx, dy)
+  // JLSTZ
+  const KICKS_JLSTZ = {
+    '0>1': [ [0,0], [-1,0], [-1,1], [0,-2], [-1,-2] ],
+    '1>2': [ [0,0], [1,0], [1,-1], [0,2], [1,2] ],
+    '2>3': [ [0,0], [1,0], [1,1], [0,-2], [1,-2] ],
+    '3>0': [ [0,0], [-1,0], [-1,-1], [0,2], [-1,2] ],
+    '1>0': [ [0,0], [1,0], [1,1], [0,-2], [1,-2] ],
+    '2>1': [ [0,0], [-1,0], [-1,-1], [0,2], [-1,2] ],
+    '3>2': [ [0,0], [-1,0], [-1,1], [0,-2], [-1,-2] ],
+    '0>3': [ [0,0], [1,0], [1,-1], [0,2], [1,2] ],
+  };
+
+  // I piece kicks
+  const KICKS_I = {
+    '0>1': [ [0,0], [-2,0], [1,0], [-2,-1], [1,2] ],
+    '1>2': [ [0,0], [-1,0], [2,0], [-1,2], [2,-1] ],
+    '2>3': [ [0,0], [2,0], [-1,0], [2,1], [-1,-2] ],
+    '3>0': [ [0,0], [1,0], [-2,0], [1,-2], [-2,1] ],
+    '1>0': [ [0,0], [2,0], [-1,0], [2,1], [-1,-2] ],
+    '2>1': [ [0,0], [1,0], [-2,0], [1,-2], [-2,1] ],
+    '3>2': [ [0,0], [-2,0], [1,0], [-2,-1], [1,2] ],
+    '0>3': [ [0,0], [-1,0], [2,0], [-1,2], [2,-1] ],
+  };
+
+  // O piece: no kicks (origin centered)
+  const KICKS_O = {
+    '0>1': [ [0,0] ], '1>2': [ [0,0] ], '2>3': [ [0,0] ], '3>0': [ [0,0] ],
+    '1>0': [ [0,0] ], '2>1': [ [0,0] ], '3>2': [ [0,0] ], '0>3': [ [0,0] ],
+  };
+
   function shuffleArray(array) {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -109,6 +171,7 @@
       // Move non-centered pieces (J, L, S, T, Z) one block to the left
       this.x = (type === 'O' || type === 'I') ? baseX : baseX - 1;
       this.y = -1; // spawn above visible area
+      this.rot = 0; // 0,1,2,3 orientation for SRS
     }
   }
 
@@ -128,7 +191,17 @@
       this.canHold = true;
       this.restartHoldStart = null;
       this.restartHoldDuration = 1000; // 1 second
+      // Lock delay handling (applies when piece is touching ground)
+      this.lockDelay = SETTINGS.lockDelay; // ms
+      this.groundedSince = null; // timestamp when first touched ground
+      // Input handling state
+      this.moveDir = 0; // -1 left, +1 right, 0 none
+      this.dasTimer = null;
+      this.arrInterval = null;
+      this.softDropping = false;
+      this.softAcc = 0; // accumulator for soft drop speed
       this.bindKeys();
+      this.bindSettingsUI();
       requestAnimationFrame(t => this.loop(t));
       this.draw(); this.drawNext(); this.drawHold(); this.updateHUD();
     }
@@ -155,9 +228,9 @@
         }
         
         switch (e.key) {
-          case 'ArrowLeft': this.move(-1); break;
-          case 'ArrowRight': this.move(1); break;
-          case 'ArrowDown': this.drop(); break;
+          case 'ArrowLeft': this.startHorizontal(-1); break;
+          case 'ArrowRight': this.startHorizontal(1); break;
+          case 'ArrowDown': this.startSoftDrop(); break;
           case 'ArrowUp': this.rotate(); break;
           case ' ': e.preventDefault(); this.hardDrop(); break;
           case 'a': case 'A': if (!e.ctrlKey) { e.preventDefault(); this.rotate180(); } break;
@@ -170,6 +243,93 @@
         if (e.key === 'r' || e.key === 'R') {
           this.restartHoldStart = null;
         }
+        if (this.paused) return;
+        switch (e.key) {
+          case 'ArrowLeft': if (this.moveDir === -1) this.stopHorizontal(-1); break;
+          case 'ArrowRight': if (this.moveDir === 1) this.stopHorizontal(1); break;
+          case 'ArrowDown': this.stopSoftDrop(); break;
+        }
+      });
+    }
+
+    bindSettingsUI() {
+      const dasRange = document.getElementById('dasRange');
+      const arrRange = document.getElementById('arrRange');
+      const sdcRange = document.getElementById('sdcRange');
+      const dasValue = document.getElementById('dasValue');
+      const arrValue = document.getElementById('arrValue');
+      const sdcValue = document.getElementById('sdcValue');
+      const modal = document.getElementById('settingsModal');
+      const openBtn = document.getElementById('settingsBtn');
+      const closeBtn = document.getElementById('settingsClose');
+
+      if (!dasRange || !arrRange || !sdcRange) return;
+
+      // Modal open/close
+      const openModal = () => {
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+      };
+      const closeModal = () => {
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+      };
+      if (openBtn) openBtn.addEventListener('click', openModal);
+      if (closeBtn) closeBtn.addEventListener('click', closeModal);
+      if (modal) modal.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target && target.getAttribute && target.getAttribute('data-close') === 'modal') closeModal();
+      });
+
+      // Initialize UI from SETTINGS
+      dasRange.value = String(SETTINGS.das);
+      arrRange.value = String(SETTINGS.arr);
+      // For Infinity, place knob at max
+      if (isFinite(SETTINGS.softDropCps)) {
+        sdcRange.value = String(SETTINGS.softDropCps);
+      } else {
+        sdcRange.value = String(sdcRange.max);
+      }
+      if (dasValue) dasValue.textContent = String(SETTINGS.das);
+      if (arrValue) arrValue.textContent = String(SETTINGS.arr);
+      if (sdcValue) sdcValue.textContent = isFinite(SETTINGS.softDropCps) ? String(SETTINGS.softDropCps) : '∞';
+
+      // Listeners
+      dasRange.addEventListener('input', () => {
+        const v = Math.max(0, parseInt(dasRange.value, 10) || 0);
+        SETTINGS.das = v;
+        if (dasValue) dasValue.textContent = String(v);
+        try { localStorage.setItem('tetris.das', String(v)); } catch {}
+      });
+
+      arrRange.addEventListener('input', () => {
+        const v = Math.max(0, parseInt(arrRange.value, 10) || 0);
+        SETTINGS.arr = v;
+        if (arrValue) arrValue.textContent = String(v);
+        try { localStorage.setItem('tetris.arr', String(v)); } catch {}
+        // If user changes ARR while key held, restart timers to reflect new rate
+        if (this.moveDir !== 0) {
+          const dir = this.moveDir;
+          this.stopHorizontal(dir);
+          this.startHorizontal(dir);
+        }
+      });
+
+      const updateSoftDropUI = () => {
+        if (sdcValue) sdcValue.textContent = isFinite(SETTINGS.softDropCps) ? String(SETTINGS.softDropCps) : '∞';
+      };
+
+      sdcRange.addEventListener('input', () => {
+        const valueNum = Math.max(1, parseInt(sdcRange.value, 10) || 1);
+        const maxNum = Math.max(1, parseInt(sdcRange.max, 10) || 1);
+        if (valueNum >= maxNum) {
+          SETTINGS.softDropCps = Infinity;
+          try { localStorage.setItem('tetris.softDropCps', 'inf'); } catch {}
+        } else {
+          SETTINGS.softDropCps = valueNum;
+          try { localStorage.setItem('tetris.softDropCps', String(valueNum)); } catch {}
+        }
+        updateSoftDropUI();
       });
     }
 
@@ -190,6 +350,24 @@
       if (!this.paused) {
         this.acc += dt;
         if (this.acc > this.dropInterval) { this.drop(); this.acc = 0; }
+        // Apply continuous soft drop when active and not instant
+        if (this.softDropping && isFinite(SETTINGS.softDropCps)) {
+          this.softAcc += dt;
+          const msPerCell = 1000 / SETTINGS.softDropCps;
+          while (this.softAcc >= msPerCell) {
+            this.softAcc -= msPerCell;
+            // attempt one cell soft drop
+            const ny = this.current.y + 1;
+            if (!this.collide(this.current.shape, ny, this.current.x)) {
+              this.current.y = ny;
+              this.refreshGrounded();
+            } else {
+              this.refreshGrounded();
+              this.tryLock();
+              break;
+            }
+          }
+        }
       }
       this.draw();
       this.updateOverlay();
@@ -207,6 +385,88 @@
       return false;
     }
 
+    // Horizontal input handling (DAS/ARR)
+    startHorizontal(dir) {
+      if (this.moveDir === dir) return;
+      this.clearHorizontalTimers();
+      this.moveDir = dir;
+      // initial move
+      this.move(dir);
+      // if ARR is 0 and DAS > 0, we wait DAS then slam to wall
+      if (SETTINGS.arr === 0) {
+        this.dasTimer = setTimeout(() => {
+          // instant auto shift to wall
+          while (!this.collide(this.current.shape, this.current.y, this.current.x + dir)) {
+            this.current.x += dir;
+          }
+          this.refreshGrounded();
+        }, SETTINGS.das);
+      } else {
+        // standard auto-repeat after DAS
+        this.dasTimer = setTimeout(() => {
+          this.arrInterval = setInterval(() => {
+            this.move(dir);
+          }, SETTINGS.arr);
+        }, SETTINGS.das);
+      }
+    }
+
+    stopHorizontal(dir) {
+      if (this.moveDir === dir) {
+        this.moveDir = 0;
+        this.clearHorizontalTimers();
+      }
+    }
+
+    clearHorizontalTimers() {
+      if (this.dasTimer) { clearTimeout(this.dasTimer); this.dasTimer = null; }
+      if (this.arrInterval) { clearInterval(this.arrInterval); this.arrInterval = null; }
+    }
+
+    // Soft drop handling
+    startSoftDrop() {
+      if (this.softDropping) return;
+      if (!isFinite(SETTINGS.softDropCps)) {
+        // Treat as sonic drop (instant to floor, but do NOT lock)
+        while (!this.collide(this.current.shape, this.current.y + 1, this.current.x)) {
+          this.current.y += 1;
+        }
+        this.refreshGrounded();
+        // keep softDropping false; this is a one-shot
+      } else {
+        this.softDropping = true;
+        this.softAcc = 0;
+      }
+    }
+
+    stopSoftDrop() {
+      this.softDropping = false;
+      this.softAcc = 0;
+    }
+
+    // Returns true if the piece is currently resting on something or bottom
+    isTouchingGround() {
+      return this.collide(this.current.shape, this.current.y + 1, this.current.x);
+    }
+
+    // Refresh grounded timestamp based on current state
+    refreshGrounded() {
+      if (this.isTouchingGround()) {
+        if (this.groundedSince === null) this.groundedSince = Date.now();
+      } else {
+        this.groundedSince = null;
+      }
+    }
+
+    // Attempt to lock the piece if lock delay expired
+    tryLock() {
+      if (this.groundedSince !== null) {
+        if (Date.now() - this.groundedSince >= this.lockDelay) {
+          this.merge();
+        }
+      }
+    }
+
     merge() {
       const s = this.current.shape; const oy = this.current.y; const ox = this.current.x;
       for (let y = 0; y < s.length; y++) for (let x = 0; x < s[y].length; x++) {
@@ -218,6 +478,7 @@
       // Refill queue
       this.nextQueue.push(this.bag.draw());
       this.canHold = true; // Reset hold flag when piece is placed
+      this.groundedSince = null; // reset lock timer for new piece
       this.drawNext();
       if (this.collide(this.current.shape, this.current.y, this.current.x)) this.reset();
     }
@@ -234,6 +495,7 @@
       this.held = null; this.canHold = true;
       this.restartHoldStart = null;
       this.paused = false;
+      this.groundedSince = null;
       this.drawHold();
       this.drawNext();
       this.updateHUD();
@@ -262,30 +524,65 @@
 
     move(dir) {
       const nx = this.current.x + dir;
-      if (!this.collide(this.current.shape, this.current.y, nx)) this.current.x = nx;
+      if (!this.collide(this.current.shape, this.current.y, nx)) {
+        this.current.x = nx;
+        // Movement can refresh lock delay
+        this.refreshGrounded();
+      }
+    }
+
+    // SRS rotate attempt with kicks
+    tryRotate(direction) { // +1: CW, -1: CCW
+      const from = this.current.rot;
+      const to = (from + (direction === 1 ? 1 : 3)) % 4;
+      const key = `${from}>${to}`;
+
+      const rotatedShape = direction === 1 ? rotate(this.current.shape) : rotateCCW(this.current.shape);
+
+      const type = this.current.type;
+      const kicks = type === 'I' ? (KICKS_I[key] || [[0,0]]) : type === 'O' ? (KICKS_O[key] || [[0,0]]) : (KICKS_JLSTZ[key] || [[0,0]]);
+
+      for (let i = 0; i < kicks.length; i++) {
+        const [dx, dy] = kicks[i];
+        const nx = this.current.x + dx;
+        const ny = this.current.y + dy;
+        if (!this.collide(rotatedShape, ny, nx)) {
+          this.current.shape = rotatedShape;
+          this.current.x = nx;
+          this.current.y = ny;
+          this.current.rot = to;
+          // Rotation can refresh lock delay
+          this.refreshGrounded();
+          return true;
+        }
+      }
+      return false;
     }
 
     rotate() {
-      const r = rotate(this.current.shape);
-      if (!this.collide(r, this.current.y, this.current.x)) this.current.shape = r;
+      this.tryRotate(1);
     }
 
     rotateCCW() {
-      const r = rotateCCW(this.current.shape);
-      if (!this.collide(r, this.current.y, this.current.x)) this.current.shape = r;
+      this.tryRotate(-1);
     }
 
     rotate180() {
-      const r = rotate180(this.current.shape);
-      if (!this.collide(r, this.current.y, this.current.x)) this.current.shape = r;
+      // Use two SRS rotations to emulate 180 with proper kicks
+      if (!this.tryRotate(1)) return; // if first fails, abort
+      this.tryRotate(1);
+      // refresh grounded already handled in tryRotate
     }
 
     drop() {
       const ny = this.current.y + 1;
       if (!this.collide(this.current.shape, ny, this.current.x)) {
         this.current.y = ny;
+        this.refreshGrounded();
       } else {
-        this.merge();
+        // Touching ground: start/continue lock delay instead of instant merge
+        this.refreshGrounded();
+        this.tryLock();
       }
     }
 
@@ -310,6 +607,7 @@
       }
       
       this.canHold = false; // Prevent holding again until piece is placed
+      this.groundedSince = null; // reset lock timer after hold swap
       this.drawHold();
       this.drawNext();
     }
