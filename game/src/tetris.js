@@ -136,6 +136,29 @@
     '1>0': [ [0,0] ], '2>1': [ [0,0] ], '3>2': [ [0,0] ], '0>3': [ [0,0] ],
   };
 
+  // 180-degree kick tables (conservative, TETR.IO-style)
+  // Keys correspond to orientation transitions: 0>2, 1>3, 2>0, 3>1
+  // JLSTZ 180 kicks
+  const KICKS_180_JLSTZ = {
+    '0>2': [ [0,0], [0,1], [1,0], [-1,0], [0,-1], [1,1], [-1,1], [1,-1], [-1,-1], [0,2], [0,-2] ],
+    '1>3': [ [0,0], [0,1], [1,0], [-1,0], [0,-1], [1,1], [-1,1], [1,-1], [-1,-1], [0,2], [0,-2] ],
+    '2>0': [ [0,0], [0,1], [1,0], [-1,0], [0,-1], [1,1], [-1,1], [1,-1], [-1,-1], [0,2], [0,-2] ],
+    '3>1': [ [0,0], [0,1], [1,0], [-1,0], [0,-1], [1,1], [-1,1], [1,-1], [-1,-1], [0,2], [0,-2] ],
+  };
+
+  // I piece 180 kicks (slightly broader horizontal tests)
+  const KICKS_180_I = {
+    '0>2': [ [0,0], [0,-1], [0,1], [1,0], [-1,0], [2,0], [-2,0], [1,-1], [-1,-1], [1,1], [-1,1], [0,-2], [0,2] ],
+    '1>3': [ [0,0], [0,-1], [0,1], [1,0], [-1,0], [2,0], [-2,0], [1,-1], [-1,-1], [1,1], [-1,1], [0,-2], [0,2] ],
+    '2>0': [ [0,0], [0,-1], [0,1], [1,0], [-1,0], [2,0], [-2,0], [1,-1], [-1,-1], [1,1], [-1,1], [0,-2], [0,2] ],
+    '3>1': [ [0,0], [0,-1], [0,1], [1,0], [-1,0], [2,0], [-2,0], [1,-1], [-1,-1], [1,1], [-1,1], [0,-2], [0,2] ],
+  };
+
+  // O piece 180 kicks (no offset)
+  const KICKS_180_O = {
+    '0>2': [ [0,0] ], '1>3': [ [0,0] ], '2>0': [ [0,0] ], '3>1': [ [0,0] ],
+  };
+
   function shuffleArray(array) {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -200,6 +223,10 @@
       this.arrInterval = null;
       this.softDropping = false;
       this.softAcc = 0; // accumulator for soft drop speed
+      // Input state
+      this.keysDown = new Set();
+      this.edgePressed = new Set(); // keys newly pressed since last frame
+      this.lastHorizontalPressDir = 0; // -1 left, +1 right based on most recent press
       this.bindKeys();
       this.bindSettingsUI();
       requestAnimationFrame(t => this.loop(t));
@@ -208,48 +235,70 @@
 
     bindKeys() {
       window.addEventListener('keydown', e => {
-        // Handle R key for restart (even when paused)
-        if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey) {
+        const key = e.key;
+        // Always track R for restart hold
+        if ((key === 'r' || key === 'R') && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey) {
           e.preventDefault();
-          if (this.restartHoldStart === null) {
-            this.restartHoldStart = Date.now();
-          }
-          return;
+          if (this.restartHoldStart === null) this.restartHoldStart = Date.now();
         }
-        
-        // Don't process other keys when paused (except R which is handled above and P)
-        if (this.paused && e.key.toLowerCase() !== 'p') return;
-        
-        // Handle Control key for counter-clockwise rotation (only when Control is pressed alone)
-        if (e.key === 'Control' && !e.shiftKey && !e.altKey && !e.metaKey) {
-          e.preventDefault();
-          this.rotateCCW();
-          return;
-        }
-        
-        switch (e.key) {
-          case 'ArrowLeft': this.startHorizontal(-1); break;
-          case 'ArrowRight': this.startHorizontal(1); break;
-          case 'ArrowDown': this.startSoftDrop(); break;
-          case 'ArrowUp': this.rotate(); break;
-          case ' ': e.preventDefault(); this.hardDrop(); break;
-          case 'a': case 'A': if (!e.ctrlKey) { e.preventDefault(); this.rotate180(); } break;
-          case 'c': case 'C': this.hold(); break;
-          case 'p': case 'P': this.togglePause(); break;
-        }
+
+        // Prevent scrolling and defaults for gameplay keys
+        const gameKeys = ['ArrowLeft','ArrowRight','ArrowDown','ArrowUp',' ','a','A','c','C','p','P','Control'];
+        if (gameKeys.includes(key)) e.preventDefault();
+
+        // Track key state
+        const wasDown = this.keysDown.has(key);
+        this.keysDown.add(key);
+        if (!wasDown) this.edgePressed.add(key);
+
+        // Track most recent horizontal press for conflict resolution
+        if (key === 'ArrowLeft') this.lastHorizontalPressDir = -1;
+        if (key === 'ArrowRight') this.lastHorizontalPressDir = 1;
       });
 
       window.addEventListener('keyup', e => {
-        if (e.key === 'r' || e.key === 'R') {
-          this.restartHoldStart = null;
-        }
-        if (this.paused) return;
-        switch (e.key) {
-          case 'ArrowLeft': if (this.moveDir === -1) this.stopHorizontal(-1); break;
-          case 'ArrowRight': if (this.moveDir === 1) this.stopHorizontal(1); break;
-          case 'ArrowDown': this.stopSoftDrop(); break;
-        }
+        const key = e.key;
+        // Release R hold if any
+        if (key === 'r' || key === 'R') this.restartHoldStart = null;
+        this.keysDown.delete(key);
       });
+    }
+
+    processInputs() {
+      // Pause toggle (edge)
+      if (this.edgePressed.has('p') || this.edgePressed.has('P')) this.togglePause();
+
+      // If paused, only allow restart hold handling (done elsewhere) and exit
+      if (this.paused) { this.edgePressed.clear(); return; }
+
+      // Rotations and discrete actions (edge)
+      if (this.edgePressed.has('ArrowUp')) this.rotate();
+      if (this.edgePressed.has('Control')) this.rotateCCW();
+      if (this.edgePressed.has('a') || this.edgePressed.has('A')) this.rotate180();
+      if (this.edgePressed.has('c') || this.edgePressed.has('C')) this.hold();
+      if (this.edgePressed.has(' ')) this.hardDrop();
+
+      // Horizontal movement (held) with DAS/ARR; resolve conflicts by last press
+      const leftHeld = this.keysDown.has('ArrowLeft');
+      const rightHeld = this.keysDown.has('ArrowRight');
+      let desiredDir = 0;
+      if (leftHeld && !rightHeld) desiredDir = -1;
+      else if (!leftHeld && rightHeld) desiredDir = 1;
+      else if (leftHeld && rightHeld) desiredDir = this.lastHorizontalPressDir;
+
+      if (desiredDir !== 0) {
+        if (this.moveDir !== desiredDir) this.startHorizontal(desiredDir);
+      } else {
+        if (this.moveDir !== 0) this.stopHorizontal(this.moveDir);
+      }
+
+      // Soft drop (held)
+      const downHeld = this.keysDown.has('ArrowDown');
+      if (downHeld && !this.softDropping) this.startSoftDrop();
+      if (!downHeld && this.softDropping) this.stopSoftDrop();
+
+      // Clear edge buffer at end of processing
+      this.edgePressed.clear();
     }
 
     bindSettingsUI() {
@@ -346,6 +395,9 @@
           this.restartHoldStart = null;
         }
       }
+      
+      // Process current inputs once per frame (enables combos)
+      this.processInputs();
       
       if (!this.paused) {
         this.acc += dt;
@@ -568,10 +620,28 @@
     }
 
     rotate180() {
-      // Use two SRS rotations to emulate 180 with proper kicks
-      if (!this.tryRotate(1)) return; // if first fails, abort
-      this.tryRotate(1);
-      // refresh grounded already handled in tryRotate
+      const from = this.current.rot;
+      const to = (from + 2) % 4;
+      const key = `${from}>${to}`;
+
+      const rotatedShape = rotate180(this.current.shape);
+      const type = this.current.type;
+      const kicks = type === 'I' ? (KICKS_180_I[key] || [[0,0]]) : type === 'O' ? (KICKS_180_O[key] || [[0,0]]) : (KICKS_180_JLSTZ[key] || [[0,0]]);
+
+      for (let i = 0; i < kicks.length; i++) {
+        const [dx, dy] = kicks[i];
+        const nx = this.current.x + dx;
+        const ny = this.current.y + dy;
+        if (!this.collide(rotatedShape, ny, nx)) {
+          this.current.shape = rotatedShape;
+          this.current.x = nx;
+          this.current.y = ny;
+          this.current.rot = to;
+          this.refreshGrounded();
+          return true;
+        }
+      }
+      return false;
     }
 
     drop() {
