@@ -12,37 +12,53 @@
     <div class="wrap">
         <header class="topbar">
             <h1>Tetris</h1>
-            <div class="stats">
-                <div>Score: <span id="score">0</span></div>
-                <div>Lines: <span id="lines">0</span></div>
-                <div>Level: <span id="level">1</span></div>
-            </div>
         </header>
-        <main class="board">
-            <canvas id="game" width="300" height="600" aria-label="Tetris board"></canvas>
-            <aside class="side">
+        <main class="board-container">
+            <aside class="left-side">
                 <div class="hold">
                     <h2>Hold</h2>
                     <canvas id="hold" width="120" height="120"></canvas>
-                </div>
-                <div class="next">
-                    <h2>Next</h2>
-                    <canvas id="next" width="120" height="120"></canvas>
                 </div>
                 <div class="controls">
                     <h2>Controls</h2>
                     <ul>
                         <li>← →: Move</li>
-                        <li>↑: Rotate</li>
+                        <li>↑: Rotate (CW)</li>
+                        <li>Ctrl: Rotate (CCW)</li>
+                        <li>A: Rotate 180°</li>
                         <li>↓: Soft drop</li>
                         <li>Space: Hard drop</li>
                         <li>C: Hold/Swap</li>
+                        <li>R (Hold): Restart</li>
                         <li>P: Pause</li>
                     </ul>
                 </div>
             </aside>
+            <div class="board-area">
+                <div class="stats">
+                    <div>Score: <span id="score">0</span></div>
+                    <div>Lines: <span id="lines">0</span></div>
+                    <div>Level: <span id="level">1</span></div>
+                </div>
+                <div class="canvas-wrapper">
+                    <canvas id="game" width="300" height="600" aria-label="Tetris board"></canvas>
+                    <div class="overlay" id="overlay"></div>
+                </div>
+                <footer class="footer">Built for ethanyqliu.com</footer>
+            </div>
+            <aside class="right-side">
+                <div class="next">
+                    <h2>Next</h2>
+                    <div class="next-pieces">
+                        <canvas class="next-piece" width="100" height="100"></canvas>
+                        <canvas class="next-piece" width="100" height="100"></canvas>
+                        <canvas class="next-piece" width="100" height="100"></canvas>
+                        <canvas class="next-piece" width="100" height="100"></canvas>
+                        <canvas class="next-piece" width="100" height="100"></canvas>
+                    </div>
+                </div>
+            </aside>
         </main>
-        <footer class="footer">Built for ethanyqliu.com</footer>
     </div>
     <script src="/game/src/tetris.js"></script>
 </body>
