@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DailyGuessr</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/game/styles/dailyguessr.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="wrap">
+        <header class="topbar">
+            <h1>DailyGuessr</h1>
+            <a class="home" href="/game/">← Back</a>
+        </header>
+        
+        <div id="game-container" class="game-container">
+            <!-- Game Info Bar -->
+            <div class="game-info">
+                <div class="round-info">
+                    <span>Round <span id="round-number">1</span> / <span id="total-rounds">10</span></span>
+                </div>
+                <div class="score-info">
+                    <span>This Round: <span id="current-round-score">0</span></span>
+                    <span class="score-separator">•</span>
+                    <span>Total: <span id="total-score">0</span></span>
+                </div>
+            </div>
+
+            <!-- Street View Container -->
+            <div class="streetview-container">
+                <div id="streetview" class="streetview"></div>
+                <div class="streetview-overlay">
+                    <button id="lock-btn" class="lock-btn" aria-label="Lock/Unlock Street View" title="Lock Street View">
+                        <i class="fa-solid fa-lock-open"></i>
+                    </button>
+                </div>
+                
+                <!-- Map Container (Embedded as overlay) -->
+                <div id="map-container" class="map-container-overlay">
+                    <div class="map-header">
+                        <h3>Make Your Guess</h3>
+                    </div>
+                    <div id="map" class="map"></div>
+                    <div class="map-instructions">
+                        <button id="confirm-guess-btn" class="confirm-guess-btn" disabled>
+                            <i class="fa-solid fa-check"></i> Confirm Guess
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="controls">
+                <button id="next-round-btn" class="next-round-btn" disabled>
+                    <i class="fa-solid fa-arrow-right"></i> Next Round
+                </button>
+            </div>
+
+            <!-- Results Modal -->
+            <div id="results-modal" class="modal hidden" aria-hidden="true">
+                <div class="modal-backdrop"></div>
+                <div class="modal-content" role="dialog" aria-modal="true">
+                    <div class="modal-header">
+                        <h2 id="results-title">Round Results</h2>
+                    </div>
+                    <div class="modal-body">
+                        <div class="result-info">
+                            <div class="result-item">
+                                <span class="result-label">Your Guess:</span>
+                                <span id="your-location" class="result-value">-</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Actual Location:</span>
+                                <span id="actual-location" class="result-value">-</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Distance:</span>
+                                <span id="distance" class="result-value">-</span>
+                            </div>
+                            <div class="result-item highlight">
+                                <span class="result-label">Points:</span>
+                                <span id="round-score" class="result-value">0</span>
+                            </div>
+                        </div>
+                        <div id="round-map" class="round-map"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="close-results-btn" class="close-results-btn">
+                            Continue
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Over Modal -->
+            <div id="game-over-modal" class="modal hidden" aria-hidden="true">
+                <div class="modal-backdrop"></div>
+                <div class="modal-content" role="dialog" aria-modal="true">
+                    <div class="modal-header">
+                        <h2>Game Over!</h2>
+                    </div>
+                    <div class="modal-body">
+                        <div class="final-score">
+                            <p class="final-score-label">Final Score</p>
+                            <p class="final-score-value" id="final-score">0</p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="share-score-btn" class="play-again-btn">
+                            <i class="fa-solid fa-share-nodes"></i> Share Score
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Key Warning -->
+        <div id="api-warning" class="api-warning hidden">
+            <p><i class="fa-solid fa-triangle-exclamation"></i> Google Maps API key required. Please add your API key in dailyguessr.js</p>
+        </div>
+
+        <footer class="footer">Built for ethanyqliu.com</footer>
+    </div>
+
+    <!-- Google Maps API will be loaded dynamically from dailyguessr.js -->
+    <script src="/game/src/dailyguessr.js"></script>
+</body>
+</html>
+
+

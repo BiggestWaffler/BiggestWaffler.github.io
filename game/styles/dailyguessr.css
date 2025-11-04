@@ -1,0 +1,522 @@
+/* DailyGuessr Game Styles */
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    color: #e3f2fd;
+    background: linear-gradient(135deg, #0c0c0c, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%);
+    background-attachment: fixed;
+    background-size: 100% 100%;
+    min-height: 100vh;
+}
+
+.wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.topbar h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 800;
+}
+
+.home {
+    color: #bcdcff;
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background 0.2s ease;
+}
+
+.home:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.game-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Game Info Bar */
+.game-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    font-size: 16px;
+}
+
+.round-info,
+.score-info {
+    font-weight: 600;
+}
+
+.score-info {
+    color: #bcdcff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.score-separator {
+    opacity: 0.5;
+}
+
+/* Street View Container */
+.streetview-container {
+    position: relative;
+    width: 100%;
+    height: 500px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.streetview {
+    width: 100%;
+    height: 100%;
+}
+
+.streetview-overlay {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    z-index: 10;
+}
+
+.lock-btn {
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #e3f2fd;
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.2s ease;
+    backdrop-filter: blur(4px);
+}
+
+.lock-btn:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+/* Controls */
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.guess-btn,
+.next-round-btn {
+    padding: 14px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #e3f2fd;
+    background: rgba(76, 175, 80, 0.8);
+    border: 1px solid rgba(76, 175, 80, 0.5);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.guess-btn:hover:not(:disabled) {
+    background: rgba(76, 175, 80, 1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.guess-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.next-round-btn {
+    background: rgba(33, 150, 243, 0.8);
+    border-color: rgba(33, 150, 243, 0.5);
+}
+
+.next-round-btn:hover:not(:disabled) {
+    background: rgba(33, 150, 243, 1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+}
+
+.next-round-btn:disabled {
+    background: rgba(60, 60, 60, 0.6);
+    border-color: rgba(100, 100, 100, 0.3);
+    color: rgba(227, 242, 253, 0.5);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Map Container Overlay */
+.map-container-overlay {
+    position: absolute;
+    bottom: 20px;
+    /* Shift left so it doesn't sit under Street View controls */
+    right: 80px;
+    width: 240px;
+    height: 300px;
+    background: rgba(26, 30, 46, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+    opacity: 0.5;
+    transform: scale(0.6);
+    transform-origin: bottom right;
+    transition: all 0.3s ease;
+    pointer-events: auto;
+}
+
+.map-container-overlay.hidden {
+    display: none;
+}
+
+/* Ensure map container is visible at init */
+#map-container {
+    display: block;
+}
+
+.map-container-overlay:hover {
+    width: min(400px, 80vw);
+    height: min(55vh, 460px);
+    opacity: 1;
+    transform: scale(1);
+    background: rgba(26, 30, 46, 0.95);
+}
+
+.map-container-overlay:not(:hover) .map {
+    pointer-events: none;
+}
+
+.map-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+    flex-shrink: 0;
+}
+
+.map-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #e3f2fd;
+    white-space: nowrap;
+}
+
+.close-map-btn {
+    background: transparent;
+    border: none;
+    color: #e3f2fd;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 16px;
+    transition: background 0.2s ease;
+}
+
+.close-map-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.map {
+    width: 100%;
+    flex: 1;
+    height: 40vh;
+    min-height: 240px;
+}
+
+.map-instructions {
+    padding: 12px 16px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.06);
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    flex-shrink: 0;
+}
+
+.map-instructions p {
+    margin: 0 0 10px 0;
+    color: #bcdcff;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.confirm-guess-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #e3f2fd;
+    background: rgba(244, 67, 54, 0.8);
+    border: 1px solid rgba(244, 67, 54, 0.5);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.confirm-guess-btn:hover:not(:disabled) {
+    background: rgba(244, 67, 54, 1);
+    transform: translateY(-2px);
+}
+
+.confirm-guess-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    position: relative;
+    background: rgba(26, 30, 46, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+    z-index: 1001;
+}
+
+.modal-header {
+    margin-bottom: 20px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.modal-body {
+    margin-bottom: 20px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+/* Results Modal */
+.result-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+}
+
+.result-item.highlight {
+    background: rgba(76, 175, 80, 0.2);
+    border: 1px solid rgba(76, 175, 80, 0.4);
+    font-weight: 600;
+}
+
+.result-label {
+    color: #bcdcff;
+    font-size: 14px;
+}
+
+.result-value {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.round-map {
+    width: 100%;
+    height: 300px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* Game Over Modal */
+.final-score {
+    text-align: center;
+    padding: 20px;
+}
+
+.final-score-label {
+    font-size: 18px;
+    color: #bcdcff;
+    margin-bottom: 12px;
+}
+
+.final-score-value {
+    font-size: 48px;
+    font-weight: 800;
+    color: #bcdcff;
+    margin: 0;
+}
+
+.close-results-btn,
+.play-again-btn {
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #e3f2fd;
+    background: rgba(33, 150, 243, 0.8);
+    border: 1px solid rgba(33, 150, 243, 0.5);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.close-results-btn:hover,
+.play-again-btn:hover {
+    background: rgba(33, 150, 243, 1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+}
+
+/* API Warning */
+.api-warning {
+    padding: 16px;
+    background: rgba(244, 67, 54, 0.2);
+    border: 1px solid rgba(244, 67, 54, 0.5);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    color: #ffcdd2;
+}
+
+.api-warning.hidden {
+    display: none;
+}
+
+.api-warning p {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Footer */
+.footer {
+    margin-top: 20px;
+    text-align: center;
+    opacity: 0.75;
+    font-size: 12px;
+    color: #bcdcff;
+}
+
+/* Hide Google attribution/buttons and links inside game containers */
+.streetview-container .gm-style-cc,
+.streetview-container .gmnoprint.gm-style-cc,
+.map-container-overlay .gm-style-cc,
+.map-container-overlay .gmnoprint.gm-style-cc {
+    display: none !important;
+}
+
+/* As a safeguard, prevent clicks on any remaining Google attribution within containers */
+.streetview-container .gm-style a,
+.map-container-overlay .gm-style a {
+    pointer-events: none !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .streetview-container {
+        height: 400px;
+    }
+    
+    .map-container-overlay {
+        width: calc(100% - 40px);
+        height: 400px;
+        bottom: 10px;
+        right: 10px; /* On small screens, keep minimal offset */
+        left: 10px;
+    }
+    
+    .game-info {
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+    }
+    
+    .modal-content {
+        padding: 16px;
+        width: 95%;
+    }
+    
+    .final-score-value {
+        font-size: 36px;
+    }
+}
+
+
