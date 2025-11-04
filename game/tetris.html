@@ -57,17 +57,69 @@
                 <div class="modal-body">
                     <section class="controls">
                         <h3>Controls</h3>
-                        <ul>
-                            <li>← →: Move</li>
-                            <li>↑: Rotate (CW)</li>
-                            <li>Ctrl: Rotate (CCW)</li>
-                            <li>A: Rotate 180°</li>
-                            <li>↓: Soft drop</li>
-                            <li>Space: Hard drop</li>
-                            <li>C: Hold/Swap</li>
-                            <li>R (Hold): Restart</li>
-                            <li>P: Pause</li>
-                        </ul>
+                        <div class="keybind-list">
+                            <div class="keybind-item">
+                                <label>Move Left:</label>
+                                <button class="keybind-btn" data-action="moveLeft" type="button">
+                                    <span class="keybind-key">←</span>
+                                </button>
+                            </div>
+                            <div class="keybind-item">
+                                <label>Move Right:</label>
+                                <button class="keybind-btn" data-action="moveRight" type="button">
+                                    <span class="keybind-key">→</span>
+                                </button>
+                            </div>
+                            <div class="keybind-item">
+                                <label>Rotate (CW):</label>
+                                <button class="keybind-btn" data-action="rotateCW" type="button">
+                                    <span class="keybind-key">↑</span>
+                                </button>
+                            </div>
+                            <div class="keybind-item">
+                                <label>Rotate (CCW):</label>
+                                <button class="keybind-btn" data-action="rotateCCW" type="button">
+                                    <span class="keybind-key">Ctrl</span>
+                                </button>
+                            </div>
+                            <div class="keybind-item">
+                                <label>Rotate 180°:</label>
+                                <button class="keybind-btn" data-action="rotate180" type="button">
+                                    <span class="keybind-key">A</span>
+                                </button>
+                            </div>
+                            <div class="keybind-item">
+                                <label>Soft Drop:</label>
+                                <button class="keybind-btn" data-action="softDrop" type="button">
+                                    <span class="keybind-key">↓</span>
+                                </button>
+                            </div>
+                            <div class="keybind-item">
+                                <label>Hard Drop:</label>
+                                <button class="keybind-btn" data-action="hardDrop" type="button">
+                                    <span class="keybind-key">Space</span>
+                                </button>
+                            </div>
+                            <div class="keybind-item">
+                                <label>Hold/Swap:</label>
+                                <button class="keybind-btn" data-action="hold" type="button">
+                                    <span class="keybind-key">C</span>
+                                </button>
+                            </div>
+                            <div class="keybind-item">
+                                <label>Pause:</label>
+                                <button class="keybind-btn" data-action="pause" type="button">
+                                    <span class="keybind-key">P</span>
+                                </button>
+                            </div>
+                            <div class="keybind-item">
+                                <label>Restart (Hold):</label>
+                                <button class="keybind-btn" data-action="restart" type="button">
+                                    <span class="keybind-key">R</span>
+                                </button>
+                            </div>
+                        </div>
+                        <button id="resetKeybinds" class="reset-btn" type="button">Reset to Defaults</button>
                     </section>
                     <section class="settings">
                         <h3>Handling</h3>

@@ -29,6 +29,82 @@ canvas { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,
 .left-side h2, .right-side h2 { margin: 8px 0; font-size: 16px; color: #bcdcff; }
 .controls ul { margin: 0; padding-left: 18px; line-height: 1.6; }
 
+.keybind-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.keybind-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.keybind-item label {
+  width: 80px;
+  text-align: right;
+  color: #bcdcff;
+  font-size: 14px;
+}
+
+.keybind-btn {
+  min-width: 100px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 8px;
+  color: #e3f2fd;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.keybind-btn:hover {
+  background: rgba(100,181,246,0.18);
+  border-color: rgba(100,181,246,0.4);
+  color: #ffffff;
+}
+
+.keybind-btn.waiting {
+  background: rgba(100,181,246,0.3);
+  border-color: rgba(100,181,246,0.6);
+  color: #ffffff;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.keybind-key {
+  display: inline-block;
+}
+
+.reset-btn {
+  margin-top: 16px;
+  padding: 8px 16px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 8px;
+  color: #e3f2fd;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  transition: all 0.2s ease;
+}
+
+.reset-btn:hover {
+  background: rgba(255,255,255,0.2);
+  border-color: rgba(255,255,255,0.35);
+}
+
 .board-area {
   display: flex;
   flex-direction: column;
@@ -155,7 +231,7 @@ canvas { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,
   color: #e3f2fd;
 }
 .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.modal-header h2 { margin: 0; font-size: 18px; }
+.modal-header h2 { margin: 0; font-size: 28px; }
 .close-btn {
   background: transparent; border: none; color: #e3f2fd; font-size: 18px; cursor: pointer;
 }

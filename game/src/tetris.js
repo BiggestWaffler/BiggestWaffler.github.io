@@ -49,6 +49,23 @@
     lockDelay: 1000,
   };
 
+  // Default keybinds
+  const DEFAULT_KEYBINDS = {
+    moveLeft: 'ArrowLeft',
+    moveRight: 'ArrowRight',
+    rotateCW: 'ArrowUp',
+    rotateCCW: 'Control',
+    rotate180: 'a',
+    softDrop: 'ArrowDown',
+    hardDrop: ' ',
+    hold: 'c',
+    pause: 'p',
+    restart: 'r'
+  };
+
+  // Keybind configuration (loaded from localStorage or defaults)
+  const KEYBINDS = { ...DEFAULT_KEYBINDS };
+
   // Load persisted values (excluding lockDelay which is dev-only)
   (function loadSettings() {
     try {
@@ -64,6 +81,15 @@
           const v = Math.max(1, parseInt(sdc, 10) || 1);
           SETTINGS.softDropCps = v;
         }
+      }
+      
+      // Load keybinds
+      const savedKeybinds = localStorage.getItem('tetris.keybinds');
+      if (savedKeybinds) {
+        try {
+          const parsed = JSON.parse(savedKeybinds);
+          Object.assign(KEYBINDS, parsed);
+        } catch {}
       }
     } catch {}
   })();
@@ -234,53 +260,99 @@
     }
 
     bindKeys() {
+      // Helper to normalize key for comparison (case-insensitive for letters)
+      const normalizeKey = (key) => {
+        if (key.length === 1 && key.match(/[a-z]/i)) {
+          return key.toLowerCase();
+        }
+        return key;
+      };
+
       window.addEventListener('keydown', e => {
         const key = e.key;
-        // Always track R for restart hold
-        if ((key === 'r' || key === 'R') && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey) {
+        const normalizedKey = normalizeKey(key);
+        const restartKey = normalizeKey(KEYBINDS.restart);
+
+        // Always track restart key for restart hold
+        if (normalizedKey === restartKey && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey) {
           e.preventDefault();
           if (this.restartHoldStart === null) this.restartHoldStart = Date.now();
         }
 
         // Prevent scrolling and defaults for gameplay keys
-        const gameKeys = ['ArrowLeft','ArrowRight','ArrowDown','ArrowUp',' ','a','A','c','C','p','P','Control'];
-        if (gameKeys.includes(key)) e.preventDefault();
+        const gameKeys = [
+          KEYBINDS.moveLeft,
+          KEYBINDS.moveRight,
+          KEYBINDS.softDrop,
+          KEYBINDS.rotateCW,
+          KEYBINDS.hardDrop,
+          KEYBINDS.rotate180,
+          KEYBINDS.hold,
+          KEYBINDS.pause,
+          KEYBINDS.restart,
+          KEYBINDS.rotateCCW
+        ].map(k => normalizeKey(k));
+
+        if (gameKeys.includes(normalizedKey)) e.preventDefault();
 
         // Track key state
-        const wasDown = this.keysDown.has(key);
-        this.keysDown.add(key);
-        if (!wasDown) this.edgePressed.add(key);
+        const wasDown = this.keysDown.has(normalizedKey);
+        this.keysDown.add(normalizedKey);
+        if (!wasDown) this.edgePressed.add(normalizedKey);
 
         // Track most recent horizontal press for conflict resolution
-        if (key === 'ArrowLeft') this.lastHorizontalPressDir = -1;
-        if (key === 'ArrowRight') this.lastHorizontalPressDir = 1;
+        const leftKey = normalizeKey(KEYBINDS.moveLeft);
+        const rightKey = normalizeKey(KEYBINDS.moveRight);
+        if (normalizedKey === leftKey) this.lastHorizontalPressDir = -1;
+        if (normalizedKey === rightKey) this.lastHorizontalPressDir = 1;
       });
 
       window.addEventListener('keyup', e => {
         const key = e.key;
-        // Release R hold if any
-        if (key === 'r' || key === 'R') this.restartHoldStart = null;
-        this.keysDown.delete(key);
+        const normalizedKey = normalizeKey(key);
+        const restartKey = normalizeKey(KEYBINDS.restart);
+        
+        // Release restart hold if any
+        if (normalizedKey === restartKey) this.restartHoldStart = null;
+        this.keysDown.delete(normalizedKey);
       });
     }
 
     processInputs() {
+      // Helper to normalize key for comparison (case-insensitive for letters)
+      const normalizeKey = (key) => {
+        if (key.length === 1 && key.match(/[a-z]/i)) {
+          return key.toLowerCase();
+        }
+        return key;
+      };
+
+      const pauseKey = normalizeKey(KEYBINDS.pause);
+      const rotateCWKey = normalizeKey(KEYBINDS.rotateCW);
+      const rotateCCWKey = normalizeKey(KEYBINDS.rotateCCW);
+      const rotate180Key = normalizeKey(KEYBINDS.rotate180);
+      const holdKey = normalizeKey(KEYBINDS.hold);
+      const hardDropKey = normalizeKey(KEYBINDS.hardDrop);
+      const leftKey = normalizeKey(KEYBINDS.moveLeft);
+      const rightKey = normalizeKey(KEYBINDS.moveRight);
+      const softDropKey = normalizeKey(KEYBINDS.softDrop);
+
       // Pause toggle (edge)
-      if (this.edgePressed.has('p') || this.edgePressed.has('P')) this.togglePause();
+      if (this.edgePressed.has(pauseKey)) this.togglePause();
 
       // If paused, only allow restart hold handling (done elsewhere) and exit
       if (this.paused) { this.edgePressed.clear(); return; }
 
       // Rotations and discrete actions (edge)
-      if (this.edgePressed.has('ArrowUp')) this.rotate();
-      if (this.edgePressed.has('Control')) this.rotateCCW();
-      if (this.edgePressed.has('a') || this.edgePressed.has('A')) this.rotate180();
-      if (this.edgePressed.has('c') || this.edgePressed.has('C')) this.hold();
-      if (this.edgePressed.has(' ')) this.hardDrop();
+      if (this.edgePressed.has(rotateCWKey)) this.rotate();
+      if (this.edgePressed.has(rotateCCWKey)) this.rotateCCW();
+      if (this.edgePressed.has(rotate180Key)) this.rotate180();
+      if (this.edgePressed.has(holdKey)) this.hold();
+      if (this.edgePressed.has(hardDropKey)) this.hardDrop();
 
       // Horizontal movement (held) with DAS/ARR; resolve conflicts by last press
-      const leftHeld = this.keysDown.has('ArrowLeft');
-      const rightHeld = this.keysDown.has('ArrowRight');
+      const leftHeld = this.keysDown.has(leftKey);
+      const rightHeld = this.keysDown.has(rightKey);
       let desiredDir = 0;
       if (leftHeld && !rightHeld) desiredDir = -1;
       else if (!leftHeld && rightHeld) desiredDir = 1;
@@ -293,7 +365,7 @@
       }
 
       // Soft drop (held)
-      const downHeld = this.keysDown.has('ArrowDown');
+      const downHeld = this.keysDown.has(softDropKey);
       if (downHeld && !this.softDropping) this.startSoftDrop();
       if (!downHeld && this.softDropping) this.stopSoftDrop();
 
@@ -314,12 +386,24 @@
 
       if (!dasRange || !arrRange || !sdcRange) return;
 
+      // Keybind rebinding state (declared early so closeModal can use it)
+      let rebindingAction = null;
+      let rebindingBtn = null;
+
       // Modal open/close
       const openModal = () => {
         modal.classList.add('open');
         modal.setAttribute('aria-hidden', 'false');
       };
+      const stopRebinding = () => {
+        if (rebindingBtn) {
+          rebindingBtn.classList.remove('waiting');
+          rebindingBtn = null;
+        }
+        rebindingAction = null;
+      };
       const closeModal = () => {
+        stopRebinding();
         modal.classList.remove('open');
         modal.setAttribute('aria-hidden', 'true');
       };
@@ -380,6 +464,127 @@
         }
         updateSoftDropUI();
       });
+
+      // Keybind UI
+      const formatKeyForDisplay = (key) => {
+        if (key === ' ') return 'Space';
+        if (key === 'ArrowLeft') return '←';
+        if (key === 'ArrowRight') return '→';
+        if (key === 'ArrowUp') return '↑';
+        if (key === 'ArrowDown') return '↓';
+        if (key === 'Control') return 'Ctrl';
+        if (key.length === 1 && key.match(/[a-z]/i)) {
+          return key.toUpperCase();
+        }
+        return key;
+      };
+
+      const updateKeybindDisplay = () => {
+        const keybindBtns = document.querySelectorAll('.keybind-btn');
+        keybindBtns.forEach(btn => {
+          const action = btn.getAttribute('data-action');
+          if (action && KEYBINDS[action]) {
+            const keySpan = btn.querySelector('.keybind-key');
+            if (keySpan) {
+              keySpan.textContent = formatKeyForDisplay(KEYBINDS[action]);
+            }
+          }
+        });
+      };
+
+      // Initialize keybind display
+      updateKeybindDisplay();
+
+      const startRebinding = (action, btn) => {
+        stopRebinding();
+        rebindingAction = action;
+        rebindingBtn = btn;
+        btn.classList.add('waiting');
+        const keySpan = btn.querySelector('.keybind-key');
+        if (keySpan) keySpan.textContent = 'Press key...';
+      };
+
+      // Handle key capture for rebinding
+      const keybindCaptureHandler = (e) => {
+        if (!rebindingAction) return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const key = e.key;
+        // Don't allow Escape to be bound (used for canceling)
+        if (key === 'Escape') {
+          stopRebinding();
+          updateKeybindDisplay();
+          return;
+        }
+        
+        // Don't allow modifier keys alone (but don't consume the handler)
+        if (key === 'Control' || key === 'Shift' || key === 'Alt' || key === 'Meta') {
+          // Re-add the listener since we're not consuming this key
+          window.addEventListener('keydown', keybindCaptureHandler, { once: true, capture: true });
+          return;
+        }
+
+        // Check if key is already bound to another action
+        let conflict = false;
+        for (const [otherAction, otherKey] of Object.entries(KEYBINDS)) {
+          if (otherAction !== rebindingAction && otherKey === key) {
+            conflict = true;
+            break;
+          }
+        }
+
+        if (!conflict) {
+          KEYBINDS[rebindingAction] = key;
+          try {
+            localStorage.setItem('tetris.keybinds', JSON.stringify(KEYBINDS));
+          } catch {}
+          
+          stopRebinding();
+          updateKeybindDisplay();
+        } else {
+          // Show error briefly, then re-enable rebinding
+          const keySpan = rebindingBtn.querySelector('.keybind-key');
+          if (keySpan) {
+            const originalText = keySpan.textContent;
+            keySpan.textContent = 'Already bound!';
+            setTimeout(() => {
+              keySpan.textContent = originalText;
+              // Re-add the listener to continue rebinding
+              window.addEventListener('keydown', keybindCaptureHandler, { once: true, capture: true });
+            }, 1000);
+          }
+        }
+      };
+
+      // Add keybind button listeners
+      const keybindBtns = document.querySelectorAll('.keybind-btn');
+      keybindBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const action = btn.getAttribute('data-action');
+          if (action) {
+            startRebinding(action, btn);
+            // Add one-time listener for key capture
+            window.addEventListener('keydown', keybindCaptureHandler, { once: true, capture: true });
+          }
+        });
+      });
+
+      // Reset keybinds button
+      const resetBtn = document.getElementById('resetKeybinds');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+          Object.assign(KEYBINDS, DEFAULT_KEYBINDS);
+          try {
+            localStorage.setItem('tetris.keybinds', JSON.stringify(KEYBINDS));
+          } catch {}
+          updateKeybindDisplay();
+          stopRebinding();
+        });
+      }
     }
 
     togglePause() { this.paused = !this.paused; }
