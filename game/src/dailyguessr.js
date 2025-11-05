@@ -1,7 +1,8 @@
 // DailyGuessr Game Logic
 
 // ===== CONFIGURATION =====
-const GOOGLE_MAPS_API_KEY = 'AIzaSyCs662JIaY8dRTlAkBWEVnp2AFXXlG9jjk'; 
+const GOOGLE_MAPS_API_KEY = 'AIzaSyCs662JIaY8dRTlAkBWEVnp2AFXXlG9jjk'; //Production API Key
+//const GOOGLE_MAPS_API_KEY = 'KEY_HERE'; // Development API Key
 
 const TOTAL_ROUNDS = 10;
 const MAX_POINTS = 10000; // maximum points per round
@@ -28,7 +29,8 @@ let gameState = {
     isStreetViewLocked: false,
     hasGuessed: false,
     guessMarker: null,
-    dailyCoords: [] // precomputed daily coordinates for each round
+    dailyCoords: [], // precomputed daily coordinates for each round
+    roundHistory: [] // track round data: [{ score, distance }]
 };
 
 // ===== INITIALIZATION =====
@@ -110,6 +112,12 @@ function setupEventListeners() {
     // Share Score button
     const shareBtn = document.getElementById('share-score-btn');
     if (shareBtn) shareBtn.addEventListener('click', shareFinalScore);
+    
+    // Close Game Over Modal button
+    const closeGameOverBtn = document.getElementById('close-game-over-btn');
+    if (closeGameOverBtn) closeGameOverBtn.addEventListener('click', () => {
+        document.getElementById('game-over-modal').classList.add('hidden');
+    });
 }
 
 // ===== GAME FLOW =====
@@ -119,6 +127,7 @@ function startNewGame() {
     gameState.currentRoundScore = 0;
     gameState.hasGuessed = false;
     gameState.dailyCoords = getDailyCoordinates();
+    gameState.roundHistory = [];
     
     // Show map and reset Next Round button
     document.getElementById('map-container').classList.remove('hidden');
@@ -428,6 +437,13 @@ function confirmGuess() {
     gameState.totalScore += roundScore;
     gameState.hasGuessed = true;
     
+    // Store round history
+    gameState.roundHistory.push({
+        round: gameState.currentRound,
+        score: roundScore,
+        distance: distance
+    });
+    
     // Disable the confirm button and map interactions after guessing
     document.getElementById('confirm-guess-btn').disabled = true;
     if (gameState.guessMap) {
@@ -569,9 +585,51 @@ function endGame() {
     document.getElementById('game-over-modal').classList.remove('hidden');
 }
 
+function getEmojisForRound(score) {
+    // Algorithm: Each green square = 20%, each yellow square = 10%
+    // Fill from left to right: greens first, then yellows, then whites
+    const percentage = score / MAX_POINTS;
+    const totalSquares = 5;
+    const greenValue = 0.2; // 20% per green
+    const yellowValue = 0.1; // 10% per yellow
+    
+    let remaining = percentage;
+    const squares = [];
+    
+    // Fill squares from left to right
+    for (let i = 0; i < totalSquares; i++) {
+        if (remaining >= greenValue) {
+            // Can fit a full green square (20%)
+            squares.push('🟩');
+            remaining -= greenValue;
+        } else if (remaining >= yellowValue) {
+            // Can fit a yellow square (10%)
+            squares.push('🟨');
+            remaining -= yellowValue;
+        } else {
+            // Less than 10% remaining, fill with white
+            squares.push('⬜');
+        }
+    }
+    
+    return squares.join('');
+}
+
 function shareFinalScore() {
     const gameUrl = `${window.location.origin}/game/dailyguessr.html`;
-    const text = `DailyGuessr\nI scored ${gameState.totalScore} in DailyGuessr! Play: ${gameUrl}`;
+    
+    // Build round-by-round output
+    let roundsText = '';
+    gameState.roundHistory.forEach((round) => {
+        const emojis = getEmojisForRound(round.score);
+        const distanceText = round.distance < 1000 
+            ? `${Math.round(round.distance)} km`
+            : `${(round.distance / 1000).toFixed(0)} km`;
+        roundsText += `${emojis} ${round.score} (${distanceText})\n`;
+    });
+    
+    const text = `DailyGuessr\nI scored ${gameState.totalScore} in DailyGuessr! Play: ${gameUrl}\n\n${roundsText.trim()}`;
+    
     if (navigator.clipboard?.writeText) {
         navigator.clipboard.writeText(text).then(() => {
             const btn = document.getElementById('share-score-btn');
