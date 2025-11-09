@@ -253,6 +253,15 @@
       this.keysDown = new Set();
       this.edgePressed = new Set(); // keys newly pressed since last frame
       this.lastHorizontalPressDir = 0; // -1 left, +1 right based on most recent press
+      // Scoring system state
+      this.backToBack = false; // Back-to-back chain active
+      this.combo = 0; // Current combo count
+      this.softDropDistance = 0; // Cells soft dropped this piece
+      this.hardDropDistance = 0; // Cells hard dropped (tracked per drop)
+      this.lastActionWasDifficult = false; // Last clear was difficult (T-Spin or Tetris)
+      this.lastRotationWasTSpin = false; // Track if last rotation resulted in T-Spin position
+      this.lastRotationAtMerge = 0; // Track rotation state at merge time for mini T-Spin detection
+      this.currentPieceStartY = this.current.y; // Track where piece started for drop distance
       this.bindKeys();
       this.bindSettingsUI();
       requestAnimationFrame(t => this.loop(t));
@@ -617,6 +626,7 @@
             const ny = this.current.y + 1;
             if (!this.collide(this.current.shape, ny, this.current.x)) {
               this.current.y = ny;
+              this.softDropDistance++; // Track soft drop distance
               this.refreshGrounded();
             } else {
               this.refreshGrounded();
@@ -726,9 +736,19 @@
 
     merge() {
       const s = this.current.shape; const oy = this.current.y; const ox = this.current.x;
+      // Calculate hard drop distance if not already set
+      if (this.currentPieceStartY !== null && this.hardDropDistance === 0) {
+        this.hardDropDistance = Math.max(0, oy - this.currentPieceStartY);
+      }
+      // Check for T-Spin before merging (need to check with current position)
+      const wasTSpin = this.current.type === 'T' && this.isTSpin();
+      // Store rotation state for mini T-Spin detection
+      this.lastRotationAtMerge = this.current.rot;
       for (let y = 0; y < s.length; y++) for (let x = 0; x < s[y].length; x++) {
         if (s[y][x] && oy + y >= 0) this.grid[oy + y][ox + x] = this.current.type;
       }
+      // Set T-Spin flag for scoring
+      this.lastRotationWasTSpin = wasTSpin;
       this.clearLines();
       // Take first piece from queue
       this.current = new Piece(this.nextQueue.shift());
@@ -736,6 +756,12 @@
       this.nextQueue.push(this.bag.draw());
       this.canHold = true; // Reset hold flag when piece is placed
       this.groundedSince = null; // reset lock timer for new piece
+      // Reset scoring tracking for new piece
+      this.softDropDistance = 0;
+      this.hardDropDistance = 0;
+      this.currentPieceStartY = this.current.y;
+      this.lastRotationWasTSpin = false;
+      this.lastRotationAtMerge = 0;
       this.drawNext();
       if (this.collide(this.current.shape, this.current.y, this.current.x)) this.reset();
     }
@@ -753,9 +779,90 @@
       this.restartHoldStart = null;
       this.paused = false;
       this.groundedSince = null;
+      // Reset scoring system state
+      this.backToBack = false;
+      this.combo = 0;
+      this.softDropDistance = 0;
+      this.hardDropDistance = 0;
+      this.lastActionWasDifficult = false;
+      this.lastRotationWasTSpin = false;
+      this.lastRotationAtMerge = 0;
+      this.currentPieceStartY = this.current.y;
       this.drawHold();
       this.drawNext();
       this.updateHUD();
+    }
+
+    // T-Spin detection using 3-corner rule
+    // Checks if the T-piece is in a T-Spin position (3 of 4 corners are filled)
+    isTSpin() {
+      if (this.current.type !== 'T') return false;
+      
+      const px = this.current.x;
+      const py = this.current.y;
+      const shape = this.current.shape;
+      
+      // Find the center of the T-piece (the T block)
+      let centerX = -1, centerY = -1;
+      for (let y = 0; y < shape.length; y++) {
+        for (let x = 0; x < shape[y].length; x++) {
+          if (shape[y][x]) {
+            // Check if this is the center (has 3 neighbors in T shape)
+            let neighbors = 0;
+            if (y > 0 && shape[y-1][x]) neighbors++;
+            if (y < shape.length - 1 && shape[y+1][x]) neighbors++;
+            if (x > 0 && shape[y][x-1]) neighbors++;
+            if (x < shape[y].length - 1 && shape[y][x+1]) neighbors++;
+            if (neighbors === 3) {
+              centerX = px + x;
+              centerY = py + y;
+              break;
+            }
+          }
+        }
+        if (centerX !== -1) break;
+      }
+      
+      if (centerX === -1 || centerY === -1) return false;
+      
+      // Check the 4 corners around the center
+      const corners = [
+        [centerX - 1, centerY - 1], // top-left
+        [centerX + 1, centerY - 1], // top-right
+        [centerX - 1, centerY + 1], // bottom-left
+        [centerX + 1, centerY + 1]  // bottom-right
+      ];
+      
+      let filledCorners = 0;
+      for (const [cx, cy] of corners) {
+        // Check if corner is out of bounds or filled
+        if (cy < 0 || cy >= ROWS || cx < 0 || cx >= COLS || this.grid[cy][cx]) {
+          filledCorners++;
+        }
+      }
+      
+      // T-Spin requires at least 3 corners filled
+      return filledCorners >= 3;
+    }
+
+    // Check if this is a mini T-Spin (pointing side T-Spin)
+    isMiniTSpin() {
+      if (this.current.type !== 'T') return false;
+      if (!this.isTSpin()) return false;
+      
+      // Mini T-Spin: T-piece is pointing left or right (not up or down)
+      // Check rotation state - rotations 1 and 3 are horizontal
+      return this.current.rot === 1 || this.current.rot === 3;
+    }
+
+    // Check if grid is empty (perfect clear)
+    isPerfectClear() {
+      for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+          if (this.grid[y][x]) return false;
+        }
+      }
+      return true;
     }
 
     clearLines() {
@@ -764,19 +871,114 @@
         if (this.grid[y].every(v => v)) {
           this.grid.splice(y, 1);
           this.grid.unshift(Array(COLS).fill(0));
-          cleared++; y++;
+          cleared++;
+          y++; // Re-check same index after removal
         }
       }
-      if (cleared) {
-        const scores = [0, 100, 300, 500, 800];
-        this.score += scores[cleared] * this.level;
+      
+      if (cleared > 0) {
+        // Determine action type
+        const isTSpinAction = this.lastRotationWasTSpin;
+        // Check mini T-Spin: T-piece pointing left or right (rotations 1 and 3 are horizontal)
+        const isMiniTSpin = isTSpinAction && (this.lastRotationAtMerge === 1 || this.lastRotationAtMerge === 3);
+        const isTetris = cleared === 4;
+        const isDifficult = isTSpinAction || isTetris;
+        
+        // Calculate base score
+        let baseScore = 0;
+        if (isTSpinAction) {
+          if (cleared === 0) {
+            baseScore = isMiniTSpin ? 100 : 400; // Mini T-Spin no lines or T-Spin no lines
+          } else if (cleared === 1) {
+            baseScore = isMiniTSpin ? 200 : 800; // Mini T-Spin Single or T-Spin Single
+          } else if (cleared === 2) {
+            baseScore = isMiniTSpin ? 400 : 1200; // Mini T-Spin Double or T-Spin Double
+          } else if (cleared === 3) {
+            baseScore = 1600; // T-Spin Triple
+          }
+        } else {
+          // Regular line clears
+          const scores = [0, 100, 300, 500, 800];
+          baseScore = scores[cleared];
+        }
+        
+        // Apply level multiplier
+        baseScore *= this.level;
+        
+        // Apply Back-to-Back multiplier (1.5x for difficult clears)
+        if (isDifficult && this.backToBack) {
+          baseScore = Math.floor(baseScore * 1.5);
+        }
+        
+        // Add combo points
+        if (this.combo > 0) {
+          baseScore += 50 * this.combo * this.level;
+        }
+        
+        // Add soft drop points (1 per cell)
+        baseScore += this.softDropDistance;
+        
+        // Add hard drop points (2 per cell)
+        baseScore += this.hardDropDistance * 2;
+        
+        // Check for perfect clear
+        const perfectClear = this.isPerfectClear();
+        let perfectClearBonus = 0;
+        if (perfectClear) {
+          if (cleared === 1) perfectClearBonus = 800 * this.level;
+          else if (cleared === 2) perfectClearBonus = 1200 * this.level;
+          else if (cleared === 3) perfectClearBonus = 1800 * this.level;
+          else if (cleared === 4) {
+            if (this.backToBack && isTetris) {
+              perfectClearBonus = 3200 * this.level;
+            } else {
+              perfectClearBonus = 2000 * this.level;
+            }
+          }
+        }
+        
+        // Add perfect clear bonus to base score
+        baseScore += perfectClearBonus;
+        
+        this.score += baseScore;
         this.lines += cleared;
+        
+        // Update Back-to-Back status
+        // Only Single, Double, or Triple line clears break Back-to-Back chain
+        // T-Spin with no lines does not break the chain
+        if (isDifficult) {
+          this.backToBack = true;
+          this.lastActionWasDifficult = true;
+        } else if (cleared > 0 && cleared < 4) {
+          // Single, Double, or Triple breaks the chain
+          this.backToBack = false;
+          this.lastActionWasDifficult = false;
+        } else {
+          this.lastActionWasDifficult = false;
+        }
+        
+        // Update combo
+        this.combo++;
+        
+        // Level up calculation
         if (this.lines >= this.level * 10) {
           this.level++;
           this.dropInterval = Math.max(120, 1000 - (this.level - 1) * 80);
         }
+        
         this.updateHUD();
+      } else {
+        // No lines cleared - reset combo
+        this.combo = 0;
+        // T-Spin with no lines doesn't break Back-to-Back
+        if (this.lastRotationWasTSpin) {
+          this.backToBack = true;
+          this.lastActionWasDifficult = true;
+        }
       }
+      
+      // Reset rotation T-Spin flag after processing
+      this.lastRotationWasTSpin = false;
     }
 
     move(dir) {
@@ -810,6 +1012,10 @@
           this.current.rot = to;
           // Rotation can refresh lock delay
           this.refreshGrounded();
+          // Check for T-Spin after rotation
+          if (this.current.type === 'T') {
+            this.lastRotationWasTSpin = this.isTSpin();
+          }
           return true;
         }
       }
@@ -843,6 +1049,10 @@
           this.current.y = ny;
           this.current.rot = to;
           this.refreshGrounded();
+          // Check for T-Spin after rotation
+          if (this.current.type === 'T') {
+            this.lastRotationWasTSpin = this.isTSpin();
+          }
           return true;
         }
       }
@@ -862,7 +1072,11 @@
     }
 
     hardDrop() {
-      while (!this.collide(this.current.shape, this.current.y + 1, this.current.x)) this.current.y++;
+      const startY = this.current.y;
+      while (!this.collide(this.current.shape, this.current.y + 1, this.current.x)) {
+        this.current.y++;
+      }
+      this.hardDropDistance = Math.max(0, this.current.y - startY);
       this.merge();
     }
 
@@ -883,6 +1097,12 @@
       
       this.canHold = false; // Prevent holding again until piece is placed
       this.groundedSince = null; // reset lock timer after hold swap
+      // Reset scoring tracking for new piece
+      this.softDropDistance = 0;
+      this.hardDropDistance = 0;
+      this.currentPieceStartY = this.current.y;
+      this.lastRotationWasTSpin = false;
+      this.lastRotationAtMerge = 0;
       this.drawHold();
       this.drawNext();
     }
