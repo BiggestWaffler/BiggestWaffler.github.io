@@ -3,17 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tetris</title>
+    <title>Tetris - Ethan Liu</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="stylesheet" href="/game/styles/tetris.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="wrap">
         <header class="topbar">
             <h1>Tetris</h1>
-            <button id="settingsBtn" class="settings-btn" aria-label="Open settings"><i class="fa-solid fa-gear"></i></button>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <a href="/game/" class="home" style="text-decoration: none;">← Back</a>
+                <button id="settingsBtn" class="settings-btn" aria-label="Open settings"><i class="fa-solid fa-gear"></i></button>
+            </div>
         </header>
         <main class="board-container">
             <aside class="left-side">
@@ -32,7 +35,6 @@
                     <canvas id="game" width="300" height="600" aria-label="Tetris board"></canvas>
                     <div class="overlay" id="overlay"></div>
                 </div>
-                <footer class="footer">Built for ethanyqliu.com</footer>
             </div>
             <aside class="right-side">
                 <div class="next">

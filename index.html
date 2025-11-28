@@ -3,80 +3,390 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ethan Liu</title>
+    <title>Ethan Liu - Computer Engineering</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="stylesheet" href="/mainassets/css/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <header class="site-header" aria-label="site controls">
-        <button class="hamburger" id="hamburger" aria-expanded="false" aria-controls="menu" aria-label="Open menu">
-            <span></span><span></span><span></span>
-        </button>
-        <nav class="menu" id="menu" hidden>
-            <button class="menu-item" id="toggle-mute" aria-pressed="false" aria-label="Mute sound">
-                <i class="fa-solid fa-volume-high"></i>
-            </button>
-            <button class="menu-item" id="toggle-info" aria-pressed="false" aria-label="Hide info">
-                <i class="fa-regular fa-eye"></i>
-            </button>
-            <a class="menu-item" id="open-games" href="/game/" aria-label="Games">
-                <i class="fa-solid fa-gamepad"></i>
-            </a>
-        </nav>
-    </header>
-    <div class="container">
-        <div class="content-box">
-            <div class="profile-section">
-                <div class="profile-image">
-                    <i class="fas fa-user-circle"></i>
-                </div>
-                <h1>Hi! I'm Ethan Liu</h1>
-                <p class="subtitle">Computer Engineering</p>
-                <p class="university">The Pennsylvania State University</p>
-            </div>
-            
-            <div class="contact-info">
-                <div class="contact-item">
-                    <i class="fas fa-file-pdf"></i>
-                    <a href="/mainassets/docs/resume.pdf" target="_blank">Resume</a>
-                </div>
-                <div class="contact-item">
-                    <i class="fas fa-envelope"></i>
-                    <a href="mailto:ethan.yq.liu@gmail.com">ethan.yq.liu@gmail.com</a>
-                </div>
-                <div class="contact-item">
-                    <i class="fab fa-linkedin"></i>
-                    <a href="https://www.linkedin.com/in/ethan-yq-liu" target="_blank">LinkedIn Profile</a>
-                </div>
-            </div>
+    <!-- Animated Background Particles -->
+    <canvas id="particles-canvas"></canvas>
 
-            <div class="about-section">
-                <h2>About Me</h2>
-                <p>
-                    I'm a Computer Engineering student at Penn State University with a passion for embedded systems, 
-                    full-stack development, and gaming. I'm currently interning at Iridium, where I develop software 
-                    to optimize satellite operations.
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                <div class="logo-icon">
+                    <i class="fas fa-code"></i>
+                </div>
+                <span class="logo-text">Ethan Liu</span>
+            </a>
+            <div class="nav-links" id="nav-links">
+                <a href="#about" class="nav-link" data-section="about">
+                    <span class="nav-link-text">About</span>
+                    <span class="nav-link-indicator"></span>
+                </a>
+                <a href="#experience" class="nav-link" data-section="experience">
+                    <span class="nav-link-text">Experience</span>
+                    <span class="nav-link-indicator"></span>
+                </a>
+                <a href="#projects" class="nav-link" data-section="projects">
+                    <span class="nav-link-text">Projects</span>
+                    <span class="nav-link-indicator"></span>
+                </a>
+                <a href="#contact" class="nav-link" data-section="contact">
+                    <span class="nav-link-text">Contact</span>
+                    <span class="nav-link-indicator"></span>
+                </a>
+                <a href="/game/" class="nav-link nav-link-games">
+                    <i class="fas fa-gamepad"></i>
+                    <span>Games</span>
+                </a>
+                <button id="dark-mode-toggle" class="nav-link dark-mode-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+                    <i id="dark-mode-icon" class="fas fa-moon"></i>
+                </button>
+            </div>
+            <button class="nav-mobile-toggle" id="nav-mobile-toggle" aria-label="Toggle menu" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="hero-background">
+            <div class="gradient-orb orb-1"></div>
+            <div class="gradient-orb orb-2"></div>
+            <div class="gradient-orb orb-3"></div>
+        </div>
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title fade-in-up">
+                    <span class="gradient-text">Hi! I'm</span>
+                    <span class="gradient-text name-highlight">Ethan Liu</span>
+                </h1>
+                <div class="hero-subtitle-wrapper fade-in-up" style="animation-delay: 0.1s">
+                    <p class="hero-subtitle">Computer Engineering Student</p>
+                    <div class="typing-indicator">
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                    </div>
+                </div>
+                <p class="hero-location fade-in-up" style="animation-delay: 0.2s">
+                    <i class="fas fa-university"></i>
+                    <span>The Pennsylvania State University • Expected May 2026</span>
                 </p>
-                <p>
-                    I'm always seeking opportunities to create reliable, scalable solutions that make technology work 
-                    smarter.
-                    <br><br>
-                    <em>Remember, you are amazing and loved! Click some circles for fun!</em>
-                </p>
+                <div class="hero-buttons fade-in-up" style="animation-delay: 0.3s">
+                    <a href="/assets/docs/resume.pdf" target="_blank" class="btn btn-primary btn-glow">
+                        <span class="btn-content">
+                            <i class="fas fa-file-pdf"></i>
+                            <span>View Resume</span>
+                        </span>
+                        <div class="btn-shine"></div>
+                    </a>
+                    <a href="#contact" class="btn btn-secondary">
+                        <span class="btn-content">
+                            <i class="fas fa-envelope"></i>
+                            <span>Get in Touch</span>
+                        </span>
+                    </a>
+                </div>
+                <div class="hero-scroll-indicator fade-in-up" style="animation-delay: 0.4s">
+                    <span>Scroll to explore</span>
+                    <div class="scroll-arrow">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <div class="background-animation" id="bg"></div>
-    <div id="scoreboard" class="scoreboard" hidden>
-        <span class="label">Combo</span>
-        <span id="score-current">0</span>
-        <span class="dot">•</span>
-        <span class="label">Best</span>
-        <span id="score-best">0</span>
-    </div>
-    <script defer src="/mainassets/js/main.js"></script>
+    <!-- About Section -->
+    <section id="about" class="section">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-number">01</div>
+                <h2 class="section-title">
+                    <span class="title-line"></span>
+                    <span class="title-text">
+                        <i class="fas fa-user"></i>
+                        About Me
+                    </span>
+                    <span class="title-line"></span>
+                </h2>
+            </div>
+            <div class="glass-card card-hover">
+                <div class="about-content">
+                    <div class="about-intro">
+                        <p class="about-text highlight-text">
+                            I'm a Computer Engineering student at Penn State University with a passion for 
+                            <span class="text-gradient">embedded systems</span>, 
+                            <span class="text-gradient">full-stack development</span>, and 
+                            <span class="text-gradient">gaming</span>.
+                        </p>
+                        <p class="about-text">
+                            Currently interning at <strong>Iridium</strong> as a Satellite Operations Intern, where I design and implement automated testing solutions and develop tools to optimize satellite operations. 
+                            I'm always seeking opportunities to create reliable, scalable solutions that make technology work smarter.
+                        </p>
+                    </div>
+                    <div class="skills-grid">
+                        <div class="skill-category skill-card">
+                            <div class="skill-header">
+                                <div class="skill-icon">
+                                    <i class="fas fa-microchip"></i>
+                                </div>
+                                <h3 class="skill-category-title">Embedded Systems</h3>
+                            </div>
+                            <div class="skill-tags">
+                                <span class="skill-tag">C/C++</span>
+                                <span class="skill-tag">C</span>
+                                <span class="skill-tag">Verilog</span>
+                                <span class="skill-tag">Assembly</span>
+                                <span class="skill-tag">Arduino</span>
+                            </div>
+                        </div>
+                        <div class="skill-category skill-card">
+                            <div class="skill-header">
+                                <div class="skill-icon">
+                                    <i class="fas fa-code"></i>
+                                </div>
+                                <h3 class="skill-category-title">Programming Languages</h3>
+                            </div>
+                            <div class="skill-tags">
+                                <span class="skill-tag">Java</span>
+                                <span class="skill-tag">Python</span>
+                                <span class="skill-tag">JavaScript</span>
+                                <span class="skill-tag">C#</span>
+                                <span class="skill-tag">Rust</span>
+                                <span class="skill-tag">SQL</span>
+                            </div>
+                        </div>
+                        <div class="skill-category skill-card">
+                            <div class="skill-header">
+                                <div class="skill-icon">
+                                    <i class="fas fa-tools"></i>
+                                </div>
+                                <h3 class="skill-category-title">Tools & Technologies</h3>
+                            </div>
+                            <div class="skill-tags">
+                                <span class="skill-tag">Git</span>
+                                <span class="skill-tag">Linux</span>
+                                <span class="skill-tag">Xilinx Vivado</span>
+                                <span class="skill-tag">NI LabVIEW</span>
+                                <span class="skill-tag">Azure</span>
+                                <span class="skill-tag">Flask</span>
+                                <span class="skill-tag">React Native</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Experience Section -->
+    <section id="experience" class="section section-alt">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-number">02</div>
+                <h2 class="section-title">
+                    <span class="title-line"></span>
+                    <span class="title-text">
+                        <i class="fas fa-briefcase"></i>
+                        Experience
+                    </span>
+                    <span class="title-line"></span>
+                </h2>
+            </div>
+            <div class="experience-timeline">
+                <div class="timeline-item">
+                    <div class="timeline-marker">
+                        <div class="marker-pulse"></div>
+                    </div>
+                    <div class="timeline-content glass-card card-hover">
+                        <div class="timeline-badge">Current</div>
+                        <div class="timeline-header">
+                            <div>
+                                <h3 class="timeline-title">Satellite Operations Intern</h3>
+                                <span class="timeline-company">
+                                    <i class="fas fa-building"></i>
+                                    Iridium Communications
+                                </span>
+                            </div>
+                        </div>
+                        <span class="timeline-date">
+                            <i class="fas fa-calendar"></i>
+                            <span>August 2025 – Present</span>
+                        </span>
+                        <ul class="timeline-description">
+                            <li>
+                                <i class="fas fa-check-circle"></i>
+                                Designed and implemented automated unit tests for company websites using Selenium, reducing manual verification time and increasing overall test coverage for operational workflows
+                            </li>
+                        </ul>
+                        <div class="timeline-footer" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--glass-border);">
+                            <a href="/experience.html" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                                <span>View All Experience</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Projects Section -->
+    <section id="projects" class="section">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-number">03</div>
+                <h2 class="section-title">
+                    <span class="title-line"></span>
+                    <span class="title-text">
+                        <i class="fas fa-project-diagram"></i>
+                        Projects
+                    </span>
+                    <span class="title-line"></span>
+                </h2>
+            </div>
+            <div class="projects-grid">
+                <div class="project-card glass-card card-hover">
+                    <div class="project-header">
+                        <div class="project-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div class="project-badge">Featured</div>
+                    </div>
+                    <h3 class="project-title">FreshGuard</h3>
+                    <p class="project-description">
+                        Smart fridge inventory tracker with barcode scanning, OCR, and expiration alerts. 
+                        Built with FastAPI, SQLite, and modern web technologies.
+                    </p>
+                    <div class="project-tech">
+                        <span class="tech-tag">Python</span>
+                        <span class="tech-tag">FastAPI</span>
+                        <span class="tech-tag">SQLite</span>
+                        <span class="tech-tag">HTML/CSS</span>
+                    </div>
+                    <div class="project-footer">
+                        <div class="project-stats">
+                            <span><i class="fas fa-code"></i> Full-Stack</span>
+                            <span><i class="fas fa-star"></i> Featured</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="project-card glass-card card-hover">
+                    <div class="project-header">
+                        <div class="project-icon">
+                            <i class="fas fa-gamepad"></i>
+                        </div>
+                        <div class="project-badge">Interactive</div>
+                    </div>
+                    <h3 class="project-title">Web Games Collection</h3>
+                    <p class="project-description">
+                        A collection of interactive web games including Tetris and Daily Guessr. 
+                        Built with vanilla JavaScript and modern CSS animations.
+                    </p>
+                    <div class="project-tech">
+                        <span class="tech-tag">JavaScript</span>
+                        <span class="tech-tag">HTML5</span>
+                        <span class="tech-tag">CSS3</span>
+                    </div>
+                    <div class="project-footer">
+                        <a href="/game/" class="project-link">
+                            <span>Play Games</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 2rem;">
+                <a href="/projects.html" class="btn btn-secondary">
+                    <span class="btn-content">
+                        <span>View All Projects</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="section section-alt">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-number">04</div>
+                <h2 class="section-title">
+                    <span class="title-line"></span>
+                    <span class="title-text">
+                        <i class="fas fa-envelope"></i>
+                        Get In Touch
+                    </span>
+                    <span class="title-line"></span>
+                </h2>
+            </div>
+            <div class="contact-grid">
+                <a href="mailto:ethan.yq.liu@gmail.com" class="contact-item glass-card card-hover">
+                    <div class="contact-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div class="contact-info">
+                        <h3 class="contact-label">Email</h3>
+                        <p class="contact-value">ethan.yq.liu@gmail.com</p>
+                    </div>
+                    <div class="contact-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </a>
+                <a href="https://www.linkedin.com/in/ethan-yq-liu" target="_blank" class="contact-item glass-card card-hover">
+                    <div class="contact-icon">
+                        <i class="fab fa-linkedin"></i>
+                    </div>
+                    <div class="contact-info">
+                        <h3 class="contact-label">LinkedIn</h3>
+                        <p class="contact-value">Connect with me</p>
+                    </div>
+                    <div class="contact-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </a>
+                <a href="/assets/docs/resume.pdf" target="_blank" class="contact-item glass-card card-hover">
+                    <div class="contact-icon">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <div class="contact-info">
+                        <h3 class="contact-label">Resume</h3>
+                        <p class="contact-value">Download PDF</p>
+                    </div>
+                    <div class="contact-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <p class="footer-text">
+                    &copy; 2025 Ethan Liu. Built with 
+                    <span class="heart-icon"><i class="fas fa-heart"></i></span> 
+                    and modern web technologies.
+                </p>
+                <div class="footer-links">
+                    <a href="#hero" class="footer-link">Back to top</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/assets/js/main.js"></script>
 </body>
 </html>

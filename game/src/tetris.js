@@ -1244,14 +1244,20 @@
     updateOverlay() {
       let text = null;
       let opacity = 1;
+      let state = null;
       
       if (this.paused) {
         text = 'Paused';
+        state = 'paused';
       } else if (this.restartHoldStart !== null) {
         const holdTime = Date.now() - this.restartHoldStart;
         opacity = Math.min(holdTime / this.restartHoldDuration, 1);
-        text = 'Restarting...';
+        text = 'Restarting';
+        state = 'restarting';
       }
+      
+      // Remove all state classes
+      overlayEl.classList.remove('paused', 'restarting');
       
       if (text) {
         overlayEl.innerHTML = `
@@ -1259,6 +1265,9 @@
           <div class="overlay-content" style="opacity: ${opacity}">${text}</div>
         `;
         overlayEl.classList.add('visible');
+        if (state) {
+          overlayEl.classList.add(state);
+        }
       } else {
         overlayEl.classList.remove('visible');
         overlayEl.innerHTML = '';
