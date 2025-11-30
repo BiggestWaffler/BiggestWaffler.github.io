@@ -89,11 +89,15 @@ class ParticleSystem {
                     this.ctx.beginPath();
                     this.ctx.moveTo(particle.x, particle.y);
                     this.ctx.lineTo(p2.x, p2.y);
-                    this.ctx.strokeStyle = particle.color;
-                    // Make connectors more visible in light mode
-                    const baseOpacity = isDark ? 0.2 : 0.4;
+                    // Use a more visible color for connections
+                    const connectionColor = isDark 
+                        ? 'rgba(102, 126, 234, 1.0)'  // Brighter in dark mode
+                        : 'rgba(102, 126, 234, 0.8)'; // Darker/more visible in light mode
+                    this.ctx.strokeStyle = connectionColor;
+                    // Make connectors brighter in dark mode, darker in light mode
+                    const baseOpacity = isDark ? 0.7 : 0.65;
                     this.ctx.globalAlpha = (1 - distance / 150) * baseOpacity;
-                    this.ctx.lineWidth = isDark ? 1 : 1.5;
+                    this.ctx.lineWidth = isDark ? 1.5 : 1.5;
                     this.ctx.stroke();
                 }
             });
