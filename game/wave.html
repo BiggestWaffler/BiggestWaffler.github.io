@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wave Mode - Ethan Liu</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/game/styles/wave.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="wrap">
+        <header class="topbar">
+            <h1>Wave Mode</h1>
+            <a href="/game/" class="home" style="text-decoration: none;">← Back</a>
+        </header>
+        <div id="menu" class="menu">
+            <div class="menu-content">
+                <h2>Select Difficulty</h2>
+                <div class="difficulty-buttons">
+                    <button class="difficulty-btn" data-difficulty="easy">Easy</button>
+                    <button class="difficulty-btn" data-difficulty="medium">Medium</button>
+                    <button class="difficulty-btn" data-difficulty="hard">Hard</button>
+                    <button class="difficulty-btn" data-difficulty="extreme">Extreme</button>
+                </div>
+                <h2>Select Speed</h2>
+                <div class="speed-buttons">
+                    <button class="speed-btn" data-speed="slow">Slow</button>
+                    <button class="speed-btn" data-speed="normal">Normal</button>
+                    <button class="speed-btn" data-speed="fast">Fast</button>
+                    <button class="speed-btn" data-speed="ultra">Ultra</button>
+                </div>
+                <div class="instructions">
+                    <h3>How to Play</h3>
+                    <p><strong>Hold</strong> any key or click to make the wave <strong>ascend</strong> at 45°</p>
+                    <p><strong>Release</strong> to make the wave <strong>descend</strong> at 45°</p>
+                    <p>Avoid hitting the slopes and walls!</p>
+                </div>
+                <button class="start-btn">Start Game</button>
+            </div>
+        </div>
+        <main class="game-container" style="display: none;">
+            <div class="stats">
+                <div>Distance: <span id="distance">0</span></div>
+                <div>Score: <span id="score">0</span></div>
+                <div>Best: <span id="best">0</span></div>
+            </div>
+            <div class="canvas-wrapper">
+                <canvas id="game" width="800" height="600"></canvas>
+                <div class="overlay" id="overlay"></div>
+            </div>
+            <div class="controls-hint">
+                <p>Hold any key or click to ascend • Release to descend</p>
+            </div>
+        </main>
+    </div>
+    <script src="/game/src/wave.js"></script>
+</body>
+</html>
+
