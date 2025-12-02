@@ -134,26 +134,31 @@
 
   // NEW FUNCTION: Creates a safe funnel at the start
   function createStartingBorder() {
-    const startLength = 600; // How long the starting straight path is
-    const tunnelHeight = 200; // Height of the safe zone
+    const settings = DIFFICULTY_SETTINGS[difficulty];
+    const startLength = 1000; // Longer start
     const centerY = canvas.height / 2;
+    const gap = settings.gap;
     
     // Ceiling Block (A flat slope)
     obstacles.push({
-      x: -100, // Start slightly off-screen left
-      y: centerY - tunnelHeight,
+      x: -500, // Start further back
+      y: centerY - gap / 2,
       length: startLength,
       angle: 0, // Flat
-      type: 'slope'
+      type: 'slope',
+      isFloor: false,
+      isSafe: true
     });
     
     // Floor Block (A flat slope)
     obstacles.push({
-      x: -100, 
-      y: centerY + tunnelHeight,
+      x: -500, 
+      y: centerY + gap / 2,
       length: startLength,
       angle: 0, // Flat
-      type: 'slope'
+      type: 'slope',
+      isFloor: true,
+      isSafe: true
     });
   }
 
@@ -162,7 +167,6 @@
 
   function generateObstacles() {
     const settings = DIFFICULTY_SETTINGS[difficulty];
-    const slopeAngle = Math.PI / 4; // 45 degrees
     
     // 1. Find start point (connect to last obstacle)
     let lastPathX = cameraX + canvas.width;
@@ -171,12 +175,6 @@
     // Use the end of the last obstacle to determine start position
     if (obstacles.length > 0) {
       // Find the furthest obstacle to connect to
-      let maxEnd = 0;
-      let connector = null;
-      
-      // We look at the last few obstacles to find the connection point
-      // We specifically want the "Center line"
-      // Simplification: Grab the last 'floor' obstacle and subtract half the gap
       const lastObs = obstacles[obstacles.length - 1];
       
       const endX = lastObs.x + lastObs.length * Math.cos(lastObs.angle);
@@ -184,12 +182,11 @@
       
       lastPathX = endX;
       
-      // Re-calculate center based on whether last obs was Top or Bottom
-      // Heuristic: If Y is large, it's floor. If Y is small, it's ceiling.
-      if (lastObs.y > canvas.height / 2) {
-         lastPathY = endY - (settings.gap / 2); // It was floor, go up
+      // Robust center finding using isFloor property
+      if (lastObs.isFloor) {
+         lastPathY = endY - (settings.gap / 2); // It was floor, go up to center
       } else {
-         lastPathY = endY + (settings.gap / 2); // It was ceiling, go down
+         lastPathY = endY + (settings.gap / 2); // It was ceiling, go down to center
       }
     }
 
@@ -198,6 +195,9 @@
 
     // Generate loop
     while (lastPathX < cameraX + canvas.width * 3) {
+      
+      // RANDOMIZE SLOPE ANGLE for this segment
+      const slopeAngle = Math.PI / 4; // Fixed 45 degrees
       
       // 2. DECIDE TARGET HEIGHT
       // If we are close to the target, pick a new random one
@@ -220,12 +220,19 @@
 
       if (goingDown) {
         // Bias: Long Down, Short Up
-        downLen = (maxL * 0.8) + Math.random() * (maxL * 0.4); 
-        upLen = minL + Math.random() * (minL * 0.5); // Keep up short
+        // Increase variety while maintaining direction bias
+        downLen = (maxL * 0.5) + Math.random() * (maxL * 0.7); 
+        upLen = minL + Math.random() * (minL * 0.8); // Short up
       } else {
         // Bias: Long Up, Short Down
-        upLen = (maxL * 0.8) + Math.random() * (maxL * 0.4);
-        downLen = minL + Math.random() * (minL * 0.5); // Keep down short
+        upLen = (maxL * 0.5) + Math.random() * (maxL * 0.7);
+        downLen = minL + Math.random() * (minL * 0.8); // Short down
+      }
+      
+      // Occasional extreme variance (10% chance)
+      if (Math.random() < 0.1) {
+         if (goingDown) downLen = maxL * 1.5;
+         else upLen = maxL * 1.5;
       }
 
       // 4. GENERATE SEGMENTS (A pair: One UP, One DOWN)
@@ -240,7 +247,8 @@
         y: lastPathY - settings.gap/2,
         length: upLen,
         angle: -slopeAngle, // Up
-        type: 'slope'
+        type: 'slope',
+        isFloor: false
       });
       // Floor
       obstacles.push({
@@ -248,7 +256,8 @@
         y: lastPathY + settings.gap/2,
         length: upLen,
         angle: -slopeAngle, // Up
-        type: 'slope'
+        type: 'slope',
+        isFloor: true
       });
       
       // Update Center Position
@@ -262,7 +271,8 @@
         y: lastPathY - settings.gap/2,
         length: downLen,
         angle: slopeAngle, // Down
-        type: 'slope'
+        type: 'slope',
+        isFloor: false
       });
       // Floor
       obstacles.push({
@@ -270,9 +280,10 @@
         y: lastPathY + settings.gap/2,
         length: downLen,
         angle: slopeAngle, // Down
-        type: 'slope'
+        type: 'slope',
+        isFloor: true
       });
-
+      
       // Update Center Position
       lastPathX += downLen * Math.cos(slopeAngle);
       lastPathY += downLen * Math.sin(slopeAngle);
@@ -463,7 +474,21 @@
         // Check collision (slope thickness + wave radius)
         const slopeThickness = 10;
         if (distance < waveRadius + slopeThickness) {
-          return true;
+          if (obs.isSafe) {
+             // Push player away from wall without killing
+             // Since safe walls are flat (angle 0) in start tunnel:
+             // Floor is below (y > centerY), Ceiling is above (y < centerY)
+             // Just clamp Y position to be outside the wall
+             if (obs.isFloor) {
+                 // Hit floor (bottom wall) -> push up
+                 waveY = Math.min(waveY, obs.y - (waveRadius + slopeThickness + 1));
+             } else {
+                 // Hit ceiling (top wall) -> push down
+                 waveY = Math.max(waveY, obs.y + (waveRadius + slopeThickness + 1));
+             }
+          } else {
+             return true;
+          }
         }
       }
       // No spikes - only slopes
@@ -628,6 +653,7 @@
     waveY = canvas.height / 2;
     obstacles = [];
     isHolding = false;
+    createStartingBorder();
     generateObstacles();
     updateUI();
   }
