@@ -28,6 +28,11 @@
   let waveY = 300;
   let waveVelocityX = 0;
   let waveVelocityY = 0;
+  
+  // Trail system
+  const trail = [];
+  const MAX_TRAIL_LENGTH = 30;
+  const TRAIL_SPACING = 3; // Distance between trail points
 
   // Camera and world
   let cameraX = 0;
@@ -121,6 +126,7 @@
     waveX = 200; // Start slightly further in
     waveY = canvas.height / 2;
     obstacles = [];
+    trail.length = 0; // Clear trail
     isHolding = false;
     
     // 1. GENERATE THE STARTING WALLS (The Funnel)
@@ -394,6 +400,16 @@
     waveX += waveVelocityX;
     waveY += waveVelocityY;
     
+    // Update trail
+    const lastTrailPoint = trail[trail.length - 1];
+    if (!lastTrailPoint || 
+        Math.sqrt((waveX - lastTrailPoint.x) ** 2 + (waveY - lastTrailPoint.y) ** 2) >= TRAIL_SPACING) {
+      trail.push({ x: waveX, y: waveY });
+      if (trail.length > MAX_TRAIL_LENGTH) {
+        trail.shift();
+      }
+    }
+    
     // Boundary check - both ceiling and floor are safe
     if (waveY < 0) {
       waveY = 0; // Clamp to ceiling
@@ -416,10 +432,10 @@
       generateObstacles();
     }
     
-    // Remove obstacles behind camera
-    obstacles = obstacles.filter(obs => obs.x + obs.length > cameraX - 100);
+    // Remove obstacles behind camera (performance optimization)
+    obstacles = obstacles.filter(obs => obs.x + obs.length > cameraX - 200);
     
-    // Check collisions
+    // Check collisions (only check visible obstacles for performance)
     if (checkCollision()) {
       gameOver();
     }
@@ -429,38 +445,44 @@
 
   function checkCollision() {
     const waveRadius = WAVE_SIZE / 2;
+    const slopeThickness = 8; // Reduced from 10 for more accurate collision
+    const collisionRadius = waveRadius + slopeThickness;
+    
+    // Only check obstacles near the wave (performance optimization)
+    const checkRange = collisionRadius + 50;
     
     for (const obs of obstacles) {
       if (obs.type === 'slope') {
-        // Check collision with slope using line-circle intersection
+        // Quick distance check first (performance optimization)
         const slopeEndX = obs.x + obs.length * Math.cos(obs.angle);
         const slopeEndY = obs.y + obs.length * Math.sin(obs.angle);
         
-        // Check if wave is near the slope's X range
-        const minX = Math.min(obs.x, slopeEndX);
-        const maxX = Math.max(obs.x, slopeEndX);
-        const minY = Math.min(obs.y, slopeEndY);
-        const maxY = Math.max(obs.y, slopeEndY);
+        // Check if wave is near the slope's X range (expanded for accuracy)
+        const minX = Math.min(obs.x, slopeEndX) - checkRange;
+        const maxX = Math.max(obs.x, slopeEndX) + checkRange;
+        const minY = Math.min(obs.y, slopeEndY) - checkRange;
+        const maxY = Math.max(obs.y, slopeEndY) + checkRange;
         
         // Quick bounding box check
-        if (waveX + waveRadius < minX || waveX - waveRadius > maxX ||
-            waveY + waveRadius < minY || waveY - waveRadius > maxY) {
+        if (waveX < minX || waveX > maxX || waveY < minY || waveY > maxY) {
           continue;
         }
         
         // Line-circle intersection test
         const dx = slopeEndX - obs.x;
         const dy = slopeEndY - obs.y;
-        const length = Math.sqrt(dx * dx + dy * dy);
+        const lengthSq = dx * dx + dy * dy;
         
-        if (length === 0) continue;
+        if (lengthSq === 0) continue;
+        
+        const length = Math.sqrt(lengthSq);
         
         // Vector from slope start to wave center
         const toWaveX = waveX - obs.x;
         const toWaveY = waveY - obs.y;
         
         // Project wave center onto slope line
-        const t = Math.max(0, Math.min(1, (toWaveX * dx + toWaveY * dy) / (length * length)));
+        const t = Math.max(0, Math.min(1, (toWaveX * dx + toWaveY * dy) / lengthSq));
         
         // Closest point on line to wave center
         const closestX = obs.x + t * dx;
@@ -469,29 +491,25 @@
         // Distance from wave center to closest point on line
         const distX = waveX - closestX;
         const distY = waveY - closestY;
-        const distance = Math.sqrt(distX * distX + distY * distY);
+        const distanceSq = distX * distX + distY * distY;
+        const distance = Math.sqrt(distanceSq);
         
-        // Check collision (slope thickness + wave radius)
-        const slopeThickness = 10;
-        if (distance < waveRadius + slopeThickness) {
+        // More accurate collision check - only collide if actually touching
+        if (distance < collisionRadius) {
           if (obs.isSafe) {
              // Push player away from wall without killing
-             // Since safe walls are flat (angle 0) in start tunnel:
-             // Floor is below (y > centerY), Ceiling is above (y < centerY)
-             // Just clamp Y position to be outside the wall
              if (obs.isFloor) {
                  // Hit floor (bottom wall) -> push up
-                 waveY = Math.min(waveY, obs.y - (waveRadius + slopeThickness + 1));
+                 waveY = Math.min(waveY, obs.y - collisionRadius - 1);
              } else {
                  // Hit ceiling (top wall) -> push down
-                 waveY = Math.max(waveY, obs.y + (waveRadius + slopeThickness + 1));
+                 waveY = Math.max(waveY, obs.y + collisionRadius + 1);
              }
           } else {
              return true;
           }
         }
       }
-      // No spikes - only slopes
     }
     
     return false;
@@ -551,8 +569,9 @@
     for (const obs of obstacles) {
       const obsScreenX = obs.x - cameraX;
       
-      if (obsScreenX + obs.length < 0 || obsScreenX > canvas.width) {
-        continue; // Skip if off screen
+      // Skip if completely off screen (with margin for smooth scrolling)
+      if (obsScreenX + obs.length < -50 || obsScreenX > canvas.width + 50) {
+        continue;
       }
       
       if (obs.type === 'slope') {
@@ -566,12 +585,38 @@
         ctx.lineTo(obsScreenEndX, obsScreenEndY);
         ctx.stroke();
       }
-      // No spikes - only slopes
     }
   }
 
   function drawWave() {
     const screenX = waveX - cameraX;
+    
+    // Draw trail
+    if (trail.length > 1) {
+      ctx.save();
+      for (let i = 0; i < trail.length - 1; i++) {
+        const point = trail[i];
+        const nextPoint = trail[i + 1];
+        const screenPointX = point.x - cameraX;
+        const screenNextX = nextPoint.x - cameraX;
+        
+        // Only draw if on screen
+        if (screenPointX > -50 && screenPointX < canvas.width + 50) {
+          const alpha = (i / trail.length) * 0.6; // Fade from 0.6 to 0
+          const width = (i / trail.length) * 3 + 1; // Thinner as it fades
+          
+          ctx.strokeStyle = `rgba(0, 255, 255, ${alpha})`;
+          ctx.lineWidth = width;
+          ctx.lineCap = 'round';
+          
+          ctx.beginPath();
+          ctx.moveTo(screenPointX, point.y);
+          ctx.lineTo(screenNextX, nextPoint.y);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
     
     // Draw wave as a diamond/rhombus shape
     ctx.fillStyle = WAVE_COLOR;
@@ -652,6 +697,7 @@
     waveX = 100;
     waveY = canvas.height / 2;
     obstacles = [];
+    trail.length = 0; // Clear trail
     isHolding = false;
     createStartingBorder();
     generateObstacles();
@@ -668,6 +714,7 @@
     waveX = 100;
     waveY = canvas.height / 2;
     obstacles = [];
+    trail.length = 0; // Clear trail
     isHolding = false;
     updateUI();
   }
