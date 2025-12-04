@@ -213,46 +213,83 @@
         currentTargetY = margin + Math.random() * (canvas.height - margin * 2);
       }
       
-      // 3. DETERMINE BIAS (How to get to target)
-      // If we need to go DOWN (Target > Current), Down slopes should be longer
-      // If we need to go UP (Target < Current), Up slopes should be longer
-      const goingDown = currentTargetY > lastPathY;
+      // 3. DETERMINE SLOPE SIZE
+      // 5 different sizes from 1/2 screen size down to 1/7 screen size
+      // Equal probabilities for each size
+      const r = Math.random();
+      const h = canvas.height;
+      let baseHeight = 0;
       
-      // Base lengths from difficulty settings
-      const minL = settings.minLen;
-      const maxL = settings.maxLen;
-      
-      let upLen, downLen;
-
-      if (goingDown) {
-        // Bias: Long Down, Short Up
-        // Increase variety while maintaining direction bias
-        downLen = (maxL * 0.5) + Math.random() * (maxL * 0.7); 
-        upLen = minL + Math.random() * (minL * 0.8); // Short up
+      if (r < 0.2) {
+         baseHeight = h / 2; // 1/2 screen
+      } else if (r < 0.4) {
+         baseHeight = h / 3; // 1/3 screen
+      } else if (r < 0.6) {
+         baseHeight = h / 4; // 1/4 screen
+      } else if (r < 0.8) {
+         baseHeight = h / 5; // 1/5 screen
       } else {
-        // Bias: Long Up, Short Down
-        upLen = (maxL * 0.5) + Math.random() * (maxL * 0.7);
-        downLen = minL + Math.random() * (minL * 0.8); // Short down
+         baseHeight = h / 7; // 1/7 screen
+      }
+
+      // Convert vertical height to hypotenuse length for 45 degree slope
+      let segmentLen = baseHeight * Math.SQRT2;
+      
+      // 4. CHECK FOR IMPOSSIBLE GAPS
+      // Since slopes are 45 degrees, vertical change equals horizontal change
+      // If we are near the bottom and force a downward slope, we might push floor off screen too much
+      // or if we are near top and go up.
+      
+      // Calculate projected Y after first segment
+      const goingDown = currentTargetY > lastPathY;
+      let startUp = !goingDown; 
+      
+      // Calculate expected Y position after movement
+      // For 45 deg slope: deltaY = segmentLen * sin(45) = segmentLen / sqrt(2) = baseHeight
+      const deltaY = baseHeight;
+      
+      // Calculate the floor Y position (center + gap/2)
+      const currentFloorY = lastPathY + settings.gap/2;
+      const currentCeilingY = lastPathY - settings.gap/2;
+      
+      // If we are going down, check if floor will go too deep
+      if (!startUp) { // Going Down
+          const projectedFloorY = currentFloorY + deltaY;
+          // If floor goes way below screen, force Up instead
+          if (projectedFloorY > canvas.height + 100) {
+              startUp = true;
+          }
+      } else { // Going Up
+          const projectedCeilingY = currentCeilingY - deltaY;
+          // If ceiling goes way above screen, force Down instead
+          if (projectedCeilingY < -100) {
+              startUp = false;
+          }
+      }
+
+      // 5. SYMMETRY CHECK
+      // 25% chance to NOT mirror (single slope)
+      // 75% chance to mirror (Up+Down or Down+Up)
+      const useMirror = Math.random() > 0.25;
+      
+      let firstAngle, secondAngle; 
+      
+      // Setup angles based on starting direction
+      if (startUp) {
+        firstAngle = -slopeAngle; // Up (/)
+        secondAngle = slopeAngle; // Down (\)
+      } else {
+        firstAngle = slopeAngle;  // Down (\)
+        secondAngle = -slopeAngle;// Up (/)
       }
       
-      // Occasional extreme variance (10% chance)
-      if (Math.random() < 0.1) {
-         if (goingDown) downLen = maxL * 1.5;
-         else upLen = maxL * 1.5;
-      }
-
-      // 4. GENERATE SEGMENTS (A pair: One UP, One DOWN)
-      // We always generate a V shape or Inverted V. 
-      // To ensure flow, let's just do UP-slope then DOWN-slope sequence 
-      // relative to the center path.
-
-      // --- STAGE 1: GOING UP (/) ---
+      // --- SEGMENT 1 ---
       // Ceiling
       obstacles.push({
         x: lastPathX,
         y: lastPathY - settings.gap/2,
-        length: upLen,
-        angle: -slopeAngle, // Up
+        length: segmentLen,
+        angle: firstAngle,
         type: 'slope',
         isFloor: false
       });
@@ -260,44 +297,49 @@
       obstacles.push({
         x: lastPathX,
         y: lastPathY + settings.gap/2,
-        length: upLen,
-        angle: -slopeAngle, // Up
+        length: segmentLen,
+        angle: firstAngle,
         type: 'slope',
         isFloor: true
       });
       
       // Update Center Position
-      lastPathX += upLen * Math.cos(-slopeAngle);
-      lastPathY += upLen * Math.sin(-slopeAngle);
+      lastPathX += segmentLen * Math.cos(firstAngle);
+      lastPathY += segmentLen * Math.sin(firstAngle);
 
-      // --- STAGE 2: GOING DOWN (\) ---
-      // Ceiling
-      obstacles.push({
-        x: lastPathX,
-        y: lastPathY - settings.gap/2,
-        length: downLen,
-        angle: slopeAngle, // Down
-        type: 'slope',
-        isFloor: false
-      });
-      // Floor
-      obstacles.push({
-        x: lastPathX,
-        y: lastPathY + settings.gap/2,
-        length: downLen,
-        angle: slopeAngle, // Down
-        type: 'slope',
-        isFloor: true
-      });
-      
-      // Update Center Position
-      lastPathX += downLen * Math.cos(slopeAngle);
-      lastPathY += downLen * Math.sin(slopeAngle);
+      // --- SEGMENT 2 (Conditional Mirror) ---
+      if (useMirror) {
+        // Ceiling
+        obstacles.push({
+          x: lastPathX,
+          y: lastPathY - settings.gap/2,
+          length: segmentLen,
+          angle: secondAngle,
+          type: 'slope',
+          isFloor: false
+        });
+        // Floor
+        obstacles.push({
+          x: lastPathX,
+          y: lastPathY + settings.gap/2,
+          length: segmentLen,
+          angle: secondAngle,
+          type: 'slope',
+          isFloor: true
+        });
+        
+        // Update Center Position
+        lastPathX += segmentLen * Math.cos(secondAngle);
+        lastPathY += segmentLen * Math.sin(secondAngle);
+      }
       
       // Safety Clamp: If random gen pushes us off screen, reset to center
-      if (lastPathY < 50 || lastPathY > canvas.height - 50) {
-        lastPathY = canvas.height / 2;
-        currentTargetY = canvas.height / 2;
+      // But allow going off-screen slightly (no hard clamp within the loop)
+      // Just guide it back if it drifts too far for too long
+      if (lastPathY < -200 || lastPathY > canvas.height + 200) {
+         // If way off screen, force reset for next segment
+         lastPathY = canvas.height / 2;
+         currentTargetY = canvas.height / 2;
       }
     }
     
@@ -566,6 +608,9 @@
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     
+    // Optimization: Batch draw calls
+    ctx.beginPath();
+    
     for (const obs of obstacles) {
       const obsScreenX = obs.x - cameraX;
       
@@ -580,12 +625,12 @@
         const obsScreenEndX = slopeEndX - cameraX;
         const obsScreenEndY = slopeEndY;
         
-        ctx.beginPath();
         ctx.moveTo(obsScreenX, obs.y);
         ctx.lineTo(obsScreenEndX, obsScreenEndY);
-        ctx.stroke();
       }
     }
+    
+    ctx.stroke();
   }
 
   function drawWave() {
