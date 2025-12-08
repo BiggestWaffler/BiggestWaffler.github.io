@@ -76,6 +76,21 @@
     ultra: 2.0
   };
 
+  // Score multipliers
+  const DIFFICULTY_SCORE_MULTIPLIERS = {
+    easy: 1,
+    medium: 1.5,
+    hard: 2,
+    extreme: 3
+  };
+
+  const SPEED_SCORE_MULTIPLIERS = {
+    slow: 0.8,
+    normal: 1,
+    fast: 1.5,
+    ultra: 2
+  };
+
   // Load best score
   try {
     const saved = localStorage.getItem('wave.best');
@@ -467,7 +482,11 @@
     
     // Update distance and score
     distance = Math.floor(waveX / 10);
-    score = distance;
+    
+    // Calculate score based on multipliers
+    const diffMult = DIFFICULTY_SCORE_MULTIPLIERS[difficulty];
+    const speedScoreMult = SPEED_SCORE_MULTIPLIERS[speed];
+    score = Math.floor(distance * diffMult * speedScoreMult);
     
     // Generate more obstacles if needed
     if (cameraX + canvas.width > worldWidth - canvas.width) {
