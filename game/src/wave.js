@@ -65,6 +65,11 @@
       gap: 100,           // Very tight
       minLen: 40,
       maxLen: 90,
+    },
+    impossible: {
+      gap: 80,            // Insanely tight
+      minLen: 30,
+      maxLen: 70,
     }
   };
 
@@ -73,7 +78,8 @@
     slow: 0.7,
     normal: 1.0,
     fast: 1.5,
-    ultra: 2.0
+    ultra: 2.0,
+    nightmare: 2.5
   };
 
   // Score multipliers
@@ -81,14 +87,16 @@
     easy: 1,
     medium: 1.5,
     hard: 2,
-    extreme: 3
+    extreme: 3,
+    impossible: 4
   };
 
   const SPEED_SCORE_MULTIPLIERS = {
     slow: 0.8,
     normal: 1,
     fast: 1.5,
-    ultra: 2
+    ultra: 2,
+    nightmare: 2.5
   };
 
   // Load best score
