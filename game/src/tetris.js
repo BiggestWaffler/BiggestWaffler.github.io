@@ -2,50 +2,20 @@
 // Grid: 10 x 20, canvas cell size inferred from canvas size
 
 (function() {
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-  const holdCanvas = document.getElementById('hold');
-  const hctx = holdCanvas.getContext('2d');
-  
-  // Setup next piece canvases
-  const nextCanvases = [];
-  const nextContexts = [];
-  for (let i = 0; i < 5; i++) {
-    const nextPieceEl = document.querySelectorAll('.next-piece')[i];
-    nextCanvases.push(nextPieceEl);
-    nextContexts.push(nextPieceEl.getContext('2d'));
-  }
-
-  // Store original canvas dimensions
-  const originalCanvasWidth = canvas.width;
-
-  const scoreEl = document.getElementById('score');
-  const linesEl = document.getElementById('lines');
-  const levelEl = document.getElementById('level');
-  const overlayEl = document.getElementById('overlay');
-
+  // Shared Constants
   const COLS = 10; const ROWS = 20;
   
-  // Calculate cell size based on original width
-  const cell = Math.floor(originalCanvasWidth / COLS);
-  // Set canvas display height
-  canvas.height = ROWS * cell;
-
   // Colors per tetromino type
   const COLORS = {
     I: '#64b5f6', J: '#8e99f3', L: '#ffb74d', O: '#ffd54f',
     S: '#81c784', T: '#ce93d8', Z: '#e57373'
   };
 
-  // Handling settings
+  // Handling settings (Shared)
   const SETTINGS = {
-    // Delayed Auto Shift (ms before auto-repeat starts)
     das: 160,
-    // Auto Repeat Rate (ms between repeats); 0 => Instant to wall
     arr: 30,
-    // Soft drop speed (cells per second). Infinity => instant sonic drop
     softDropCps: 20,
-    // Lock delay (ms)
     lockDelay: 1000,
   };
 
@@ -63,10 +33,9 @@
     restart: 'r'
   };
 
-  // Keybind configuration (loaded from localStorage or defaults)
   const KEYBINDS = { ...DEFAULT_KEYBINDS };
 
-  // Load persisted values (excluding lockDelay which is dev-only)
+  // Load persisted values
   (function loadSettings() {
     try {
       const das = localStorage.getItem('tetris.das');
@@ -83,7 +52,6 @@
         }
       }
       
-      // Load keybinds
       const savedKeybinds = localStorage.getItem('tetris.keybinds');
       if (savedKeybinds) {
         try {
@@ -94,7 +62,7 @@
     } catch {}
   })();
 
-  // Tetromino definitions (4x4 matrices)
+  // Tetromino definitions
   const SHAPES = {
     I: [ [0,0,0,0], [1,1,1,1], [0,0,0,0], [0,0,0,0] ],
     J: [ [1,0,0], [1,1,1], [0,0,0] ],
@@ -122,17 +90,14 @@
   }
 
   function rotateCCW(matrix) {
-    // Counter-clockwise rotation (rotate 3 times clockwise)
     return rotate(rotate(rotate(matrix)));
   }
 
   function rotate180(matrix) {
-    // 180-degree rotation (rotate twice)
     return rotate(rotate(matrix));
   }
 
-  // SRS kick tables (dx, dy)
-  // JLSTZ
+  // SRS Kick Tables (Global)
   const KICKS_JLSTZ = {
     '0>1': [ [0,0], [-1,0], [-1,-1], [0,2], [-1,2] ],
     '1>2': [ [0,0], [1,0], [1,1], [0,-2], [1,-2] ],
@@ -144,7 +109,6 @@
     '0>3': [ [0,0], [1,0], [1,-1], [0,2], [1,2] ],
   };
 
-  // I piece kicks
   const KICKS_I = {
     '0>1': [ [0,0], [-2,0], [1,0], [-2,1], [1,-2] ],
     '1>2': [ [0,0], [-1,0], [2,0], [-1,-2], [2,1] ],
@@ -156,15 +120,11 @@
     '0>3': [ [0,0], [-1,0], [2,0], [-1,-2], [2,1] ],
   };
 
-  // O piece: no kicks (origin centered)
   const KICKS_O = {
     '0>1': [ [0,0] ], '1>2': [ [0,0] ], '2>3': [ [0,0] ], '3>0': [ [0,0] ],
     '1>0': [ [0,0] ], '2>1': [ [0,0] ], '3>2': [ [0,0] ], '0>3': [ [0,0] ],
   };
 
-  // 180-degree kick tables (TETR.IO-style)
-  // Keys correspond to orientation transitions: 0>2, 1>3, 2>0, 3>1
-  // JLSTZ 180 kicks
   const KICKS_180_JLSTZ = {
     '0>2': [ [0,0], [1,0], [2,0], [1,1], [2,1], [-1,0], [-2,0], [-1,1], [-2,1], [0,-1], [3,0], [-3,0] ],
     '1>3': [ [0,0], [0,1], [0,2], [-1,1], [-1,2], [0,-1], [0,-2], [-1,-1], [-1,-2], [1,0], [0,3], [0,-3] ],
@@ -172,7 +132,6 @@
     '3>1': [ [0,0], [0,1], [0,2], [1,1], [1,2], [0,-1], [0,-2], [1,-1], [1,-2], [-1,0], [0,3], [0,-3] ],
   };
 
-  // I piece 180 kicks (reordered for orientation)
   const KICKS_180_I = {
     '0>2': [ [0,0], [1,0], [-1,0], [2,0], [-2,0], [0,-1], [0,1], [0,-2], [0,2], [1,-1], [-1,-1], [1,1], [-1,1] ],
     '1>3': [ [0,0], [0,1], [0,-1], [0,2], [0,-2], [1,0], [-1,0], [2,0], [-2,0], [1,-1], [-1,-1], [1,1], [-1,1] ],
@@ -180,7 +139,6 @@
     '3>1': [ [0,0], [0,1], [0,-1], [0,2], [0,-2], [1,0], [-1,0], [2,0], [-2,0], [1,-1], [-1,-1], [1,1], [-1,1] ],
   };
 
-  // O piece 180 kicks (no offset)
   const KICKS_180_O = {
     '0>2': [ [0,0] ], '1>3': [ [0,0] ], '2>0': [ [0,0] ], '3>1': [ [0,0] ],
   };
@@ -199,15 +157,11 @@
       this.bag = [];
       this.refill();
     }
-
     refill() {
       this.bag = shuffleArray([...TYPES]);
     }
-
     draw() {
-      if (this.bag.length === 0) {
-        this.refill();
-      }
+      if (this.bag.length === 0) this.refill();
       return this.bag.pop();
     }
   }
@@ -217,18 +171,63 @@
       this.type = type; this.color = COLORS[type];
       this.shape = SHAPES[type].map(r => r.slice());
       const baseX = ((COLS / 2) | 0) - ((this.shape[0].length / 2) | 0);
-      // Move non-centered pieces (J, L, S, T, Z) one block to the left
       this.x = (type === 'O' || type === 'I') ? baseX : baseX - 1;
-      this.y = -1; // spawn above visible area
-      this.rot = 0; // 0,1,2,3 orientation for SRS
+      this.y = -1; 
+      this.rot = 0;
     }
   }
 
   class Tetris {
-    constructor() {
+    constructor(config = {}) {
+      // Configuration
+      this.config = Object.assign({
+        canvasId: 'game',
+        holdCanvasId: 'hold',
+        nextCanvasClass: 'next-piece', // expects multiple elements if class
+        scoreId: 'score',
+        linesId: 'lines',
+        levelId: 'level',
+        overlayId: 'overlay',
+        isBot: false,
+        botPPS: 1,
+        input: true // bind keyboard
+      }, config);
+
+      // DOM Elements
+      this.canvas = document.getElementById(this.config.canvasId);
+      if (!this.canvas) return; // Fail safe
+      this.ctx = this.canvas.getContext('2d');
+      
+      this.holdCanvas = document.getElementById(this.config.holdCanvasId);
+      this.hctx = this.holdCanvas ? this.holdCanvas.getContext('2d') : null;
+      
+      this.nextCanvases = [];
+      this.nextContexts = [];
+      
+      // Handle next pieces selector
+      if (this.config.nextElements) {
+        this.nextCanvases = this.config.nextElements;
+      } else if (this.config.nextCanvasClass) {
+        this.nextCanvases = Array.from(document.querySelectorAll('.' + this.config.nextCanvasClass));
+      }
+
+      this.nextContexts = this.nextCanvases.map(c => c.getContext('2d'));
+
+      // Calculate cell size
+      const originalCanvasWidth = this.canvas.width;
+      this.cell = Math.floor(originalCanvasWidth / COLS);
+      this.canvas.height = ROWS * this.cell; // Ensure height matches rows
+
+      // UI Elements
+      this.scoreEl = document.getElementById(this.config.scoreId);
+      this.linesEl = document.getElementById(this.config.linesId);
+      this.levelEl = document.getElementById(this.config.levelId);
+      this.overlayEl = document.getElementById(this.config.overlayId);
+
+      // Game State
       this.grid = createMatrix(ROWS, COLS, 0);
       this.score = 0; this.lines = 0; this.level = 1;
-      this.dropInterval = 1000; // ms
+      this.dropInterval = 1000;
       this.acc = 0; this.last = 0; this.paused = false;
       this.bag = new Bag();
       this.current = new Piece(this.bag.draw());
@@ -239,361 +238,308 @@
       this.held = null;
       this.canHold = true;
       this.restartHoldStart = null;
-      this.restartHoldDuration = 1000; // 1 second
-      // Lock delay handling (applies when piece is touching ground)
-      this.lockDelay = SETTINGS.lockDelay; // ms
-      this.groundedSince = null; // timestamp when first touched ground
-      // Input handling state
-      this.moveDir = 0; // -1 left, +1 right, 0 none
+      this.restartHoldDuration = 1000;
+      this.lockDelay = SETTINGS.lockDelay;
+      this.groundedSince = null;
+      
+      // Input State
+      this.moveDir = 0;
       this.dasTimer = null;
       this.arrInterval = null;
       this.softDropping = false;
-      this.softAcc = 0; // accumulator for soft drop speed
-      // Input state
+      this.softAcc = 0;
       this.keysDown = new Set();
-      this.edgePressed = new Set(); // keys newly pressed since last frame
-      this.lastHorizontalPressDir = 0; // -1 left, +1 right based on most recent press
-      // Scoring system state
-      this.backToBack = false; // Back-to-back chain active
-      this.combo = 0; // Current combo count
-      this.softDropDistance = 0; // Cells soft dropped this piece
-      this.hardDropDistance = 0; // Cells hard dropped (tracked per drop)
-      this.lastActionWasDifficult = false; // Last clear was difficult (T-Spin or Tetris)
-      this.lastRotationWasTSpin = false; // Track if last rotation resulted in T-Spin position
-      this.lastRotationAtMerge = 0; // Track rotation state at merge time for mini T-Spin detection
-      this.currentPieceStartY = this.current.y; // Track where piece started for drop distance
-      this.bindKeys();
-      this.bindSettingsUI();
+      this.edgePressed = new Set();
+      this.lastHorizontalPressDir = 0;
+
+      // Scoring State
+      this.backToBack = false;
+      this.combo = 0;
+      this.softDropDistance = 0;
+      this.hardDropDistance = 0;
+      this.lastActionWasDifficult = false;
+      this.lastRotationWasTSpin = false;
+      this.lastRotationAtMerge = 0;
+      this.currentPieceStartY = this.current.y;
+
+      // Bot State
+      this.bot = null; // To be assigned if isBot
+      this.botTimer = 0;
+
+      if (this.config.input) {
+        this.bindKeys();
+        this.bindSettingsUI();
+      }
+
+      // Start loop
       requestAnimationFrame(t => this.loop(t));
       this.draw(); this.drawNext(); this.drawHold(); this.updateHUD();
     }
 
     bindKeys() {
-      // Helper to normalize key for comparison (case-insensitive for letters)
-      const normalizeKey = (key) => {
-        if (key.length === 1 && key.match(/[a-z]/i)) {
-          return key.toLowerCase();
-        }
-        return key;
-      };
-
-      window.addEventListener('keydown', e => {
-        const key = e.key;
-        const normalizedKey = normalizeKey(key);
-        const restartKey = normalizeKey(KEYBINDS.restart);
-
-        // Always track restart key for restart hold
-        if (normalizedKey === restartKey && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey) {
-          e.preventDefault();
-          if (this.restartHoldStart === null) this.restartHoldStart = Date.now();
-        }
-
-        // Prevent scrolling and defaults for gameplay keys
-        const gameKeys = [
-          KEYBINDS.moveLeft,
-          KEYBINDS.moveRight,
-          KEYBINDS.softDrop,
-          KEYBINDS.rotateCW,
-          KEYBINDS.hardDrop,
-          KEYBINDS.rotate180,
-          KEYBINDS.hold,
-          KEYBINDS.pause,
-          KEYBINDS.restart,
-          KEYBINDS.rotateCCW
-        ].map(k => normalizeKey(k));
-
-        if (gameKeys.includes(normalizedKey)) e.preventDefault();
-
-        // Track key state
-        const wasDown = this.keysDown.has(normalizedKey);
-        this.keysDown.add(normalizedKey);
-        if (!wasDown) this.edgePressed.add(normalizedKey);
-
-        // Track most recent horizontal press for conflict resolution
-        const leftKey = normalizeKey(KEYBINDS.moveLeft);
-        const rightKey = normalizeKey(KEYBINDS.moveRight);
-        if (normalizedKey === leftKey) this.lastHorizontalPressDir = -1;
-        if (normalizedKey === rightKey) this.lastHorizontalPressDir = 1;
-      });
-
-      window.addEventListener('keyup', e => {
-        const key = e.key;
-        const normalizedKey = normalizeKey(key);
-        const restartKey = normalizeKey(KEYBINDS.restart);
-        
-        // Release restart hold if any
-        if (normalizedKey === restartKey) this.restartHoldStart = null;
-        this.keysDown.delete(normalizedKey);
-      });
+        const normalizeKey = (key) => {
+          if (key.length === 1 && key.match(/[a-z]/i)) return key.toLowerCase();
+          return key;
+        };
+  
+        window.addEventListener('keydown', e => {
+          const key = e.key;
+          const normalizedKey = normalizeKey(key);
+          const restartKey = normalizeKey(KEYBINDS.restart);
+  
+          if (normalizedKey === restartKey && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey) {
+            e.preventDefault();
+            if (this.restartHoldStart === null) this.restartHoldStart = Date.now();
+          }
+  
+          const gameKeys = [
+            KEYBINDS.moveLeft, KEYBINDS.moveRight, KEYBINDS.softDrop,
+            KEYBINDS.rotateCW, KEYBINDS.hardDrop, KEYBINDS.rotate180,
+            KEYBINDS.hold, KEYBINDS.pause, KEYBINDS.restart, KEYBINDS.rotateCCW
+          ].map(k => normalizeKey(k));
+  
+          if (gameKeys.includes(normalizedKey)) e.preventDefault();
+  
+          const wasDown = this.keysDown.has(normalizedKey);
+          this.keysDown.add(normalizedKey);
+          if (!wasDown) this.edgePressed.add(normalizedKey);
+  
+          const leftKey = normalizeKey(KEYBINDS.moveLeft);
+          const rightKey = normalizeKey(KEYBINDS.moveRight);
+          if (normalizedKey === leftKey) this.lastHorizontalPressDir = -1;
+          if (normalizedKey === rightKey) this.lastHorizontalPressDir = 1;
+        });
+  
+        window.addEventListener('keyup', e => {
+          const key = e.key;
+          const normalizedKey = normalizeKey(key);
+          const restartKey = normalizeKey(KEYBINDS.restart);
+          
+          if (normalizedKey === restartKey) this.restartHoldStart = null;
+          this.keysDown.delete(normalizedKey);
+        });
     }
 
     processInputs() {
-      // Helper to normalize key for comparison (case-insensitive for letters)
-      const normalizeKey = (key) => {
-        if (key.length === 1 && key.match(/[a-z]/i)) {
-          return key.toLowerCase();
-        }
-        return key;
-      };
+        if (!this.config.input) return; // Skip keyboard processing if input disabled
 
-      const pauseKey = normalizeKey(KEYBINDS.pause);
-      const rotateCWKey = normalizeKey(KEYBINDS.rotateCW);
-      const rotateCCWKey = normalizeKey(KEYBINDS.rotateCCW);
-      const rotate180Key = normalizeKey(KEYBINDS.rotate180);
-      const holdKey = normalizeKey(KEYBINDS.hold);
-      const hardDropKey = normalizeKey(KEYBINDS.hardDrop);
-      const leftKey = normalizeKey(KEYBINDS.moveLeft);
-      const rightKey = normalizeKey(KEYBINDS.moveRight);
-      const softDropKey = normalizeKey(KEYBINDS.softDrop);
-
-      // Pause toggle (edge)
-      if (this.edgePressed.has(pauseKey)) this.togglePause();
-
-      // If paused, only allow restart hold handling (done elsewhere) and exit
-      if (this.paused) { this.edgePressed.clear(); return; }
-
-      // Rotations and discrete actions (edge)
-      if (this.edgePressed.has(rotateCWKey)) this.rotate();
-      if (this.edgePressed.has(rotateCCWKey)) this.rotateCCW();
-      if (this.edgePressed.has(rotate180Key)) this.rotate180();
-      if (this.edgePressed.has(holdKey)) this.hold();
-      if (this.edgePressed.has(hardDropKey)) this.hardDrop();
-
-      // Horizontal movement (held) with DAS/ARR; resolve conflicts by last press
-      const leftHeld = this.keysDown.has(leftKey);
-      const rightHeld = this.keysDown.has(rightKey);
-      let desiredDir = 0;
-      if (leftHeld && !rightHeld) desiredDir = -1;
-      else if (!leftHeld && rightHeld) desiredDir = 1;
-      else if (leftHeld && rightHeld) desiredDir = this.lastHorizontalPressDir;
-
-      if (desiredDir !== 0) {
-        if (this.moveDir !== desiredDir) this.startHorizontal(desiredDir);
-      } else {
-        if (this.moveDir !== 0) this.stopHorizontal(this.moveDir);
-      }
-
-      // Soft drop (held)
-      const downHeld = this.keysDown.has(softDropKey);
-      if (downHeld && !this.softDropping) this.startSoftDrop();
-      if (!downHeld && this.softDropping) this.stopSoftDrop();
-
-      // Clear edge buffer at end of processing
-      this.edgePressed.clear();
-    }
-
-    bindSettingsUI() {
-      const dasRange = document.getElementById('dasRange');
-      const arrRange = document.getElementById('arrRange');
-      const sdcRange = document.getElementById('sdcRange');
-      const dasValue = document.getElementById('dasValue');
-      const arrValue = document.getElementById('arrValue');
-      const sdcValue = document.getElementById('sdcValue');
-      const modal = document.getElementById('settingsModal');
-      const openBtn = document.getElementById('settingsBtn');
-      const closeBtn = document.getElementById('settingsClose');
-
-      if (!dasRange || !arrRange || !sdcRange) return;
-
-      // Keybind rebinding state (declared early so closeModal can use it)
-      let rebindingAction = null;
-      let rebindingBtn = null;
-
-      // Modal open/close
-      const openModal = () => {
-        modal.classList.add('open');
-        modal.setAttribute('aria-hidden', 'false');
-      };
-      const stopRebinding = () => {
-        if (rebindingBtn) {
-          rebindingBtn.classList.remove('waiting');
-          rebindingBtn = null;
-        }
-        rebindingAction = null;
-      };
-      const closeModal = () => {
-        stopRebinding();
-        modal.classList.remove('open');
-        modal.setAttribute('aria-hidden', 'true');
-      };
-      if (openBtn) openBtn.addEventListener('click', openModal);
-      if (closeBtn) closeBtn.addEventListener('click', closeModal);
-      if (modal) modal.addEventListener('click', (e) => {
-        const target = e.target;
-        if (target && target.getAttribute && target.getAttribute('data-close') === 'modal') closeModal();
-      });
-
-      // Initialize UI from SETTINGS
-      dasRange.value = String(SETTINGS.das);
-      arrRange.value = String(SETTINGS.arr);
-      // For Infinity, place knob at max
-      if (isFinite(SETTINGS.softDropCps)) {
-        sdcRange.value = String(SETTINGS.softDropCps);
-      } else {
-        sdcRange.value = String(sdcRange.max);
-      }
-      if (dasValue) dasValue.textContent = String(SETTINGS.das);
-      if (arrValue) arrValue.textContent = String(SETTINGS.arr);
-      if (sdcValue) sdcValue.textContent = isFinite(SETTINGS.softDropCps) ? String(SETTINGS.softDropCps) : '∞';
-
-      // Listeners
-      dasRange.addEventListener('input', () => {
-        const v = Math.max(0, parseInt(dasRange.value, 10) || 0);
-        SETTINGS.das = v;
-        if (dasValue) dasValue.textContent = String(v);
-        try { localStorage.setItem('tetris.das', String(v)); } catch {}
-      });
-
-      arrRange.addEventListener('input', () => {
-        const v = Math.max(0, parseInt(arrRange.value, 10) || 0);
-        SETTINGS.arr = v;
-        if (arrValue) arrValue.textContent = String(v);
-        try { localStorage.setItem('tetris.arr', String(v)); } catch {}
-        // If user changes ARR while key held, restart timers to reflect new rate
-        if (this.moveDir !== 0) {
-          const dir = this.moveDir;
-          this.stopHorizontal(dir);
-          this.startHorizontal(dir);
-        }
-      });
-
-      const updateSoftDropUI = () => {
-        if (sdcValue) sdcValue.textContent = isFinite(SETTINGS.softDropCps) ? String(SETTINGS.softDropCps) : '∞';
-      };
-
-      sdcRange.addEventListener('input', () => {
-        const valueNum = Math.max(1, parseInt(sdcRange.value, 10) || 1);
-        const maxNum = Math.max(1, parseInt(sdcRange.max, 10) || 1);
-        if (valueNum >= maxNum) {
-          SETTINGS.softDropCps = Infinity;
-          try { localStorage.setItem('tetris.softDropCps', 'inf'); } catch {}
+        const normalizeKey = (key) => {
+          if (key.length === 1 && key.match(/[a-z]/i)) return key.toLowerCase();
+          return key;
+        };
+  
+        const pauseKey = normalizeKey(KEYBINDS.pause);
+        const rotateCWKey = normalizeKey(KEYBINDS.rotateCW);
+        const rotateCCWKey = normalizeKey(KEYBINDS.rotateCCW);
+        const rotate180Key = normalizeKey(KEYBINDS.rotate180);
+        const holdKey = normalizeKey(KEYBINDS.hold);
+        const hardDropKey = normalizeKey(KEYBINDS.hardDrop);
+        const leftKey = normalizeKey(KEYBINDS.moveLeft);
+        const rightKey = normalizeKey(KEYBINDS.moveRight);
+        const softDropKey = normalizeKey(KEYBINDS.softDrop);
+  
+        if (this.edgePressed.has(pauseKey)) this.togglePause();
+        if (this.paused) { this.edgePressed.clear(); return; }
+  
+        if (this.edgePressed.has(rotateCWKey)) this.rotate();
+        if (this.edgePressed.has(rotateCCWKey)) this.rotateCCW();
+        if (this.edgePressed.has(rotate180Key)) this.rotate180();
+        if (this.edgePressed.has(holdKey)) this.hold();
+        if (this.edgePressed.has(hardDropKey)) this.hardDrop();
+  
+        const leftHeld = this.keysDown.has(leftKey);
+        const rightHeld = this.keysDown.has(rightKey);
+        let desiredDir = 0;
+        if (leftHeld && !rightHeld) desiredDir = -1;
+        else if (!leftHeld && rightHeld) desiredDir = 1;
+        else if (leftHeld && rightHeld) desiredDir = this.lastHorizontalPressDir;
+  
+        if (desiredDir !== 0) {
+          if (this.moveDir !== desiredDir) this.startHorizontal(desiredDir);
         } else {
-          SETTINGS.softDropCps = valueNum;
-          try { localStorage.setItem('tetris.softDropCps', String(valueNum)); } catch {}
+          if (this.moveDir !== 0) this.stopHorizontal(this.moveDir);
         }
-        updateSoftDropUI();
-      });
-
-      // Keybind UI
-      const formatKeyForDisplay = (key) => {
-        if (key === ' ') return 'Space';
-        if (key === 'ArrowLeft') return '←';
-        if (key === 'ArrowRight') return '→';
-        if (key === 'ArrowUp') return '↑';
-        if (key === 'ArrowDown') return '↓';
-        if (key === 'Control') return 'Ctrl';
-        if (key.length === 1 && key.match(/[a-z]/i)) {
-          return key.toUpperCase();
+  
+        const downHeld = this.keysDown.has(softDropKey);
+        if (downHeld && !this.softDropping) this.startSoftDrop();
+        if (!downHeld && this.softDropping) this.stopSoftDrop();
+  
+        this.edgePressed.clear();
+    }
+    
+    bindSettingsUI() {
+        const dasRange = document.getElementById('dasRange');
+        const arrRange = document.getElementById('arrRange');
+        const sdcRange = document.getElementById('sdcRange');
+        const dasValue = document.getElementById('dasValue');
+        const arrValue = document.getElementById('arrValue');
+        const sdcValue = document.getElementById('sdcValue');
+        const modal = document.getElementById('settingsModal');
+        const openBtn = document.getElementById('settingsBtn');
+        const closeBtn = document.getElementById('settingsClose');
+  
+        if (!dasRange || !arrRange || !sdcRange) return;
+  
+        let rebindingAction = null;
+        let rebindingBtn = null;
+  
+        const openModal = () => {
+          modal.classList.add('open');
+          modal.setAttribute('aria-hidden', 'false');
+        };
+        const stopRebinding = () => {
+          if (rebindingBtn) {
+            rebindingBtn.classList.remove('waiting');
+            rebindingBtn = null;
+          }
+          rebindingAction = null;
+        };
+        const closeModal = () => {
+          stopRebinding();
+          modal.classList.remove('open');
+          modal.setAttribute('aria-hidden', 'true');
+        };
+        if (openBtn) openBtn.addEventListener('click', openModal);
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (modal) modal.addEventListener('click', (e) => {
+          const target = e.target;
+          if (target && target.getAttribute && target.getAttribute('data-close') === 'modal') closeModal();
+        });
+  
+        dasRange.value = String(SETTINGS.das);
+        arrRange.value = String(SETTINGS.arr);
+        if (isFinite(SETTINGS.softDropCps)) {
+          sdcRange.value = String(SETTINGS.softDropCps);
+        } else {
+          sdcRange.value = String(sdcRange.max);
         }
-        return key;
-      };
-
-      const updateKeybindDisplay = () => {
-        const keybindBtns = document.querySelectorAll('.keybind-btn');
-        keybindBtns.forEach(btn => {
-          const action = btn.getAttribute('data-action');
-          if (action && KEYBINDS[action]) {
-            const keySpan = btn.querySelector('.keybind-key');
-            if (keySpan) {
-              keySpan.textContent = formatKeyForDisplay(KEYBINDS[action]);
+        if (dasValue) dasValue.textContent = String(SETTINGS.das);
+        if (arrValue) arrValue.textContent = String(SETTINGS.arr);
+        if (sdcValue) sdcValue.textContent = isFinite(SETTINGS.softDropCps) ? String(SETTINGS.softDropCps) : '∞';
+  
+        dasRange.addEventListener('input', () => {
+          const v = Math.max(0, parseInt(dasRange.value, 10) || 0);
+          SETTINGS.das = v;
+          if (dasValue) dasValue.textContent = String(v);
+          try { localStorage.setItem('tetris.das', String(v)); } catch {}
+        });
+  
+        arrRange.addEventListener('input', () => {
+          const v = Math.max(0, parseInt(arrRange.value, 10) || 0);
+          SETTINGS.arr = v;
+          if (arrValue) arrValue.textContent = String(v);
+          try { localStorage.setItem('tetris.arr', String(v)); } catch {}
+          if (this.moveDir !== 0) {
+            const dir = this.moveDir;
+            this.stopHorizontal(dir);
+            this.startHorizontal(dir);
+          }
+        });
+  
+        const updateSoftDropUI = () => {
+          if (sdcValue) sdcValue.textContent = isFinite(SETTINGS.softDropCps) ? String(SETTINGS.softDropCps) : '∞';
+        };
+  
+        sdcRange.addEventListener('input', () => {
+          const valueNum = Math.max(1, parseInt(sdcRange.value, 10) || 1);
+          const maxNum = Math.max(1, parseInt(sdcRange.max, 10) || 1);
+          if (valueNum >= maxNum) {
+            SETTINGS.softDropCps = Infinity;
+            try { localStorage.setItem('tetris.softDropCps', 'inf'); } catch {}
+          } else {
+            SETTINGS.softDropCps = valueNum;
+            try { localStorage.setItem('tetris.softDropCps', String(valueNum)); } catch {}
+          }
+          updateSoftDropUI();
+        });
+  
+        const formatKeyForDisplay = (key) => {
+          if (key === ' ') return 'Space';
+          if (key === 'ArrowLeft') return '←';
+          if (key === 'ArrowRight') return '→';
+          if (key === 'ArrowUp') return '↑';
+          if (key === 'ArrowDown') return '↓';
+          if (key === 'Control') return 'Ctrl';
+          if (key.length === 1 && key.match(/[a-z]/i)) return key.toUpperCase();
+          return key;
+        };
+  
+        const updateKeybindDisplay = () => {
+          const keybindBtns = document.querySelectorAll('.keybind-btn');
+          keybindBtns.forEach(btn => {
+            const action = btn.getAttribute('data-action');
+            if (action && KEYBINDS[action]) {
+              const keySpan = btn.querySelector('.keybind-key');
+              if (keySpan) keySpan.textContent = formatKeyForDisplay(KEYBINDS[action]);
+            }
+          });
+        };
+  
+        updateKeybindDisplay();
+  
+        const startRebinding = (action, btn) => {
+          stopRebinding();
+          rebindingAction = action;
+          rebindingBtn = btn;
+          btn.classList.add('waiting');
+          const keySpan = btn.querySelector('.keybind-key');
+          if (keySpan) keySpan.textContent = 'Press key...';
+        };
+  
+        const keybindCaptureHandler = (e) => {
+          if (!rebindingAction) return;
+          e.preventDefault(); e.stopPropagation();
+          const key = e.key;
+          if (key === 'Escape') {
+            stopRebinding(); updateKeybindDisplay(); return;
+          }
+          if (key === 'Control' || key === 'Shift' || key === 'Alt' || key === 'Meta') {
+            window.addEventListener('keydown', keybindCaptureHandler, { once: true, capture: true });
+            return;
+          }
+          let conflict = false;
+          for (const [otherAction, otherKey] of Object.entries(KEYBINDS)) {
+            if (otherAction !== rebindingAction && otherKey === key) {
+              conflict = true; break;
             }
           }
-        });
-      };
-
-      // Initialize keybind display
-      updateKeybindDisplay();
-
-      const startRebinding = (action, btn) => {
-        stopRebinding();
-        rebindingAction = action;
-        rebindingBtn = btn;
-        btn.classList.add('waiting');
-        const keySpan = btn.querySelector('.keybind-key');
-        if (keySpan) keySpan.textContent = 'Press key...';
-      };
-
-      // Handle key capture for rebinding
-      const keybindCaptureHandler = (e) => {
-        if (!rebindingAction) return;
-        
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const key = e.key;
-        // Don't allow Escape to be bound (used for canceling)
-        if (key === 'Escape') {
-          stopRebinding();
-          updateKeybindDisplay();
-          return;
-        }
-        
-        // Don't allow modifier keys alone (but don't consume the handler)
-        if (key === 'Control' || key === 'Shift' || key === 'Alt' || key === 'Meta') {
-          // Re-add the listener since we're not consuming this key
-          window.addEventListener('keydown', keybindCaptureHandler, { once: true, capture: true });
-          return;
-        }
-
-        // Check if key is already bound to another action
-        let conflict = false;
-        for (const [otherAction, otherKey] of Object.entries(KEYBINDS)) {
-          if (otherAction !== rebindingAction && otherKey === key) {
-            conflict = true;
-            break;
+          if (!conflict) {
+            KEYBINDS[rebindingAction] = key;
+            try { localStorage.setItem('tetris.keybinds', JSON.stringify(KEYBINDS)); } catch {}
+            stopRebinding(); updateKeybindDisplay();
+          } else {
+            const keySpan = rebindingBtn.querySelector('.keybind-key');
+            if (keySpan) {
+              const originalText = keySpan.textContent;
+              keySpan.textContent = 'Already bound!';
+              setTimeout(() => {
+                keySpan.textContent = originalText;
+                window.addEventListener('keydown', keybindCaptureHandler, { once: true, capture: true });
+              }, 1000);
+            }
           }
-        }
-
-        if (!conflict) {
-          KEYBINDS[rebindingAction] = key;
-          try {
-            localStorage.setItem('tetris.keybinds', JSON.stringify(KEYBINDS));
-          } catch {}
-          
-          stopRebinding();
-          updateKeybindDisplay();
-        } else {
-          // Show error briefly, then re-enable rebinding
-          const keySpan = rebindingBtn.querySelector('.keybind-key');
-          if (keySpan) {
-            const originalText = keySpan.textContent;
-            keySpan.textContent = 'Already bound!';
-            setTimeout(() => {
-              keySpan.textContent = originalText;
-              // Re-add the listener to continue rebinding
+        };
+  
+        const keybindBtns = document.querySelectorAll('.keybind-btn');
+        keybindBtns.forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            const action = btn.getAttribute('data-action');
+            if (action) {
+              startRebinding(action, btn);
               window.addEventListener('keydown', keybindCaptureHandler, { once: true, capture: true });
-            }, 1000);
-          }
+            }
+          });
+        });
+  
+        const resetBtn = document.getElementById('resetKeybinds');
+        if (resetBtn) {
+          resetBtn.addEventListener('click', () => {
+            Object.assign(KEYBINDS, DEFAULT_KEYBINDS);
+            try { localStorage.setItem('tetris.keybinds', JSON.stringify(KEYBINDS)); } catch {}
+            updateKeybindDisplay(); stopRebinding();
+          });
         }
-      };
-
-      // Add keybind button listeners
-      const keybindBtns = document.querySelectorAll('.keybind-btn');
-      keybindBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const action = btn.getAttribute('data-action');
-          if (action) {
-            startRebinding(action, btn);
-            // Add one-time listener for key capture
-            window.addEventListener('keydown', keybindCaptureHandler, { once: true, capture: true });
-          }
-        });
-      });
-
-      // Reset keybinds button
-      const resetBtn = document.getElementById('resetKeybinds');
-      if (resetBtn) {
-        resetBtn.addEventListener('click', () => {
-          Object.assign(KEYBINDS, DEFAULT_KEYBINDS);
-          try {
-            localStorage.setItem('tetris.keybinds', JSON.stringify(KEYBINDS));
-          } catch {}
-          updateKeybindDisplay();
-          stopRebinding();
-        });
-      }
     }
 
     togglePause() { this.paused = !this.paused; }
@@ -601,7 +547,6 @@
     loop(t) {
       const dt = t - this.last; this.last = t;
       
-      // Check if restart hold is complete
       if (this.restartHoldStart !== null) {
         const holdTime = Date.now() - this.restartHoldStart;
         if (holdTime >= this.restartHoldDuration) {
@@ -610,23 +555,31 @@
         }
       }
       
-      // Process current inputs once per frame (enables combos)
       this.processInputs();
       
+      // Bot Logic Hook
+      if (this.config.isBot && !this.paused && this.bot) {
+         this.botTimer += dt;
+         const moveInterval = 1000 / this.config.botPPS;
+         if (this.botTimer > moveInterval) {
+             this.bot.update(); 
+             this.botTimer = 0;
+         }
+      }
+
       if (!this.paused) {
         this.acc += dt;
         if (this.acc > this.dropInterval) { this.drop(); this.acc = 0; }
-        // Apply continuous soft drop when active and not instant
+        
         if (this.softDropping && isFinite(SETTINGS.softDropCps)) {
           this.softAcc += dt;
           const msPerCell = 1000 / SETTINGS.softDropCps;
           while (this.softAcc >= msPerCell) {
             this.softAcc -= msPerCell;
-            // attempt one cell soft drop
             const ny = this.current.y + 1;
             if (!this.collide(this.current.shape, ny, this.current.x)) {
               this.current.y = ny;
-              this.softDropDistance++; // Track soft drop distance
+              this.softDropDistance++;
               this.refreshGrounded();
             } else {
               this.refreshGrounded();
@@ -652,24 +605,19 @@
       return false;
     }
 
-    // Horizontal input handling (DAS/ARR)
     startHorizontal(dir) {
       if (this.moveDir === dir) return;
       this.clearHorizontalTimers();
       this.moveDir = dir;
-      // initial move
       this.move(dir);
-      // if ARR is 0 and DAS > 0, we wait DAS then slam to wall
       if (SETTINGS.arr === 0) {
         this.dasTimer = setTimeout(() => {
-          // instant auto shift to wall
           while (!this.collide(this.current.shape, this.current.y, this.current.x + dir)) {
             this.current.x += dir;
           }
           this.refreshGrounded();
         }, SETTINGS.das);
       } else {
-        // standard auto-repeat after DAS
         this.dasTimer = setTimeout(() => {
           this.arrInterval = setInterval(() => {
             this.move(dir);
@@ -690,16 +638,13 @@
       if (this.arrInterval) { clearInterval(this.arrInterval); this.arrInterval = null; }
     }
 
-    // Soft drop handling
     startSoftDrop() {
       if (this.softDropping) return;
       if (!isFinite(SETTINGS.softDropCps)) {
-        // Treat as sonic drop (instant to floor, but do NOT lock)
         while (!this.collide(this.current.shape, this.current.y + 1, this.current.x)) {
           this.current.y += 1;
         }
         this.refreshGrounded();
-        // keep softDropping false; this is a one-shot
       } else {
         this.softDropping = true;
         this.softAcc = 0;
@@ -711,12 +656,10 @@
       this.softAcc = 0;
     }
 
-    // Returns true if the piece is currently resting on something or bottom
     isTouchingGround() {
       return this.collide(this.current.shape, this.current.y + 1, this.current.x);
     }
 
-    // Refresh grounded timestamp based on current state
     refreshGrounded() {
       if (this.isTouchingGround()) {
         if (this.groundedSince === null) this.groundedSince = Date.now();
@@ -725,7 +668,6 @@
       }
     }
 
-    // Attempt to lock the piece if lock delay expired
     tryLock() {
       if (this.groundedSince !== null) {
         if (Date.now() - this.groundedSince >= this.lockDelay) {
@@ -736,27 +678,20 @@
 
     merge() {
       const s = this.current.shape; const oy = this.current.y; const ox = this.current.x;
-      // Calculate hard drop distance if not already set
       if (this.currentPieceStartY !== null && this.hardDropDistance === 0) {
         this.hardDropDistance = Math.max(0, oy - this.currentPieceStartY);
       }
-      // Check for T-Spin before merging (need to check with current position)
       const wasTSpin = this.current.type === 'T' && this.isTSpin();
-      // Store rotation state for mini T-Spin detection
       this.lastRotationAtMerge = this.current.rot;
       for (let y = 0; y < s.length; y++) for (let x = 0; x < s[y].length; x++) {
         if (s[y][x] && oy + y >= 0) this.grid[oy + y][ox + x] = this.current.type;
       }
-      // Set T-Spin flag for scoring
       this.lastRotationWasTSpin = wasTSpin;
       this.clearLines();
-      // Take first piece from queue
       this.current = new Piece(this.nextQueue.shift());
-      // Refill queue
       this.nextQueue.push(this.bag.draw());
-      this.canHold = true; // Reset hold flag when piece is placed
-      this.groundedSince = null; // reset lock timer for new piece
-      // Reset scoring tracking for new piece
+      this.canHold = true;
+      this.groundedSince = null;
       this.softDropDistance = 0;
       this.hardDropDistance = 0;
       this.currentPieceStartY = this.current.y;
@@ -779,7 +714,6 @@
       this.restartHoldStart = null;
       this.paused = false;
       this.groundedSince = null;
-      // Reset scoring system state
       this.backToBack = false;
       this.combo = 0;
       this.softDropDistance = 0;
@@ -793,69 +727,45 @@
       this.updateHUD();
     }
 
-    // T-Spin detection using 3-corner rule
-    // Checks if the T-piece is in a T-Spin position (3 of 4 corners are filled)
     isTSpin() {
       if (this.current.type !== 'T') return false;
-      
       const px = this.current.x;
       const py = this.current.y;
       const shape = this.current.shape;
-      
-      // Find the center of the T-piece (the T block)
       let centerX = -1, centerY = -1;
       for (let y = 0; y < shape.length; y++) {
         for (let x = 0; x < shape[y].length; x++) {
           if (shape[y][x]) {
-            // Check if this is the center (has 3 neighbors in T shape)
             let neighbors = 0;
             if (y > 0 && shape[y-1][x]) neighbors++;
             if (y < shape.length - 1 && shape[y+1][x]) neighbors++;
             if (x > 0 && shape[y][x-1]) neighbors++;
             if (x < shape[y].length - 1 && shape[y][x+1]) neighbors++;
             if (neighbors === 3) {
-              centerX = px + x;
-              centerY = py + y;
-              break;
+              centerX = px + x; centerY = py + y; break;
             }
           }
         }
         if (centerX !== -1) break;
       }
-      
       if (centerX === -1 || centerY === -1) return false;
-      
-      // Check the 4 corners around the center
       const corners = [
-        [centerX - 1, centerY - 1], // top-left
-        [centerX + 1, centerY - 1], // top-right
-        [centerX - 1, centerY + 1], // bottom-left
-        [centerX + 1, centerY + 1]  // bottom-right
+        [centerX - 1, centerY - 1], [centerX + 1, centerY - 1],
+        [centerX - 1, centerY + 1], [centerX + 1, centerY + 1]
       ];
-      
       let filledCorners = 0;
       for (const [cx, cy] of corners) {
-        // Check if corner is out of bounds or filled
-        if (cy < 0 || cy >= ROWS || cx < 0 || cx >= COLS || this.grid[cy][cx]) {
-          filledCorners++;
-        }
+        if (cy < 0 || cy >= ROWS || cx < 0 || cx >= COLS || this.grid[cy][cx]) filledCorners++;
       }
-      
-      // T-Spin requires at least 3 corners filled
       return filledCorners >= 3;
     }
 
-    // Check if this is a mini T-Spin (pointing side T-Spin)
     isMiniTSpin() {
       if (this.current.type !== 'T') return false;
       if (!this.isTSpin()) return false;
-      
-      // Mini T-Spin: T-piece is pointing left or right (not up or down)
-      // Check rotation state - rotations 1 and 3 are horizontal
       return this.current.rot === 1 || this.current.rot === 3;
     }
 
-    // Check if grid is empty (perfect clear)
     isPerfectClear() {
       for (let y = 0; y < ROWS; y++) {
         for (let x = 0; x < COLS; x++) {
@@ -872,112 +782,68 @@
           this.grid.splice(y, 1);
           this.grid.unshift(Array(COLS).fill(0));
           cleared++;
-          y++; // Re-check same index after removal
+          y++;
         }
       }
       
       if (cleared > 0) {
-        // Determine action type
         const isTSpinAction = this.lastRotationWasTSpin;
-        // Check mini T-Spin: T-piece pointing left or right (rotations 1 and 3 are horizontal)
         const isMiniTSpin = isTSpinAction && (this.lastRotationAtMerge === 1 || this.lastRotationAtMerge === 3);
         const isTetris = cleared === 4;
         const isDifficult = isTSpinAction || isTetris;
         
-        // Calculate base score
         let baseScore = 0;
         if (isTSpinAction) {
-          if (cleared === 0) {
-            baseScore = isMiniTSpin ? 100 : 400; // Mini T-Spin no lines or T-Spin no lines
-          } else if (cleared === 1) {
-            baseScore = isMiniTSpin ? 200 : 800; // Mini T-Spin Single or T-Spin Single
-          } else if (cleared === 2) {
-            baseScore = isMiniTSpin ? 400 : 1200; // Mini T-Spin Double or T-Spin Double
-          } else if (cleared === 3) {
-            baseScore = 1600; // T-Spin Triple
-          }
+          if (cleared === 0) baseScore = isMiniTSpin ? 100 : 400;
+          else if (cleared === 1) baseScore = isMiniTSpin ? 200 : 800;
+          else if (cleared === 2) baseScore = isMiniTSpin ? 400 : 1200;
+          else if (cleared === 3) baseScore = 1600;
         } else {
-          // Regular line clears
           const scores = [0, 100, 300, 500, 800];
           baseScore = scores[cleared];
         }
         
-        // Apply level multiplier
         baseScore *= this.level;
-        
-        // Apply Back-to-Back multiplier (1.5x for difficult clears)
-        if (isDifficult && this.backToBack) {
-          baseScore = Math.floor(baseScore * 1.5);
-        }
-        
-        // Add combo points
-        if (this.combo > 0) {
-          baseScore += 50 * this.combo * this.level;
-        }
-        
-        // Add soft drop points (1 per cell)
+        if (isDifficult && this.backToBack) baseScore = Math.floor(baseScore * 1.5);
+        if (this.combo > 0) baseScore += 50 * this.combo * this.level;
         baseScore += this.softDropDistance;
-        
-        // Add hard drop points (2 per cell)
         baseScore += this.hardDropDistance * 2;
         
-        // Check for perfect clear
         const perfectClear = this.isPerfectClear();
         let perfectClearBonus = 0;
         if (perfectClear) {
           if (cleared === 1) perfectClearBonus = 800 * this.level;
           else if (cleared === 2) perfectClearBonus = 1200 * this.level;
           else if (cleared === 3) perfectClearBonus = 1800 * this.level;
-          else if (cleared === 4) {
-            if (this.backToBack && isTetris) {
-              perfectClearBonus = 3200 * this.level;
-            } else {
-              perfectClearBonus = 2000 * this.level;
-            }
-          }
+          else if (cleared === 4) perfectClearBonus = (this.backToBack && isTetris ? 3200 : 2000) * this.level;
         }
-        
-        // Add perfect clear bonus to base score
         baseScore += perfectClearBonus;
         
         this.score += baseScore;
         this.lines += cleared;
         
-        // Update Back-to-Back status
-        // Only Single, Double, or Triple line clears break Back-to-Back chain
-        // T-Spin with no lines does not break the chain
         if (isDifficult) {
           this.backToBack = true;
           this.lastActionWasDifficult = true;
         } else if (cleared > 0 && cleared < 4) {
-          // Single, Double, or Triple breaks the chain
           this.backToBack = false;
           this.lastActionWasDifficult = false;
         } else {
           this.lastActionWasDifficult = false;
         }
-        
-        // Update combo
         this.combo++;
-        
-        // Level up calculation
         if (this.lines >= this.level * 10) {
           this.level++;
           this.dropInterval = Math.max(120, 1000 - (this.level - 1) * 80);
         }
-        
         this.updateHUD();
       } else {
-        // No lines cleared - reset combo
         this.combo = 0;
-        // T-Spin with no lines doesn't break Back-to-Back
         if (this.lastRotationWasTSpin) {
           this.backToBack = true;
           this.lastActionWasDifficult = true;
         }
       }
-      
-      // Reset rotation T-Spin flag after processing
       this.lastRotationWasTSpin = false;
     }
 
@@ -985,19 +851,15 @@
       const nx = this.current.x + dir;
       if (!this.collide(this.current.shape, this.current.y, nx)) {
         this.current.x = nx;
-        // Movement can refresh lock delay
         this.refreshGrounded();
       }
     }
 
-    // SRS rotate attempt with kicks
-    tryRotate(direction) { // +1: CW, -1: CCW
+    tryRotate(direction) {
       const from = this.current.rot;
       const to = (from + (direction === 1 ? 1 : 3)) % 4;
       const key = `${from}>${to}`;
-
       const rotatedShape = direction === 1 ? rotate(this.current.shape) : rotateCCW(this.current.shape);
-
       const type = this.current.type;
       const kicks = type === 'I' ? (KICKS_I[key] || [[0,0]]) : type === 'O' ? (KICKS_O[key] || [[0,0]]) : (KICKS_JLSTZ[key] || [[0,0]]);
 
@@ -1010,9 +872,7 @@
           this.current.x = nx;
           this.current.y = ny;
           this.current.rot = to;
-          // Rotation can refresh lock delay
           this.refreshGrounded();
-          // Check for T-Spin after rotation
           if (this.current.type === 'T') {
             this.lastRotationWasTSpin = this.isTSpin();
           }
@@ -1022,19 +882,13 @@
       return false;
     }
 
-    rotate() {
-      this.tryRotate(1);
-    }
-
-    rotateCCW() {
-      this.tryRotate(-1);
-    }
+    rotate() { this.tryRotate(1); }
+    rotateCCW() { this.tryRotate(-1); }
 
     rotate180() {
       const from = this.current.rot;
       const to = (from + 2) % 4;
       const key = `${from}>${to}`;
-
       const rotatedShape = rotate180(this.current.shape);
       const type = this.current.type;
       const kicks = type === 'I' ? (KICKS_180_I[key] || [[0,0]]) : type === 'O' ? (KICKS_180_O[key] || [[0,0]]) : (KICKS_180_JLSTZ[key] || [[0,0]]);
@@ -1049,7 +903,6 @@
           this.current.y = ny;
           this.current.rot = to;
           this.refreshGrounded();
-          // Check for T-Spin after rotation
           if (this.current.type === 'T') {
             this.lastRotationWasTSpin = this.isTSpin();
           }
@@ -1065,7 +918,6 @@
         this.current.y = ny;
         this.refreshGrounded();
       } else {
-        // Touching ground: start/continue lock delay instead of instant merge
         this.refreshGrounded();
         this.tryLock();
       }
@@ -1081,23 +933,18 @@
     }
 
     hold() {
-      if (!this.canHold) return; // Can only hold once per piece
-      
+      if (!this.canHold) return;
       if (this.held === null) {
-        // First hold: store current piece and get next piece from queue
         this.held = this.current.type;
         this.current = new Piece(this.nextQueue.shift());
         this.nextQueue.push(this.bag.draw());
       } else {
-        // Swap held piece with current piece
         const temp = this.current.type;
         this.current = new Piece(this.held);
         this.held = temp;
       }
-      
-      this.canHold = false; // Prevent holding again until piece is placed
-      this.groundedSince = null; // reset lock timer after hold swap
-      // Reset scoring tracking for new piece
+      this.canHold = false;
+      this.groundedSince = null;
       this.softDropDistance = 0;
       this.hardDropDistance = 0;
       this.currentPieceStartY = this.current.y;
@@ -1106,12 +953,12 @@
       this.drawHold();
       this.drawNext();
     }
-
+    
     drawCell(gx, gy, type) {
-      const x = gx * cell, y = gy * cell; const col = COLORS[type] || '#90a4ae';
-      ctx.fillStyle = col; ctx.fillRect(x, y, cell, cell);
-      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-      ctx.strokeRect(x + 0.5, y + 0.5, cell - 1, cell - 1);
+      const x = gx * this.cell, y = gy * this.cell; const col = COLORS[type] || '#90a4ae';
+      this.ctx.fillStyle = col; this.ctx.fillRect(x, y, this.cell, this.cell);
+      this.ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+      this.ctx.strokeRect(x + 0.5, y + 0.5, this.cell - 1, this.cell - 1);
     }
 
     getGhostY() {
@@ -1124,11 +971,11 @@
 
     drawGhost() {
       const ghostY = this.getGhostY();
-      if (ghostY === this.current.y) return; // Already at drop position
+      if (ghostY === this.current.y) return;
       
       const s = this.current.shape;
-      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-      ctx.lineWidth = 2;
+      this.ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      this.ctx.lineWidth = 2;
       
       for (let y = 0; y < s.length; y++) {
         for (let x = 0; x < s[y].length; x++) {
@@ -1137,49 +984,42 @@
           const gx = this.current.x + x;
           if (gy < 0) continue;
           
-          const px = gx * cell;
-          const py = gy * cell;
-          ctx.strokeRect(px + 1, py + 1, cell - 2, cell - 2);
+          const px = gx * this.cell;
+          const py = gy * this.cell;
+          this.ctx.strokeRect(px + 1, py + 1, this.cell - 2, this.cell - 2);
         }
       }
-      
-      ctx.lineWidth = 1; // Reset line width
+      this.ctx.lineWidth = 1;
     }
 
     drawGrid() {
-      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-      ctx.lineWidth = 1;
+      this.ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+      this.ctx.lineWidth = 1;
       
-      // Vertical lines
       for (let x = 0; x <= COLS; x++) {
-        const px = x * cell;
-        ctx.beginPath();
-        ctx.moveTo(px + 0.5, 0);
-        ctx.lineTo(px + 0.5, ROWS * cell);
-        ctx.stroke();
+        const px = x * this.cell;
+        this.ctx.beginPath();
+        this.ctx.moveTo(px + 0.5, 0);
+        this.ctx.lineTo(px + 0.5, ROWS * this.cell);
+        this.ctx.stroke();
       }
       
-      // Horizontal lines
       for (let y = 0; y <= ROWS; y++) {
-        const py = y * cell;
-        ctx.beginPath();
-        ctx.moveTo(0, py + 0.5);
-        ctx.lineTo(COLS * cell, py + 0.5);
-        ctx.stroke();
+        const py = y * this.cell;
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, py + 0.5);
+        this.ctx.lineTo(COLS * this.cell, py + 0.5);
+        this.ctx.stroke();
       }
     }
 
     draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Draw grid lines first
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.drawGrid();
-      // grid cells
       for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
         const v = this.grid[y][x]; if (v) this.drawCell(x, y, v);
       }
-      // ghost (drop preview)
       this.drawGhost();
-      // current
       const s = this.current.shape;
       for (let y = 0; y < s.length; y++) for (let x = 0; x < s[y].length; x++) {
         if (!s[y][x]) continue; const gy = this.current.y + y; const gx = this.current.x + x; if (gy < 0) continue;
@@ -1189,27 +1029,19 @@
 
     drawCenteredPiece(ctx, canvasWidth, canvasHeight, shape, type) {
       ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-      
-      // Calculate actual bounding box of the piece
       let minX = shape[0].length, maxX = -1, minY = shape.length, maxY = -1;
       for (let y = 0; y < shape.length; y++) {
         for (let x = 0; x < shape[y].length; x++) {
           if (shape[y][x]) {
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
+            if (x < minX) minX = x; if (x > maxX) maxX = x;
+            if (y < minY) minY = y; if (y > maxY) maxY = y;
           }
         }
       }
-      
-      const width = maxX - minX + 1;
-      const height = maxY - minY + 1;
+      const width = maxX - minX + 1; const height = maxY - minY + 1;
       const size = Math.max(width, height);
-      
       const cellN = Math.floor(Math.min(canvasWidth, canvasHeight) / (size + 2));
-      const totalWidth = cellN * width;
-      const totalHeight = cellN * height;
+      const totalWidth = cellN * width; const totalHeight = cellN * height;
       const offsetX = (canvasWidth - totalWidth) / 2 - minX * cellN;
       const offsetY = (canvasHeight - totalHeight) / 2 - minY * cellN;
       
@@ -1226,62 +1058,53 @@
         if (i < this.nextQueue.length) {
           const type = this.nextQueue[i];
           const shape = SHAPES[type];
-          this.drawCenteredPiece(nextContexts[i], nextCanvases[i].width, nextCanvases[i].height, shape, type);
-        } else {
-          nextContexts[i].clearRect(0, 0, nextCanvases[i].width, nextCanvases[i].height);
+          if (this.nextContexts[i]) {
+            this.drawCenteredPiece(this.nextContexts[i], this.nextCanvases[i].width, this.nextCanvases[i].height, shape, type);
+          }
+        } else if (this.nextContexts[i]) {
+          this.nextContexts[i].clearRect(0, 0, this.nextCanvases[i].width, this.nextCanvases[i].height);
         }
       }
     }
 
     drawHold() {
+      if (!this.holdCanvas || !this.hctx) return;
       if (this.held === null) {
-        hctx.clearRect(0, 0, holdCanvas.width, holdCanvas.height);
+        this.hctx.clearRect(0, 0, this.holdCanvas.width, this.holdCanvas.height);
         return;
       }
-      this.drawCenteredPiece(hctx, holdCanvas.width, holdCanvas.height, SHAPES[this.held], this.held);
+      this.drawCenteredPiece(this.hctx, this.holdCanvas.width, this.holdCanvas.height, SHAPES[this.held], this.held);
     }
 
     updateOverlay() {
-      let text = null;
-      let opacity = 1;
-      let state = null;
-      
-      if (this.paused) {
-        text = 'Paused';
-        state = 'paused';
-      } else if (this.restartHoldStart !== null) {
+      if (!this.overlayEl) return;
+      let text = null; let opacity = 1; let state = null;
+      if (this.paused) { text = 'Paused'; state = 'paused'; }
+      else if (this.restartHoldStart !== null) {
         const holdTime = Date.now() - this.restartHoldStart;
         opacity = Math.min(holdTime / this.restartHoldDuration, 1);
-        text = 'Restarting';
-        state = 'restarting';
+        text = 'Restarting'; state = 'restarting';
       }
-      
-      // Remove all state classes
-      overlayEl.classList.remove('paused', 'restarting');
-      
+      this.overlayEl.classList.remove('paused', 'restarting');
       if (text) {
-        overlayEl.innerHTML = `
-          <div class="overlay-backdrop" style="opacity: ${opacity}"></div>
-          <div class="overlay-content" style="opacity: ${opacity}">${text}</div>
-        `;
-        overlayEl.classList.add('visible');
-        if (state) {
-          overlayEl.classList.add(state);
-        }
+        this.overlayEl.innerHTML = `<div class="overlay-backdrop" style="opacity: ${opacity}"></div><div class="overlay-content" style="opacity: ${opacity}">${text}</div>`;
+        this.overlayEl.classList.add('visible');
+        if (state) this.overlayEl.classList.add(state);
       } else {
-        overlayEl.classList.remove('visible');
-        overlayEl.innerHTML = '';
+        this.overlayEl.classList.remove('visible');
+        this.overlayEl.innerHTML = '';
       }
     }
 
     updateHUD() {
-      scoreEl.textContent = this.score;
-      linesEl.textContent = this.lines;
-      levelEl.textContent = this.level;
+      if (this.scoreEl) this.scoreEl.textContent = this.score;
+      if (this.linesEl) this.linesEl.textContent = this.lines;
+      if (this.levelEl) this.levelEl.textContent = this.level;
     }
   }
+  
+  // Expose Tetris class
+  window.TetrisGame = Tetris;
+  window.TetrisConstants = { ROWS, COLS, SHAPES, TYPES, KICKS_JLSTZ, KICKS_I, KICKS_O, KICKS_180_JLSTZ, KICKS_180_I, KICKS_180_O, createMatrix, rotate, rotateCCW, rotate180, COLORS };
 
-  new Tetris();
 })();
-
-
