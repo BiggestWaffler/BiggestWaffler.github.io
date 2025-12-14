@@ -1,5 +1,5 @@
-// Simple Modern Tetris implementation
-// Grid: 10 x 20, canvas cell size inferred from canvas size
+// Modern Tetris implementation with Attack System (Versus)
+// Grid: 10 x 20
 
 (function() {
   // Shared Constants
@@ -8,7 +8,8 @@
   // Colors per tetromino type
   const COLORS = {
     I: '#64b5f6', J: '#8e99f3', L: '#ffb74d', O: '#ffd54f',
-    S: '#81c784', T: '#ce93d8', Z: '#e57373'
+    S: '#81c784', T: '#ce93d8', Z: '#e57373',
+    G: '#9e9e9e' // Garbage
   };
 
   // Handling settings (Shared)
@@ -97,7 +98,7 @@
     return rotate(rotate(matrix));
   }
 
-  // SRS Kick Tables (Global)
+  // SRS Kick Tables
   const KICKS_JLSTZ = {
     '0>1': [ [0,0], [-1,0], [-1,-1], [0,2], [-1,2] ],
     '1>2': [ [0,0], [1,0], [1,1], [0,-2], [1,-2] ],
@@ -183,19 +184,25 @@
       this.config = Object.assign({
         canvasId: 'game',
         holdCanvasId: 'hold',
-        nextCanvasClass: 'next-piece', // expects multiple elements if class
-        scoreId: 'score',
+        nextCanvasClass: 'next-piece', // fallback
+        ppsId: 'pps',
+        apmId: 'apm',
+        scoreId: 'score', // Added for single player stats
         linesId: 'lines',
         levelId: 'level',
+        garbageId: 'garbage', // visual gauge
         overlayId: 'overlay',
         isBot: false,
         botPPS: 1,
-        input: true // bind keyboard
+        input: true,
+        gameMode: 'single', // 'single' or 'versus'
+        onGameOver: null, // Callback for game over
+        allowPause: true
       }, config);
 
       // DOM Elements
       this.canvas = document.getElementById(this.config.canvasId);
-      if (!this.canvas) return; // Fail safe
+      if (!this.canvas) return; 
       this.ctx = this.canvas.getContext('2d');
       
       this.holdCanvas = document.getElementById(this.config.holdCanvasId);
@@ -204,29 +211,32 @@
       this.nextCanvases = [];
       this.nextContexts = [];
       
-      // Handle next pieces selector
       if (this.config.nextElements) {
         this.nextCanvases = this.config.nextElements;
       } else if (this.config.nextCanvasClass) {
         this.nextCanvases = Array.from(document.querySelectorAll('.' + this.config.nextCanvasClass));
       }
-
       this.nextContexts = this.nextCanvases.map(c => c.getContext('2d'));
 
       // Calculate cell size
       const originalCanvasWidth = this.canvas.width;
       this.cell = Math.floor(originalCanvasWidth / COLS);
-      this.canvas.height = ROWS * this.cell; // Ensure height matches rows
+      this.canvas.height = ROWS * this.cell; 
 
       // UI Elements
+      this.ppsEl = document.getElementById(this.config.ppsId);
+      this.apmEl = document.getElementById(this.config.apmId);
       this.scoreEl = document.getElementById(this.config.scoreId);
       this.linesEl = document.getElementById(this.config.linesId);
       this.levelEl = document.getElementById(this.config.levelId);
+      this.garbageEl = document.getElementById(this.config.garbageId);
       this.overlayEl = document.getElementById(this.config.overlayId);
 
       // Game State
       this.grid = createMatrix(ROWS, COLS, 0);
-      this.score = 0; this.lines = 0; this.level = 1;
+      this.level = 1; // Used for gravity speed
+      this.score = 0;
+      this.lines = 0;
       this.dropInterval = 1000;
       this.acc = 0; this.last = 0; this.paused = false;
       this.bag = new Bag();
@@ -241,6 +251,16 @@
       this.restartHoldDuration = 1000;
       this.lockDelay = SETTINGS.lockDelay;
       this.groundedSince = null;
+      this.isGameOver = false;
+      
+      // Stats
+      this.startTime = null;
+      this.piecesPlaced = 0;
+      this.attacksSent = 0;
+      
+      // Attack / Garbage System
+      this.opponent = null;
+      this.garbageQueue = []; // Array of {lines: int, hole: int}
       
       // Input State
       this.moveDir = 0;
@@ -252,7 +272,7 @@
       this.edgePressed = new Set();
       this.lastHorizontalPressDir = 0;
 
-      // Scoring State
+      // Scoring State (Used for Attack Calc)
       this.backToBack = false;
       this.combo = 0;
       this.softDropDistance = 0;
@@ -263,7 +283,7 @@
       this.currentPieceStartY = this.current.y;
 
       // Bot State
-      this.bot = null; // To be assigned if isBot
+      this.bot = null; 
       this.botTimer = 0;
 
       if (this.config.input) {
@@ -271,9 +291,107 @@
         this.bindSettingsUI();
       }
 
-      // Start loop
-      requestAnimationFrame(t => this.loop(t));
+      this.startTime = Date.now();
+      this.animationFrameId = requestAnimationFrame(t => this.loop(t));
       this.draw(); this.drawNext(); this.drawHold(); this.updateHUD();
+    }
+
+    setOpponent(opp) {
+        this.opponent = opp;
+    }
+
+    stop() {
+        cancelAnimationFrame(this.animationFrameId);
+        this.isGameOver = true;
+    }
+
+    sendGarbage(amount) {
+        if (amount <= 0) return;
+        
+        // 1. Cancel own garbage first
+        while (amount > 0 && this.garbageQueue.length > 0) {
+            const batch = this.garbageQueue[0];
+            if (batch.lines <= amount) {
+                amount -= batch.lines;
+                this.garbageQueue.shift();
+            } else {
+                batch.lines -= amount;
+                amount = 0;
+            }
+        }
+        this.updateGarbageGauge();
+
+        // 2. Send remainder to opponent
+        if (amount > 0) {
+            this.attacksSent += amount;
+            if (this.opponent && !this.opponent.isGameOver) {
+                this.opponent.receiveGarbage(amount);
+            }
+        }
+    }
+
+    receiveGarbage(amount) {
+        // Generate a random hole for this batch
+        const hole = Math.floor(Math.random() * COLS);
+        this.garbageQueue.push({ lines: amount, hole: hole });
+        this.updateGarbageGauge();
+    }
+
+    spawnGarbage() {
+        if (this.garbageQueue.length === 0) return;
+        
+        let linesToSpawn = 0;
+        // Cap total lines per turn at 8
+        const CAP = 8;
+        
+        // Calculate total available garbage
+        let totalGarbage = 0;
+        for(const batch of this.garbageQueue) totalGarbage += batch.lines;
+        
+        const spawnAmount = Math.min(totalGarbage, CAP);
+        if (spawnAmount === 0) return;
+
+        // Check for instant top out BEFORE spawning
+        if (this.grid[spawnAmount - 1].some(c => c !== 0)) {
+             // If any block exists in the top 'spawnAmount' rows, pushing up will kill player
+             this.gameOver();
+             return;
+        }
+
+        let spawned = 0;
+        while (spawned < spawnAmount && this.garbageQueue.length > 0) {
+            const batch = this.garbageQueue[0];
+            const linesFromBatch = Math.min(batch.lines, spawnAmount - spawned);
+            
+            for (let i = 0; i < linesFromBatch; i++) {
+                this.grid.shift();
+                const line = Array(COLS).fill('G');
+                line[batch.hole] = 0;
+                this.grid.push(line);
+            }
+            
+            spawned += linesFromBatch;
+            batch.lines -= linesFromBatch;
+            if (batch.lines <= 0) this.garbageQueue.shift();
+        }
+        
+        this.updateGarbageGauge();
+        
+        // Adjust current piece position to stay valid relative to screen
+        // If piece collides after grid shift (because grid moved up into it), move piece up
+        if (this.collide(this.current.shape, this.current.y, this.current.x)) {
+            let moved = false;
+            for (let dy = 1; dy <= ROWS; dy++) {
+                if (!this.collide(this.current.shape, this.current.y - dy, this.current.x)) {
+                    this.current.y -= dy;
+                    moved = true;
+                    break;
+                }
+            }
+            if (!moved) {
+                this.gameOver();
+            }
+        }
     }
 
     bindKeys() {
@@ -283,11 +401,20 @@
         };
   
         window.addEventListener('keydown', e => {
+          if (this.isGameOver) return;
           const key = e.key;
           const normalizedKey = normalizeKey(key);
+          
+          if (!this.config.allowPause) {
+              const pauseKey = normalizeKey(KEYBINDS.pause);
+              const restartKey = normalizeKey(KEYBINDS.restart);
+              if (normalizedKey === pauseKey || normalizedKey === restartKey) {
+                  return; 
+              }
+          }
+
           const restartKey = normalizeKey(KEYBINDS.restart);
-  
-          if (normalizedKey === restartKey && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey) {
+          if (normalizedKey === restartKey && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && this.config.allowPause) {
             e.preventDefault();
             if (this.restartHoldStart === null) this.restartHoldStart = Date.now();
           }
@@ -321,7 +448,7 @@
     }
 
     processInputs() {
-        if (!this.config.input) return; // Skip keyboard processing if input disabled
+        if (!this.config.input || this.isGameOver) return; 
 
         const normalizeKey = (key) => {
           if (key.length === 1 && key.match(/[a-z]/i)) return key.toLowerCase();
@@ -338,7 +465,7 @@
         const rightKey = normalizeKey(KEYBINDS.moveRight);
         const softDropKey = normalizeKey(KEYBINDS.softDrop);
   
-        if (this.edgePressed.has(pauseKey)) this.togglePause();
+        if (this.config.allowPause && this.edgePressed.has(pauseKey)) this.togglePause();
         if (this.paused) { this.edgePressed.clear(); return; }
   
         if (this.edgePressed.has(rotateCWKey)) this.rotate();
@@ -545,9 +672,10 @@
     togglePause() { this.paused = !this.paused; }
 
     loop(t) {
+      if (this.isGameOver) return;
       const dt = t - this.last; this.last = t;
       
-      if (this.restartHoldStart !== null) {
+      if (this.config.allowPause && this.restartHoldStart !== null) {
         const holdTime = Date.now() - this.restartHoldStart;
         if (holdTime >= this.restartHoldDuration) {
           this.reset();
@@ -557,8 +685,7 @@
       
       this.processInputs();
       
-      // Bot Logic Hook
-      if (this.config.isBot && !this.paused && this.bot) {
+      if (this.config.isBot && !this.paused && this.bot && !this.isGameOver) {
          this.botTimer += dt;
          const moveInterval = 1000 / this.config.botPPS;
          if (this.botTimer > moveInterval) {
@@ -567,7 +694,7 @@
          }
       }
 
-      if (!this.paused) {
+      if (!this.paused && !this.isGameOver) {
         this.acc += dt;
         if (this.acc > this.dropInterval) { this.drop(); this.acc = 0; }
         
@@ -589,9 +716,11 @@
           }
         }
       }
+      
+      this.updateHUD();
       this.draw();
       this.updateOverlay();
-      requestAnimationFrame(tt => this.loop(tt));
+      this.animationFrameId = requestAnimationFrame(tt => this.loop(tt));
     }
 
     collide(shape, offY, offX) {
@@ -605,6 +734,7 @@
       return false;
     }
 
+    // Input Handling
     startHorizontal(dir) {
       if (this.moveDir === dir) return;
       this.clearHorizontalTimers();
@@ -678,16 +808,28 @@
 
     merge() {
       const s = this.current.shape; const oy = this.current.y; const ox = this.current.x;
+      const wasTSpin = this.current.type === 'T' && this.isTSpin();
+      this.lastRotationAtMerge = this.current.rot;
+      
+      // Check hard drop score
       if (this.currentPieceStartY !== null && this.hardDropDistance === 0) {
         this.hardDropDistance = Math.max(0, oy - this.currentPieceStartY);
       }
-      const wasTSpin = this.current.type === 'T' && this.isTSpin();
-      this.lastRotationAtMerge = this.current.rot;
+
       for (let y = 0; y < s.length; y++) for (let x = 0; x < s[y].length; x++) {
         if (s[y][x] && oy + y >= 0) this.grid[oy + y][ox + x] = this.current.type;
       }
+      
       this.lastRotationWasTSpin = wasTSpin;
-      this.clearLines();
+      this.piecesPlaced++;
+      this.clearLines(); 
+      
+      const linesCleared = this.lastLinesCleared || 0; 
+      if (linesCleared === 0) {
+          this.spawnGarbage();
+      }
+
+      // Check Game Over (spawn collision)
       this.current = new Piece(this.nextQueue.shift());
       this.nextQueue.push(this.bag.draw());
       this.canHold = true;
@@ -698,12 +840,27 @@
       this.lastRotationWasTSpin = false;
       this.lastRotationAtMerge = 0;
       this.drawNext();
-      if (this.collide(this.current.shape, this.current.y, this.current.x)) this.reset();
+      
+      if (this.collide(this.current.shape, this.current.y, this.current.x)) {
+          this.gameOver();
+      }
+    }
+
+    gameOver() {
+        this.isGameOver = true;
+        this.updateOverlay();
+        if (this.config.onGameOver) {
+            this.config.onGameOver(this);
+        } else if (this.config.gameMode === 'single') {
+            // Instant restart for single player if no callback
+            setTimeout(() => this.reset(), 1000); 
+        }
     }
 
     reset() {
       this.grid = createMatrix(ROWS, COLS, 0);
-      this.score = 0; this.lines = 0; this.level = 1; this.dropInterval = 1000;
+      this.level = 1; this.dropInterval = 1000;
+      this.score = 0; this.lines = 0;
       this.bag = new Bag();
       this.current = new Piece(this.bag.draw());
       this.nextQueue = [];
@@ -716,22 +873,28 @@
       this.groundedSince = null;
       this.backToBack = false;
       this.combo = 0;
-      this.softDropDistance = 0;
-      this.hardDropDistance = 0;
-      this.lastActionWasDifficult = false;
-      this.lastRotationWasTSpin = false;
-      this.lastRotationAtMerge = 0;
       this.currentPieceStartY = this.current.y;
+      this.piecesPlaced = 0;
+      this.attacksSent = 0;
+      this.startTime = Date.now();
+      this.garbageQueue = []; // Reset queue
+      this.isGameOver = false;
+      this.updateGarbageGauge();
       this.drawHold();
       this.drawNext();
       this.updateHUD();
+      this.draw();
+      
+      // If loop stopped, restart it
+      cancelAnimationFrame(this.animationFrameId);
+      this.last = performance.now();
+      this.animationFrameId = requestAnimationFrame(t => this.loop(t));
     }
 
+    // Scoring & Logic
     isTSpin() {
       if (this.current.type !== 'T') return false;
-      const px = this.current.x;
-      const py = this.current.y;
-      const shape = this.current.shape;
+      const px = this.current.x; const py = this.current.y; const shape = this.current.shape;
       let centerX = -1, centerY = -1;
       for (let y = 0; y < shape.length; y++) {
         for (let x = 0; x < shape[y].length; x++) {
@@ -741,18 +904,13 @@
             if (y < shape.length - 1 && shape[y+1][x]) neighbors++;
             if (x > 0 && shape[y][x-1]) neighbors++;
             if (x < shape[y].length - 1 && shape[y][x+1]) neighbors++;
-            if (neighbors === 3) {
-              centerX = px + x; centerY = py + y; break;
-            }
+            if (neighbors === 3) { centerX = px + x; centerY = py + y; break; }
           }
         }
         if (centerX !== -1) break;
       }
       if (centerX === -1 || centerY === -1) return false;
-      const corners = [
-        [centerX - 1, centerY - 1], [centerX + 1, centerY - 1],
-        [centerX - 1, centerY + 1], [centerX + 1, centerY + 1]
-      ];
+      const corners = [[centerX - 1, centerY - 1], [centerX + 1, centerY - 1], [centerX - 1, centerY + 1], [centerX + 1, centerY + 1]];
       let filledCorners = 0;
       for (const [cx, cy] of corners) {
         if (cy < 0 || cy >= ROWS || cx < 0 || cx >= COLS || this.grid[cy][cx]) filledCorners++;
@@ -767,11 +925,7 @@
     }
 
     isPerfectClear() {
-      for (let y = 0; y < ROWS; y++) {
-        for (let x = 0; x < COLS; x++) {
-          if (this.grid[y][x]) return false;
-        }
-      }
+      for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) if (this.grid[y][x]) return false;
       return true;
     }
 
@@ -785,66 +939,66 @@
           y++;
         }
       }
+      this.lastLinesCleared = cleared;
       
+      const isTSpinAction = this.lastRotationWasTSpin;
+      const isMiniTSpin = isTSpinAction && (this.lastRotationAtMerge === 1 || this.lastRotationAtMerge === 3);
+      const isTetris = cleared === 4;
+      const isDifficult = isTSpinAction || isTetris;
+      
+      // Calculate Score (Single Player)
       if (cleared > 0) {
-        const isTSpinAction = this.lastRotationWasTSpin;
-        const isMiniTSpin = isTSpinAction && (this.lastRotationAtMerge === 1 || this.lastRotationAtMerge === 3);
-        const isTetris = cleared === 4;
-        const isDifficult = isTSpinAction || isTetris;
-        
-        let baseScore = 0;
+          let baseScore = 0;
+          if (isTSpinAction) {
+              if (cleared === 0) baseScore = isMiniTSpin ? 100 : 400;
+              else if (cleared === 1) baseScore = isMiniTSpin ? 200 : 800;
+              else if (cleared === 2) baseScore = isMiniTSpin ? 400 : 1200;
+              else if (cleared === 3) baseScore = 1600;
+          } else {
+              const scores = [0, 100, 300, 500, 800];
+              baseScore = scores[cleared];
+          }
+          baseScore *= this.level;
+          if (isDifficult && this.backToBack) baseScore = Math.floor(baseScore * 1.5);
+          if (this.combo > 0) baseScore += 50 * this.combo * this.level;
+          baseScore += this.softDropDistance + (this.hardDropDistance * 2);
+          if (this.isPerfectClear()) baseScore += 2000 * this.level;
+          
+          this.score += baseScore;
+          this.lines += cleared;
+          if (this.lines >= this.level * 10) {
+              this.level++;
+              this.dropInterval = Math.max(120, 1000 - (this.level - 1) * 80);
+          }
+      }
+
+      // Calculate Attack (Versus)
+      if (cleared > 0) {
+        let attack = 0;
         if (isTSpinAction) {
-          if (cleared === 0) baseScore = isMiniTSpin ? 100 : 400;
-          else if (cleared === 1) baseScore = isMiniTSpin ? 200 : 800;
-          else if (cleared === 2) baseScore = isMiniTSpin ? 400 : 1200;
-          else if (cleared === 3) baseScore = 1600;
+            if (cleared === 1) attack = isMiniTSpin ? 0 : 2;
+            else if (cleared === 2) attack = isMiniTSpin ? 1 : 4;
+            else if (cleared === 3) attack = 6;
         } else {
-          const scores = [0, 100, 300, 500, 800];
-          baseScore = scores[cleared];
+            if (cleared === 2) attack = 1;
+            else if (cleared === 3) attack = 2;
+            else if (cleared === 4) attack = 4;
         }
-        
-        baseScore *= this.level;
-        if (isDifficult && this.backToBack) baseScore = Math.floor(baseScore * 1.5);
-        if (this.combo > 0) baseScore += 50 * this.combo * this.level;
-        baseScore += this.softDropDistance;
-        baseScore += this.hardDropDistance * 2;
-        
-        const perfectClear = this.isPerfectClear();
-        let perfectClearBonus = 0;
-        if (perfectClear) {
-          if (cleared === 1) perfectClearBonus = 800 * this.level;
-          else if (cleared === 2) perfectClearBonus = 1200 * this.level;
-          else if (cleared === 3) perfectClearBonus = 1800 * this.level;
-          else if (cleared === 4) perfectClearBonus = (this.backToBack && isTetris ? 3200 : 2000) * this.level;
-        }
-        baseScore += perfectClearBonus;
-        
-        this.score += baseScore;
-        this.lines += cleared;
-        
         if (isDifficult) {
-          this.backToBack = true;
-          this.lastActionWasDifficult = true;
-        } else if (cleared > 0 && cleared < 4) {
-          this.backToBack = false;
-          this.lastActionWasDifficult = false;
+            if (this.backToBack) attack += 1;
+            this.backToBack = true;
         } else {
-          this.lastActionWasDifficult = false;
+            this.backToBack = false;
         }
+        const comboAttack = Math.floor((this.combo - 1) / 2);
+        if (this.combo >= 2) attack += Math.max(1, comboAttack);
+        if (this.isPerfectClear()) attack += 10;
+        
         this.combo++;
-        if (this.lines >= this.level * 10) {
-          this.level++;
-          this.dropInterval = Math.max(120, 1000 - (this.level - 1) * 80);
-        }
-        this.updateHUD();
+        this.sendGarbage(attack);
       } else {
         this.combo = 0;
-        if (this.lastRotationWasTSpin) {
-          this.backToBack = true;
-          this.lastActionWasDifficult = true;
-        }
       }
-      this.lastRotationWasTSpin = false;
     }
 
     move(dir) {
@@ -945,8 +1099,6 @@
       }
       this.canHold = false;
       this.groundedSince = null;
-      this.softDropDistance = 0;
-      this.hardDropDistance = 0;
       this.currentPieceStartY = this.current.y;
       this.lastRotationWasTSpin = false;
       this.lastRotationAtMerge = 0;
@@ -1079,13 +1231,24 @@
     updateOverlay() {
       if (!this.overlayEl) return;
       let text = null; let opacity = 1; let state = null;
-      if (this.paused) { text = 'Paused'; state = 'paused'; }
-      else if (this.restartHoldStart !== null) {
+      
+      if (this.isGameOver) {
+          text = 'Game Over';
+          if (this.config.gameMode === 'versus') {
+              // Note: Winner logic is handled in manager, but this is a fallback state
+              text = 'Defeat'; 
+              state = 'loser';
+          }
+      } else if (this.paused) { 
+          text = 'Paused'; state = 'paused'; 
+      } else if (this.restartHoldStart !== null) {
         const holdTime = Date.now() - this.restartHoldStart;
         opacity = Math.min(holdTime / this.restartHoldDuration, 1);
         text = 'Restarting'; state = 'restarting';
       }
-      this.overlayEl.classList.remove('paused', 'restarting');
+      
+      this.overlayEl.classList.remove('paused', 'restarting', 'winner', 'loser');
+      
       if (text) {
         this.overlayEl.innerHTML = `<div class="overlay-backdrop" style="opacity: ${opacity}"></div><div class="overlay-content" style="opacity: ${opacity}">${text}</div>`;
         this.overlayEl.classList.add('visible');
@@ -1100,6 +1263,26 @@
       if (this.scoreEl) this.scoreEl.textContent = this.score;
       if (this.linesEl) this.linesEl.textContent = this.lines;
       if (this.levelEl) this.levelEl.textContent = this.level;
+      
+      if (this.ppsEl) {
+          const duration = Math.max(0.1, (Date.now() - this.startTime) / 1000);
+          const pps = this.piecesPlaced / duration;
+          this.ppsEl.textContent = pps.toFixed(2);
+      }
+      if (this.apmEl) {
+          const minutes = Math.max(0.001, (Date.now() - this.startTime) / 60000);
+          const apm = this.attacksSent / minutes;
+          this.apmEl.textContent = apm.toFixed(1);
+      }
+    }
+
+    updateGarbageGauge() {
+        if (!this.garbageEl) return;
+        // Cap visual gauge at 20
+        let totalGarbage = 0;
+        for(const batch of this.garbageQueue) totalGarbage += batch.lines;
+        const percentage = Math.min(100, (totalGarbage / 20) * 100);
+        this.garbageEl.style.height = `${percentage}%`;
     }
   }
   

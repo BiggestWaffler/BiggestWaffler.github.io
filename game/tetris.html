@@ -8,80 +8,6 @@
     <link rel="stylesheet" href="/game/styles/tetris.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        /* Multi-player layout overrides */
-        .board-container {
-            display: flex;
-            justify-content: center;
-            gap: 40px;
-            max-width: 1400px;
-            transition: all 0.3s ease;
-        }
-
-        .player-wrapper {
-            display: grid;
-            grid-template-columns: 100px 1fr 100px; /* Compact side panels for versus */
-            gap: 16px;
-            align-items: start;
-            transition: all 0.3s ease;
-        }
-        
-        /* Single player mode can keep original wide spacing if needed, but the flex works too */
-        .player-wrapper.single-mode {
-             grid-template-columns: 160px 1fr 160px;
-             gap: 24px;
-        }
-
-        .player-wrapper.hidden {
-            display: none;
-        }
-
-        /* Adjust side panels for versus to fit */
-        .player-wrapper:not(.single-mode) .left-side, 
-        .player-wrapper:not(.single-mode) .right-side {
-            padding: 10px;
-        }
-        
-        .player-wrapper:not(.single-mode) .next-piece,
-        .player-wrapper:not(.single-mode) #hold1,
-        .player-wrapper:not(.single-mode) #hold2 {
-            width: 80px;
-            height: 80px;
-        }
-
-        /* Mode Selection Modal */
-        #modeSelectModal .modal-content {
-            text-align: center;
-        }
-
-        .mode-btn {
-            display: block;
-            width: 100%;
-            padding: 20px;
-            margin: 10px 0;
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid #00ffff;
-            color: #00ffff;
-            font-size: 24px;
-            font-weight: 800;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .mode-btn:hover {
-            background: rgba(0, 255, 255, 0.2);
-            transform: scale(1.02);
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
-        }
-
-        .bot-settings {
-            margin-top: 20px;
-            padding: 20px;
-            border: 1px solid rgba(0, 255, 255, 0.3);
-            background: rgba(0,0,0,0.5);
-        }
-    </style>
 </head>
 <body>
     <div class="wrap">
@@ -104,11 +30,20 @@
                 </aside>
                 <div class="board-area">
                     <div class="stats">
-                        <div>Score: <span id="score1">0</span></div>
-                        <div>Lines: <span id="lines1">0</span></div>
-                        <div>Level: <span id="level1">1</span></div>
+                        <!-- Single Player Stats -->
+                        <div class="stats-single" id="statsSingle1">
+                            <div>Score: <span id="score1">0</span></div>
+                            <div>Lines: <span id="lines1">0</span></div>
+                            <div>Level: <span id="level1">1</span></div>
+                        </div>
+                        <!-- Versus Stats -->
+                        <div class="stats-versus" id="statsVersus1" style="display:none;">
+                            <div>PPS <span id="pps1">0.00</span></div>
+                            <div>APM <span id="apm1">0.0</span></div>
+                        </div>
                     </div>
                     <div class="canvas-wrapper">
+                        <div class="garbage-gauge"><div id="garbage1" class="garbage-fill" style="height: 0%"></div></div>
                         <canvas id="game1" width="300" height="600" aria-label="Tetris board"></canvas>
                         <div class="overlay" id="overlay1"></div>
                     </div>
@@ -137,11 +72,13 @@
                 </aside>
                 <div class="board-area">
                     <div class="stats">
-                        <div>Score: <span id="score2">0</span></div>
-                        <div>Lines: <span id="lines2">0</span></div>
-                        <div>Level: <span id="level2">1</span></div>
+                        <div class="stats-versus" id="statsVersus2">
+                            <div>PPS <span id="pps2">0.00</span></div>
+                            <div>APM <span id="apm2">0.0</span></div>
+                        </div>
                     </div>
                     <div class="canvas-wrapper">
+                        <div class="garbage-gauge"><div id="garbage2" class="garbage-fill" style="height: 0%"></div></div>
                         <canvas id="game2" width="300" height="600" aria-label="Bot Tetris board"></canvas>
                         <div class="overlay" id="overlay2"></div>
                     </div>
@@ -173,9 +110,28 @@
                     <button class="mode-btn" id="btnVersus">Versus AI</button>
                     
                     <div class="bot-settings" id="botSettings" style="display:none;">
-                        <label for="botPPS">Bot Speed (PPS): <span id="botPPSValue">1.0</span></label>
-                        <input type="range" id="botPPS" min="0.1" max="3.0" step="0.1" value="1.0" style="width:100%">
-                        <button class="mode-btn" id="btnStartVersus" style="margin-top:10px; font-size: 18px;">Start Match</button>
+                        <div class="setting">
+                            <label for="botPPS">Bot Speed: <span id="botPPSValue">1.0</span> PPS</label>
+                            <input type="range" id="botPPS" min="0.1" max="3.0" step="0.1" value="1.0">
+                        </div>
+                        <button class="mode-btn" id="btnStartVersus" style="margin-top:20px; font-size: 18px;">Start Match</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Modal (New) -->
+        <div id="resultModal" class="modal" aria-hidden="true">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content" style="text-align: center;">
+                <div class="modal-header">
+                    <h2 id="resultTitle">Game Over</h2>
+                </div>
+                <div class="modal-body">
+                    <h3 id="resultMessage"></h3>
+                    <div style="display: flex; gap: 16px; justify-content: center; margin-top: 20px;">
+                        <button class="mode-btn" id="btnRestartMatch" style="font-size: 16px; padding: 12px;">Restart Match</button>
+                        <button class="mode-btn" id="btnMenu" style="font-size: 16px; padding: 12px;">Main Menu</button>
                     </div>
                 </div>
             </div>

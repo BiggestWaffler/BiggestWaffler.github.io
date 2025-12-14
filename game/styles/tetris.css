@@ -171,18 +171,59 @@ body::before {
 
 /* Board Container - Retro Grid Layout */
 .board-container { 
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    max-width: 1400px;
+    transition: all 0.3s ease;
+}
+
+/* Single player mode can keep original wide spacing if needed, but the flex works too */
+.player-wrapper.single-mode .board-container {
     display: grid; 
     grid-template-columns: 160px 1fr 160px; 
     gap: 24px; 
     align-items: start;
 }
 
+.player-wrapper {
+    display: grid;
+    grid-template-columns: 100px 1fr 100px; /* Compact side panels for versus */
+    gap: 16px;
+    align-items: start;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+/* Single player mode can keep original wide spacing if needed, but the flex works too */
+.player-wrapper.single-mode {
+     grid-template-columns: 160px 1fr 160px;
+     gap: 24px;
+}
+
+.player-wrapper.hidden {
+    display: none;
+}
+
+/* Adjust side panels for versus to fit */
+.player-wrapper:not(.single-mode) .left-side, 
+.player-wrapper:not(.single-mode) .right-side {
+    padding: 10px;
+}
+
+.player-wrapper:not(.single-mode) .next-piece,
+.player-wrapper:not(.single-mode) #hold1,
+.player-wrapper:not(.single-mode) #hold2 {
+    width: 80px;
+    height: 80px;
+}
+
 /* Stats Display - Retro Style */
 .stats {
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between;
     margin-bottom: 16px;
-    padding: 12px;
+    padding: 10px 20px;
     background: rgba(0, 0, 0, 0.8);
     border: 2px solid #00ffff;
     border-radius: 0;
@@ -190,16 +231,27 @@ body::before {
 }
 
 .stats div {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     color: #00ffff;
     text-shadow: 0 0 8px #00ffff;
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
 }
 
 .stats span {
     color: #ff00ff;
     text-shadow: 0 0 8px #ff00ff;
     font-size: 20px;
+    margin-top: 0;
+}
+
+.stats-single, .stats-versus {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
 }
 
 /* Canvas - Retro Game Board */
@@ -276,6 +328,8 @@ canvas {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-direction: column;
+    gap: 20px;
 }
 
 /* Paused state */
@@ -310,6 +364,30 @@ canvas {
         0 0 30px #ffff00,
         0 0 45px #ffff00;
     animation: overlayPulseRestart 1s ease-in-out infinite;
+}
+
+/* Winner state */
+.overlay.visible.winner {
+    border-color: #00ff00;
+    box-shadow: 
+        0 0 40px rgba(0, 255, 0, 0.8),
+        inset 0 0 40px rgba(0, 255, 0, 0.2);
+}
+
+.overlay.visible.winner .overlay-content {
+    color: #00ff00;
+}
+
+/* Loser state */
+.overlay.visible.loser {
+    border-color: #ff0000;
+    box-shadow: 
+        0 0 40px rgba(255, 0, 0, 0.8),
+        inset 0 0 40px rgba(255, 0, 0, 0.2);
+}
+
+.overlay.visible.loser .overlay-content {
+    color: #ff0000;
 }
 
 @keyframes overlayPulse {
@@ -684,6 +762,89 @@ section.settings h3 {
 .setting input[type="range"]::-moz-range-thumb:hover {
     background: #ff00ff;
     box-shadow: 0 0 20px rgba(255, 0, 255, 1);
+}
+
+/* Garbage Bar */
+.garbage-bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    background: rgba(255, 0, 0, 0.2);
+    border: 1px solid #ff0000;
+    display: flex;
+    flex-direction: column-reverse;
+    overflow: hidden;
+}
+
+.player-wrapper .garbage-bar {
+    left: -16px;
+}
+
+/* Hide garbage bar in single player mode */
+.player-wrapper.single-mode .garbage-gauge {
+    display: none;
+}
+
+.garbage-gauge {
+    position: absolute;
+    left: -12px;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    background: #330000;
+    border: 1px solid #ff0000;
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+.garbage-fill {
+    width: 100%;
+    background: #ff0000;
+    transition: height 0.2s ease-out;
+    box-shadow: 0 0 10px #ff0000;
+}
+
+/* Mode Selection Modal */
+#modeSelectModal .modal-content {
+    text-align: center;
+}
+
+.mode-btn {
+    display: block;
+    width: 100%;
+    padding: 20px;
+    margin: 10px 0;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #00ffff;
+    color: #00ffff;
+    font-size: 24px;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mode-btn:hover {
+    background: rgba(0, 255, 255, 0.2);
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+}
+
+.bot-settings {
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    background: rgba(0,0,0,0.5);
+}
+
+/* Reuse setting slider styles for bot settings */
+.bot-settings .setting {
+    max-width: 100%;
+    margin-bottom: 0;
+    background: transparent;
+    border: none;
+    padding: 0;
 }
 
 /* Responsive */
