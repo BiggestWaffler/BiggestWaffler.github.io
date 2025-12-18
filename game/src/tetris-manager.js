@@ -8,10 +8,45 @@
     const p2Wrapper = document.getElementById('p2Wrapper');
     const botPPSInput = document.getElementById('botPPS');
     const botPPSValue = document.getElementById('botPPSValue');
+    const menuBtn = document.getElementById('menuBtn');
+    const botSettings = document.getElementById('botSettings');
     
     let p1Game = null;
     let p2Game = null;
     let currentGameMode = 'single';
+
+    function resetModeModalUI() {
+        const btnSingleEl = document.getElementById('btnSingle');
+        const btnVersusEl = document.getElementById('btnVersus');
+        if (botSettings) botSettings.style.display = 'none';
+        if (btnSingleEl) btnSingleEl.style.display = 'block';
+        if (btnVersusEl) btnVersusEl.style.display = 'block';
+    }
+
+    function goToMenu() {
+        // Stop active games
+        if (p1Game) { p1Game.stop(); p1Game = null; }
+        if (p2Game) { p2Game.stop(); p2Game = null; }
+
+        // Close result modal if open
+        if (resultModal) {
+            resultModal.classList.remove('open');
+            resultModal.setAttribute('aria-hidden', 'true');
+        }
+
+        // Reset layout to single-player (default)
+        if (p1Wrapper) p1Wrapper.classList.add('single-mode');
+        if (p2Wrapper) p2Wrapper.classList.add('hidden');
+        toggleStats('single');
+        currentGameMode = 'single';
+
+        // Reset modal UI + open mode selector
+        resetModeModalUI();
+        if (modeModal) {
+            modeModal.classList.add('open');
+            modeModal.setAttribute('aria-hidden', 'false');
+        }
+    }
 
     // UI Event Listeners
     const btnSingle = document.getElementById('btnSingle');
@@ -25,7 +60,7 @@
     if (btnVersus) {
         btnVersus.addEventListener('click', () => {
             // Show bot settings
-            document.getElementById('botSettings').style.display = 'block';
+            if (botSettings) botSettings.style.display = 'block';
             btnSingle.style.display = 'none';
             btnVersus.style.display = 'none';
         });
@@ -63,23 +98,14 @@
     const btnMenu = document.getElementById('btnMenu');
     if (btnMenu) {
         btnMenu.addEventListener('click', () => {
-            if (resultModal) {
-                resultModal.classList.remove('open');
-                resultModal.setAttribute('aria-hidden', 'true');
-            }
-            // Reset to initial state
-            if (p1Game) { p1Game.stop(); p1Game = null; }
-            if (p2Game) { p2Game.stop(); p2Game = null; }
-            
-            if (modeModal) {
-                modeModal.classList.add('open');
-                modeModal.setAttribute('aria-hidden', 'false');
-            }
-            
-            // Reset modal UI
-            document.getElementById('botSettings').style.display = 'none';
-            btnSingle.style.display = 'block';
-            btnVersus.style.display = 'block';
+            goToMenu();
+        });
+    }
+
+    // Topbar menu button (works mid-match too)
+    if (menuBtn) {
+        menuBtn.addEventListener('click', () => {
+            goToMenu();
         });
     }
 
