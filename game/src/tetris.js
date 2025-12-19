@@ -197,6 +197,12 @@
         input: true,
         gameMode: 'single', // 'single' or 'versus'
         onGameOver: null, // Callback for game over
+        onAttack: null, // Callback for sending garbage
+        onGridChange: null, // Callback for grid updates
+        onMove: null, // Callback for piece movement
+        onHold: null, // Callback for hold
+        onGarbageChange: null, // Callback for garbage queue change
+        isRemote: false, // If true, this instance is a passive renderer
         allowPause: true
       }, config);
 
@@ -300,6 +306,38 @@
         this.opponent = opp;
     }
 
+    setCurrentPiece(data) {
+        if (!data) return;
+        // Don't create new Piece instance every time to avoid GC churn if possible,
+        // but for simplicity/correctness we can just update props or new instance.
+        // Data should have { type, x, y, rot }
+        if (this.current.type !== data.type) {
+            this.current = new Piece(data.type);
+        }
+        this.current.x = data.x;
+        this.current.y = data.y;
+        this.current.rot = data.rot;
+        // Update shape based on rotation
+        this.current.shape = SHAPES[data.type].map(r => r.slice());
+        for(let i=0; i<data.rot; i++) {
+             this.current.shape = rotate(this.current.shape);
+        }
+    }
+    
+    setHeldPiece(type) {
+        this.held = type;
+        this.drawHold();
+    }
+
+    setGrid(newGrid) {
+        this.grid = newGrid;
+    }
+    
+    setGarbageQueue(queue) {
+        this.garbageQueue = queue;
+        this.updateGarbageGauge();
+    }
+
     stop() {
         cancelAnimationFrame(this.animationFrameId);
         this.isGameOver = true;
@@ -324,7 +362,9 @@
         // 2. Send remainder to opponent
         if (amount > 0) {
             this.attacksSent += amount;
-            if (this.opponent && !this.opponent.isGameOver) {
+            if (this.config.onAttack) {
+                this.config.onAttack(amount);
+            } else if (this.opponent && !this.opponent.isGameOver) {
                 this.opponent.receiveGarbage(amount);
             }
         }
@@ -335,6 +375,7 @@
         const hole = Math.floor(Math.random() * COLS);
         this.garbageQueue.push({ lines: amount, hole: hole });
         this.updateGarbageGauge();
+        if (this.config.onGarbageChange) this.config.onGarbageChange(this.garbageQueue);
     }
 
     spawnGarbage() {
@@ -376,7 +417,10 @@
         }
         
         this.updateGarbageGauge();
+        if (this.config.onGarbageChange) this.config.onGarbageChange(this.garbageQueue);
         
+        if (this.config.onGridChange) this.config.onGridChange(this.grid);
+
         // Adjust current piece position to stay valid relative to screen
         // If piece collides after grid shift (because grid moved up into it), move piece up
         if (this.collide(this.current.shape, this.current.y, this.current.x)) {
@@ -674,6 +718,13 @@
     loop(t) {
       if (this.isGameOver) return;
       const dt = t - this.last; this.last = t;
+
+      if (this.config.isRemote) {
+          this.draw();
+          this.updateHUD(); // Update stats if we're syncing them
+          this.animationFrameId = requestAnimationFrame(tt => this.loop(tt));
+          return;
+      }
       
       if (this.config.allowPause && this.restartHoldStart !== null) {
         const holdTime = Date.now() - this.restartHoldStart;
@@ -843,6 +894,8 @@
       
       if (this.collide(this.current.shape, this.current.y, this.current.x)) {
           this.gameOver();
+      } else {
+          if (this.config.onGridChange) this.config.onGridChange(this.grid);
       }
     }
 
@@ -1001,11 +1054,23 @@
       }
     }
 
+    triggerMoveEvent() {
+        if (this.config.onMove) {
+            this.config.onMove({
+                type: this.current.type,
+                x: this.current.x,
+                y: this.current.y,
+                rot: this.current.rot
+            });
+        }
+    }
+
     move(dir) {
       const nx = this.current.x + dir;
       if (!this.collide(this.current.shape, this.current.y, nx)) {
         this.current.x = nx;
         this.refreshGrounded();
+        this.triggerMoveEvent();
       }
     }
 
@@ -1030,6 +1095,7 @@
           if (this.current.type === 'T') {
             this.lastRotationWasTSpin = this.isTSpin();
           }
+          this.triggerMoveEvent();
           return true;
         }
       }
@@ -1060,6 +1126,7 @@
           if (this.current.type === 'T') {
             this.lastRotationWasTSpin = this.isTSpin();
           }
+          this.triggerMoveEvent();
           return true;
         }
       }
@@ -1071,6 +1138,7 @@
       if (!this.collide(this.current.shape, ny, this.current.x)) {
         this.current.y = ny;
         this.refreshGrounded();
+        this.triggerMoveEvent();
       } else {
         this.refreshGrounded();
         this.tryLock();
@@ -1104,6 +1172,7 @@
       this.lastRotationAtMerge = 0;
       this.drawHold();
       this.drawNext();
+      if (this.config.onHold) this.config.onHold(this.held);
     }
     
     drawCell(gx, gy, type) {
