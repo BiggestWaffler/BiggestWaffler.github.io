@@ -40,6 +40,10 @@
     // PeerJS State
     let peer = null;
     let conn = null;
+    
+    // Rematch State
+    let myRematchVote = false;
+    let oppRematchVote = false;
 
     function resetModeModalUI() {
         if (botSettings) botSettings.style.display = 'none';
@@ -56,6 +60,21 @@
         if (connectMsg) connectMsg.textContent = '';
         if (myRoomId) myRoomId.value = '';
         if (destRoomId) destRoomId.value = '';
+        
+        resetRematchState();
+    }
+    
+    function resetRematchState() {
+        myRematchVote = false;
+        oppRematchVote = false;
+        const btnRestartMatch = document.getElementById('btnRestartMatch');
+        if (btnRestartMatch) {
+            btnRestartMatch.textContent = 'Restart Match';
+            btnRestartMatch.disabled = false;
+            btnRestartMatch.classList.remove('waiting');
+        }
+        const msg = document.getElementById('resultMessage');
+        // Don't clear message if it shows winner, only if it shows rematch status
     }
 
     function goToMenu() {
@@ -199,8 +218,25 @@
         });
 
         conn.on('close', () => {
-            alert('Opponent disconnected.');
-            goToMenu();
+            // Handle disconnect without popup
+            if (currentGameMode === 'multiplayer') {
+                if (resultModal.classList.contains('open')) {
+                    const msg = document.getElementById('resultMessage');
+                    if (msg) msg.textContent += ' (Opponent Disconnected)';
+                } else {
+                    // Show disconnect in overlay if game is running or just finished
+                    if (p1Game) {
+                        // Hacky: access overlay element via ID since we know it
+                        const overlay = document.getElementById('overlay1');
+                        if (overlay) {
+                            overlay.innerHTML = `<div class="overlay-backdrop" style="opacity: 1"></div><div class="overlay-content" style="opacity: 1; font-size: 24px;">Opponent Disconnected</div>`;
+                            overlay.classList.add('visible');
+                        }
+                    }
+                }
+                // Optional: after delay go to menu
+                // setTimeout(goToMenu, 3000);
+            }
         });
     }
 
@@ -236,9 +272,28 @@
             case 'lose':
                 handleGameOver(p2Game, 'Opponent');
                 break;
-            case 'restart':
-                // Reset games if we implement rematch
+            case 'rematch_request':
+                oppRematchVote = true;
+                updateRematchUI();
+                checkStartRematch();
                 break;
+        }
+    }
+    
+    function updateRematchUI() {
+        const msg = document.getElementById('resultMessage');
+        if (oppRematchVote && !myRematchVote) {
+            // Append message if not already there
+            if (msg && !msg.textContent.includes('wants a rematch')) {
+                msg.innerHTML += '<br><span style="color: #4caf50; font-size: 0.8em;">Opponent wants a rematch!</span>';
+            }
+        }
+    }
+    
+    function checkStartRematch() {
+        if (myRematchVote && oppRematchVote) {
+            // Start game
+            startMultiplayer();
         }
     }
 
@@ -252,21 +307,26 @@
     const btnRestartMatch = document.getElementById('btnRestartMatch');
     if (btnRestartMatch) {
         btnRestartMatch.addEventListener('click', () => {
-            if (resultModal) {
-                resultModal.classList.remove('open');
-                resultModal.setAttribute('aria-hidden', 'true');
-            }
-            if (currentGameMode === 'versus') {
-                startVersus();
-            } else if (currentGameMode === 'multiplayer') {
-                // For MP, we probably need a "Rematch" signal. 
-                // For now, simple restart creates a mess if not synced.
-                // Just go to menu for now or just restart local logic?
-                // Ideally send 'restart' signal.
-                // For MVP, let's just go to menu.
-                goToMenu();
+            if (currentGameMode === 'multiplayer') {
+                // Send rematch request
+                myRematchVote = true;
+                btnRestartMatch.textContent = 'Waiting...';
+                btnRestartMatch.disabled = true;
+                if (conn && conn.open) {
+                    conn.send({ type: 'rematch_request' });
+                }
+                checkStartRematch();
             } else {
-                startSinglePlayer();
+                // For single/versus, instant restart
+                if (resultModal) {
+                    resultModal.classList.remove('open');
+                    resultModal.setAttribute('aria-hidden', 'true');
+                }
+                if (currentGameMode === 'versus') {
+                    startVersus();
+                } else {
+                    startSinglePlayer();
+                }
             }
         });
     }
@@ -386,9 +446,16 @@
     
     function startMultiplayer() {
         currentGameMode = 'multiplayer';
+        resetRematchState();
+        
         if (modeModal) {
             modeModal.classList.remove('open');
             modeModal.setAttribute('aria-hidden', 'true');
+        }
+        
+        if (resultModal) {
+            resultModal.classList.remove('open');
+            resultModal.setAttribute('aria-hidden', 'true');
         }
         
         if (p1Wrapper) p1Wrapper.classList.remove('single-mode');
@@ -420,6 +487,15 @@
             },
             onGridChange: (grid) => {
                 if (conn && conn.open) conn.send({ type: 'grid', grid: grid });
+            },
+            onMove: (data) => {
+                if (conn && conn.open) conn.send({ type: 'piece', data: data });
+            },
+            onHold: (type) => {
+                if (conn && conn.open) conn.send({ type: 'hold', type: type });
+            },
+            onGarbageChange: (queue) => {
+                if (conn && conn.open) conn.send({ type: 'garbageQueue', queue: queue });
             }
         };
         
@@ -464,7 +540,11 @@
         const msg = document.getElementById('resultMessage');
         
         if (title) title.textContent = (winner === 'You' || winner === 'Player 1') ? 'You Win!' : 'You Lose!';
-        if (msg) msg.textContent = name + ' topped out.';
+        if (msg) {
+            msg.textContent = name + ' topped out.';
+            // Reset msg color if it was changed
+            msg.style.color = '';
+        }
 
         if (resultModal) {
             resultModal.classList.add('open');
