@@ -203,6 +203,7 @@
         onHold: null, // Callback for hold
         onGarbageChange: null, // Callback for garbage queue change
         isRemote: false, // If true, this instance is a passive renderer
+        timeLimit: 0, // Time limit in ms (0 = infinite)
         allowPause: true
       }, config);
 
@@ -213,6 +214,10 @@
       
       this.holdCanvas = document.getElementById(this.config.holdCanvasId);
       this.hctx = this.holdCanvas ? this.holdCanvas.getContext('2d') : null;
+      
+      // Timer Element
+      this.timerEl = document.getElementById('timer1');
+      if (this.timerEl) this.timerEl.textContent = '2:00'; // Reset timer display
       
       this.nextCanvases = [];
       this.nextContexts = [];
@@ -263,6 +268,10 @@
       this.startTime = null;
       this.piecesPlaced = 0;
       this.attacksSent = 0;
+      this.timeLimit = this.config.timeLimit;
+      
+      // Force initial HUD update for timer
+      this.updateHUD();
       
       // Attack / Garbage System
       this.opponent = null;
@@ -746,6 +755,17 @@
       }
 
       if (!this.paused && !this.isGameOver) {
+        // Time Limit Check
+        if (this.timeLimit > 0) {
+            const elapsed = Date.now() - this.startTime;
+            if (elapsed >= this.timeLimit) {
+                this.isGameOver = true;
+                this.updateHUD(); // Ensure final time is shown
+                this.gameOver();
+                return;
+            }
+        }
+
         this.acc += dt;
         if (this.acc > this.dropInterval) { this.drop(); this.acc = 0; }
         
@@ -905,8 +925,23 @@
         if (this.config.onGameOver) {
             this.config.onGameOver(this);
         } else if (this.config.gameMode === 'single') {
-            // Instant restart for single player if no callback
-            setTimeout(() => this.reset(), 1000); 
+            // Check if time limit reached for Highscore mode
+            if (this.timeLimit > 0 && Date.now() - this.startTime >= this.timeLimit) {
+                // Time's up! Show result modal instead of instant restart
+                const title = document.getElementById('resultTitle');
+                const msg = document.getElementById('resultMessage');
+                const modal = document.getElementById('resultModal');
+                
+                if (title) title.textContent = "Time's Up!";
+                if (msg) msg.textContent = `Final Score: ${this.score}`;
+                if (modal) {
+                    modal.classList.add('open');
+                    modal.setAttribute('aria-hidden', 'false');
+                }
+            } else {
+                // Instant restart for single player normal death
+                setTimeout(() => this.reset(), 1000); 
+            }
         }
     }
 
@@ -1342,6 +1377,16 @@
           const minutes = Math.max(0.001, (Date.now() - this.startTime) / 60000);
           const apm = this.attacksSent / minutes;
           this.apmEl.textContent = apm.toFixed(1);
+      }
+      
+      // Update Timer
+      if (this.timerEl && this.timeLimit > 0) {
+          const elapsed = Date.now() - this.startTime;
+          const remaining = Math.max(0, this.timeLimit - elapsed);
+          const totalSeconds = Math.ceil(remaining / 1000);
+          const mins = Math.floor(totalSeconds / 60);
+          const secs = totalSeconds % 60;
+          this.timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
       }
     }
 

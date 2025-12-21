@@ -37,6 +37,10 @@
                             <div class="stat-label">LEVEL</div>
                             <div class="stat-value" id="level1">1</div>
                         </div>
+                        <div class="stat-item" id="timerContainer" style="display: none;">
+                            <div class="stat-label">TIME</div>
+                            <div class="stat-value" id="timer1">2:00</div>
+                        </div>
                     </div>
                 </aside>
                 <div class="board-area">
@@ -111,14 +115,23 @@
         <div id="modeSelectModal" class="modal open" aria-hidden="false">
             <div class="modal-backdrop"></div>
             <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Select Game Mode</h2>
+                <div class="modal-header" style="position: relative; justify-content: center;">
+                    <h2 style="margin: 0;">Select Game Mode</h2>
+                    <button class="mode-btn" id="btnBackToMain" style="display:none; font-size: 14px; width: auto; padding: 5px 12px; margin: 0; background: transparent; border: 1px solid #00ffff; position: absolute; right: 20px;">← Back</button>
                 </div>
                 <div class="modal-body">
-                    <button class="mode-btn" id="btnSingle">Single Player</button>
-                    <button class="mode-btn" id="btnVersus">Versus AI</button>
-                    <button class="mode-btn" id="btnMultiplayer">Multiplayer (P2P)</button>
+                    <div id="mainModes">
+                        <button class="mode-btn" id="btnSingle">Single Player</button>
+                        <button class="mode-btn" id="btnVersus">Versus AI</button>
+                        <button class="mode-btn" id="btnMultiplayer">Multiplayer (P2P)</button>
+                    </div>
                     
+                    <!-- Single Player Sub-menu -->
+                    <div id="singleModes" style="display:none; flex-direction: column; gap: 10px; margin-bottom: 10px;">
+                        <button class="mode-btn" id="btnMarathon" style="font-size: 20px; border-color: #ff00ff; color: #ff00ff;">Normal</button>
+                        <button class="mode-btn" id="btnUltra" style="font-size: 20px; border-color: #00ff00; color: #00ff00;">Highscore</button>
+                    </div>
+
                     <div class="bot-settings" id="botSettings" style="display:none;">
                         <div class="setting">
                             <label for="botPPS">Bot Speed: <span id="botPPSValue">1.0</span> PPS</label>

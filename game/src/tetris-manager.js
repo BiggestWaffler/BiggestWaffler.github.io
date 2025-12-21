@@ -15,10 +15,21 @@
     const multiplayerSettings = document.getElementById('multiplayerSettings');
     
     // Buttons
+    const mainModes = document.getElementById('mainModes');
+    const singleModes = document.getElementById('singleModes');
     const btnSingle = document.getElementById('btnSingle');
     const btnVersus = document.getElementById('btnVersus');
     const btnMultiplayer = document.getElementById('btnMultiplayer');
+    
+    // Sub-mode buttons
+    const btnMarathon = document.getElementById('btnMarathon');
+    const btnUltra = document.getElementById('btnUltra');
     const btnStartVersus = document.getElementById('btnStartVersus');
+    
+    // Back Buttons
+    const btnBackSingle = document.getElementById('btnBackSingle');
+    const btnBackVersus = document.getElementById('btnBackVersus');
+    const btnBackMulti = document.getElementById('btnBackMulti');
     
     // Multiplayer UI
     const btnCreateRoom = document.getElementById('btnCreateRoom');
@@ -48,10 +59,9 @@
     function resetModeModalUI() {
         if (botSettings) botSettings.style.display = 'none';
         if (multiplayerSettings) multiplayerSettings.style.display = 'none';
-        
-        if (btnSingle) btnSingle.style.display = 'block';
-        if (btnVersus) btnVersus.style.display = 'block';
-        if (btnMultiplayer) btnMultiplayer.style.display = 'block';
+        if (singleModes) singleModes.style.display = 'none';
+        if (mainModes) mainModes.style.display = 'block';
+        if (btnBackToMain) btnBackToMain.style.display = 'none';
         
         // Reset multiplayer sub-UI
         if (roomCreateArea) roomCreateArea.style.display = 'none';
@@ -112,25 +122,47 @@
     // UI Event Listeners
     if (btnSingle) {
         btnSingle.addEventListener('click', () => {
-            startSinglePlayer();
+            if (mainModes) mainModes.style.display = 'none';
+            if (singleModes) singleModes.style.display = 'flex';
+            if (btnBackToMain) btnBackToMain.style.display = 'block';
+        });
+    }
+
+    if (btnBackToMain) {
+        btnBackToMain.addEventListener('click', () => {
+            if (singleModes) singleModes.style.display = 'none';
+            if (botSettings) botSettings.style.display = 'none';
+            if (multiplayerSettings) multiplayerSettings.style.display = 'none';
+            if (mainModes) mainModes.style.display = 'block';
+            btnBackToMain.style.display = 'none';
+        });
+    }
+
+    if (btnMarathon) {
+        btnMarathon.addEventListener('click', () => {
+            startSinglePlayer('marathon');
+        });
+    }
+
+    if (btnUltra) {
+        btnUltra.addEventListener('click', () => {
+            startSinglePlayer('ultra');
         });
     }
 
     if (btnVersus) {
         btnVersus.addEventListener('click', () => {
+            if (mainModes) mainModes.style.display = 'none';
             if (botSettings) botSettings.style.display = 'block';
-            btnSingle.style.display = 'none';
-            btnVersus.style.display = 'none';
-            if (btnMultiplayer) btnMultiplayer.style.display = 'none';
+            if (btnBackToMain) btnBackToMain.style.display = 'block';
         });
     }
 
     if (btnMultiplayer) {
         btnMultiplayer.addEventListener('click', () => {
+            if (mainModes) mainModes.style.display = 'none';
             if (multiplayerSettings) multiplayerSettings.style.display = 'block';
-            btnSingle.style.display = 'none';
-            btnVersus.style.display = 'none';
-            btnMultiplayer.style.display = 'none';
+            if (btnBackToMain) btnBackToMain.style.display = 'block';
         });
     }
 
@@ -352,7 +384,7 @@
         versus.forEach(el => el.style.display = (mode === 'versus' || mode === 'multiplayer') ? 'flex' : 'none');
     }
 
-    function startSinglePlayer() {
+    function startSinglePlayer(mode = 'marathon') {
         currentGameMode = 'single';
         if (modeModal) {
             modeModal.classList.remove('open');
@@ -363,6 +395,12 @@
         if (p2Wrapper) p2Wrapper.classList.add('hidden');
         
         toggleStats('single');
+
+        // Toggle Timer UI based on mode
+        const timerContainer = document.getElementById('timerContainer');
+        if (timerContainer) {
+            timerContainer.style.display = (mode === 'ultra') ? 'block' : 'none';
+        }
 
         if (p1Game) p1Game.stop();
         if (p2Game) p2Game.stop();
@@ -377,7 +415,8 @@
             overlayId: 'overlay1',
             nextElements: Array.from(document.querySelectorAll('.p1-next')),
             input: true,
-            gameMode: 'single'
+            gameMode: 'single',
+            timeLimit: (mode === 'ultra') ? 120000 : 0 // 2 minutes for Ultra
         };
         
         if (window.TetrisGame) {
