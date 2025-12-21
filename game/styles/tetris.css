@@ -169,6 +169,44 @@ body::before {
     transform: translateY(-2px);
 }
 
+/* New Single Player Stats Layout */
+.single-stats-left {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-label {
+    color: #00ffff;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    text-shadow: 0 0 5px #00ffff;
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    color: #ff00ff;
+    font-size: 24px;
+    font-weight: 700;
+    text-shadow: 0 0 8px #ff00ff;
+}
+
+.player-wrapper.single-mode .single-stats-left {
+    display: flex !important;
+}
+
+/* Adjust stats header for single mode to center score */
+.stats-single {
+    justify-content: center;
+}
+
 /* Board Container - Retro Grid Layout */
 .board-container { 
     display: flex;

@@ -420,7 +420,7 @@
         if (this.config.onGarbageChange) this.config.onGarbageChange(this.garbageQueue);
         
         if (this.config.onGridChange) this.config.onGridChange(this.grid);
-
+        
         // Adjust current piece position to stay valid relative to screen
         // If piece collides after grid shift (because grid moved up into it), move piece up
         if (this.collide(this.current.shape, this.current.y, this.current.x)) {
@@ -1062,7 +1062,7 @@
                 y: this.current.y,
                 rot: this.current.rot
             });
-        }
+      }
     }
 
     move(dir) {

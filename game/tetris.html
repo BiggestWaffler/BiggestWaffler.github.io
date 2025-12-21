@@ -28,14 +28,22 @@
                         <h2>Hold</h2>
                         <canvas id="hold1" width="120" height="120"></canvas>
                     </div>
+                    <div class="single-stats-left" style="display: none;">
+                        <div class="stat-item">
+                            <div class="stat-label">LINES</div>
+                            <div class="stat-value" id="lines1">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">LEVEL</div>
+                            <div class="stat-value" id="level1">1</div>
+                        </div>
+                    </div>
                 </aside>
                 <div class="board-area">
                     <div class="stats">
-                        <!-- Single Player Stats -->
+                        <!-- Single Player Stats (Only Score) -->
                         <div class="stats-single" id="statsSingle1">
                             <div>Score: <span id="score1">0</span></div>
-                            <div>Lines: <span id="lines1">0</span></div>
-                            <div>Level: <span id="level1">1</span></div>
                         </div>
                         <!-- Versus Stats -->
                         <div class="stats-versus" id="statsVersus1" style="display:none;">
@@ -120,7 +128,7 @@
                     </div>
 
                     <div class="multiplayer-settings" id="multiplayerSettings" style="display:none;">
-                        <div class="setting" style="flex-direction: column; gap: 10px; align-items: center;">
+                        <div class="setting" style="display: flex; flex-direction: column; gap: 10px; align-items: stretch; margin: 0 auto;">
                             <button class="mode-btn" id="btnCreateRoom">Create Room</button>
                             <div id="roomCreateArea" style="display:none; flex-direction: column; gap: 5px; margin-top: 10px; width: 100%; align-items: center;">
                                 <div style="font-size: 14px; color: #aaa;">Share this ID:</div>
