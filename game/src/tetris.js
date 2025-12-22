@@ -928,6 +928,17 @@
             // Check if time limit reached for Highscore mode
             if (this.timeLimit > 0 && Date.now() - this.startTime >= this.timeLimit) {
                 // Time's up! Show result modal instead of instant restart
+                
+                // Save Highscore
+                try {
+                    const currentBest = parseInt(localStorage.getItem('tetris.ultraHighScore') || '0');
+                    if (this.score > currentBest) {
+                        localStorage.setItem('tetris.ultraHighScore', this.score.toString());
+                    }
+                } catch (e) {
+                    console.error('Failed to save highscore', e);
+                }
+
                 const title = document.getElementById('resultTitle');
                 const msg = document.getElementById('resultMessage');
                 const modal = document.getElementById('resultModal');

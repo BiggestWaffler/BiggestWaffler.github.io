@@ -56,7 +56,19 @@
     let myRematchVote = false;
     let oppRematchVote = false;
 
+    function updateHighScoreDisplay() {
+        if (!btnUltra) return;
+        try {
+            const best = localStorage.getItem('tetris.ultraHighScore') || '0';
+            // Preserve the original text "Highscore" and add the score below or next to it
+            btnUltra.innerHTML = `Highscore<div style="font-size: 0.7em; opacity: 0.8; margin-top: 4px;">Best: ${best}</div>`;
+        } catch (e) {
+            console.error('Failed to load highscore', e);
+        }
+    }
+
     function resetModeModalUI() {
+        updateHighScoreDisplay();
         if (botSettings) botSettings.style.display = 'none';
         if (multiplayerSettings) multiplayerSettings.style.display = 'none';
         if (singleModes) singleModes.style.display = 'none';
@@ -575,6 +587,9 @@
             winner = 'Game Over';
         }
 
+        // Update highscore display in case we just finished a highscore run
+        updateHighScoreDisplay();
+
         const title = document.getElementById('resultTitle');
         const msg = document.getElementById('resultMessage');
         
@@ -590,4 +605,7 @@
             resultModal.setAttribute('aria-hidden', 'false');
         }
     }
+
+    // Initialize UI
+    updateHighScoreDisplay();
 })();
