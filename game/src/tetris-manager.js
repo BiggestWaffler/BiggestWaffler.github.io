@@ -24,6 +24,7 @@
     // Sub-mode buttons
     const btnMarathon = document.getElementById('btnMarathon');
     const btnUltra = document.getElementById('btnUltra');
+    const btnLineClear = document.getElementById('btnLineClear');
     const btnStartVersus = document.getElementById('btnStartVersus');
     
     // Back Buttons
@@ -57,13 +58,30 @@
     let oppRematchVote = false;
 
     function updateHighScoreDisplay() {
-        if (!btnUltra) return;
-        try {
-            const best = localStorage.getItem('tetris.ultraHighScore') || '0';
-            // Preserve the original text "Highscore" and add the score below or next to it
-            btnUltra.innerHTML = `Highscore<div style="font-size: 0.7em; opacity: 0.8; margin-top: 4px;">Best: ${best}</div>`;
-        } catch (e) {
-            console.error('Failed to load highscore', e);
+        if (btnUltra) {
+            try {
+                const best = localStorage.getItem('tetris.ultraHighScore') || '0';
+                // Preserve the original text "Highscore" and add the score below or next to it
+                btnUltra.innerHTML = `Highscore<div style="font-size: 0.7em; opacity: 0.8; margin-top: 4px;">Best: ${best}</div>`;
+            } catch (e) {
+                console.error('Failed to load ultra highscore', e);
+            }
+        }
+        
+        if (btnLineClear) {
+            try {
+                const bestTime = parseInt(localStorage.getItem('tetris.lineClearBestTime') || '0');
+                let timeStr = '--:--.--';
+                if (bestTime > 0) {
+                     const min = Math.floor(bestTime / 60000);
+                     const sec = Math.floor((bestTime % 60000) / 1000);
+                     const ms = Math.floor((bestTime % 1000) / 10); // 2 decimal places
+                     timeStr = `${min}:${sec.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+                }
+                btnLineClear.innerHTML = `40 Lines<div style="font-size: 0.7em; opacity: 0.8; margin-top: 4px;">Best: ${timeStr}</div>`;
+            } catch (e) {
+                console.error('Failed to load line clear best time', e);
+            }
         }
     }
 
@@ -159,6 +177,12 @@
     if (btnUltra) {
         btnUltra.addEventListener('click', () => {
             startSinglePlayer('ultra');
+        });
+    }
+
+    if (btnLineClear) {
+        btnLineClear.addEventListener('click', () => {
+            startSinglePlayer('lineclear');
         });
     }
 
@@ -411,7 +435,7 @@
         // Toggle Timer UI based on mode
         const timerContainer = document.getElementById('timerContainer');
         if (timerContainer) {
-            timerContainer.style.display = (mode === 'ultra') ? 'block' : 'none';
+            timerContainer.style.display = (mode === 'ultra' || mode === 'lineclear') ? 'block' : 'none';
         }
 
         if (p1Game) p1Game.stop();
@@ -428,7 +452,9 @@
             nextElements: Array.from(document.querySelectorAll('.p1-next')),
             input: true,
             gameMode: 'single',
-            timeLimit: (mode === 'ultra') ? 120000 : 0 // 2 minutes for Ultra
+            // Specific configs
+            timeLimit: (mode === 'ultra') ? 120000 : 0, // 2 minutes for Ultra
+            linesGoal: (mode === 'lineclear') ? 40 : 0
         };
         
         if (window.TetrisGame) {

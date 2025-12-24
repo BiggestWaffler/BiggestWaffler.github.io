@@ -204,6 +204,7 @@
         onGarbageChange: null, // Callback for garbage queue change
         isRemote: false, // If true, this instance is a passive renderer
         timeLimit: 0, // Time limit in ms (0 = infinite)
+        linesGoal: 0, // Target lines to clear (0 = infinite)
         allowPause: true
       }, config);
 
@@ -269,6 +270,7 @@
       this.piecesPlaced = 0;
       this.attacksSent = 0;
       this.timeLimit = this.config.timeLimit;
+      this.linesGoal = this.config.linesGoal;
       
       // Force initial HUD update for timer
       this.updateHUD();
@@ -919,6 +921,47 @@
       }
     }
 
+    gameWin() {
+        this.isGameOver = true;
+        this.updateOverlay();
+        const endTime = Date.now();
+        const elapsed = endTime - this.startTime;
+
+        if (this.config.onGameOver) {
+             this.config.onGameOver(this); // Can reuse onGameOver or add onGameWin
+        } else if (this.config.gameMode === 'single') {
+             const title = document.getElementById('resultTitle');
+             const msg = document.getElementById('resultMessage');
+             const modal = document.getElementById('resultModal');
+
+             if (this.linesGoal > 0) {
+                 // Line Clear Mode Victory
+                 const mins = Math.floor(elapsed / 60000);
+                 const secs = Math.floor((elapsed % 60000) / 1000);
+                 const ms = Math.floor((elapsed % 1000) / 10);
+                 const timeStr = `${mins}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+                 
+                 // Save Best Time (Lower is better)
+                 try {
+                     const currentBest = parseInt(localStorage.getItem('tetris.lineClearBestTime') || '0');
+                     if (currentBest === 0 || elapsed < currentBest) {
+                         localStorage.setItem('tetris.lineClearBestTime', elapsed.toString());
+                     }
+                 } catch (e) {
+                     console.error('Failed to save line clear time', e);
+                 }
+                 
+                 if (title) title.textContent = "Finished!";
+                 if (msg) msg.textContent = `Time: ${timeStr}`;
+             }
+
+             if (modal) {
+                 modal.classList.add('open');
+                 modal.setAttribute('aria-hidden', 'false');
+             }
+        }
+    }
+
     gameOver() {
         this.isGameOver = true;
         this.updateOverlay();
@@ -1065,6 +1108,14 @@
           
           this.score += baseScore;
           this.lines += cleared;
+          
+          // Line Clear Win Condition
+          if (this.linesGoal > 0 && this.lines >= this.linesGoal) {
+              this.lines = this.linesGoal; // Cap it
+              this.gameWin();
+              return;
+          }
+
           if (this.lines >= this.level * 10) {
               this.level++;
               this.dropInterval = Math.max(120, 1000 - (this.level - 1) * 80);
@@ -1348,11 +1399,16 @@
       let text = null; let opacity = 1; let state = null;
       
       if (this.isGameOver) {
-          text = 'Game Over';
-          if (this.config.gameMode === 'versus') {
-              // Note: Winner logic is handled in manager, but this is a fallback state
-              text = 'Defeat'; 
-              state = 'loser';
+          if (this.linesGoal > 0 && this.lines >= this.linesGoal) {
+              text = 'Finished!';
+              state = 'winner';
+          } else {
+              text = 'Game Over';
+              if (this.config.gameMode === 'versus') {
+                  // Note: Winner logic is handled in manager, but this is a fallback state
+                  text = 'Defeat'; 
+                  state = 'loser';
+              }
           }
       } else if (this.paused) { 
           text = 'Paused'; state = 'paused'; 
@@ -1391,13 +1447,23 @@
       }
       
       // Update Timer
-      if (this.timerEl && this.timeLimit > 0) {
-          const elapsed = Date.now() - this.startTime;
-          const remaining = Math.max(0, this.timeLimit - elapsed);
-          const totalSeconds = Math.ceil(remaining / 1000);
-          const mins = Math.floor(totalSeconds / 60);
-          const secs = totalSeconds % 60;
-          this.timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+      if (this.timerEl) {
+          if (this.timeLimit > 0) {
+              // Count down
+              const elapsed = Date.now() - this.startTime;
+              const remaining = Math.max(0, this.timeLimit - elapsed);
+              const totalSeconds = Math.ceil(remaining / 1000);
+              const mins = Math.floor(totalSeconds / 60);
+              const secs = totalSeconds % 60;
+              this.timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+          } else if (this.linesGoal > 0) {
+              // Count up (Stopwatch)
+              const elapsed = Date.now() - this.startTime;
+              const mins = Math.floor(elapsed / 60000);
+              const secs = Math.floor((elapsed % 60000) / 1000);
+              const ms = Math.floor((elapsed % 1000) / 10);
+              this.timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+          }
       }
     }
 
