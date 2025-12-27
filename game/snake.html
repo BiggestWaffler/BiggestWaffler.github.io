@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake - Ethan Liu</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/game/styles/games.css">
+    <link rel="stylesheet" href="/game/styles/snake.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="wrap">
+        <header class="topbar">
+            <h1>Snake</h1>
+            <a class="home" href="/game/">← Back</a>
+        </header>
+
+        <div class="game-container">
+            <div class="score-board">
+                <div class="score-item">
+                    <span class="score-label">Score</span>
+                    <span id="score">0</span>
+                </div>
+                <div class="score-item">
+                    <span class="score-label">Best</span>
+                    <span id="high-score">0</span>
+                </div>
+            </div>
+
+            <canvas id="snake-game" width="400" height="400"></canvas>
+
+            <div class="controls-info">
+                Use Arrow Keys or WASD to move<br>
+                Space to Pause/Resume
+            </div>
+        </div>
+    </div>
+
+    <div id="gameOverModal" class="game-over-modal">
+        <div class="game-over-content">
+            <h2 class="game-over-title">Game Over</h2>
+            <div class="final-score">Score: <span id="finalScore">0</span></div>
+            <button class="restart-btn" onclick="resetGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script src="/game/src/snake.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,112 @@
+/* Snake Game Styles */
+
+.game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+}
+
+.score-board {
+    display: flex;
+    gap: 40px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 24px;
+    color: #00ffff;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    background: rgba(0, 0, 0, 0.8);
+    padding: 15px 30px;
+    border: 2px solid #00ffff;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+}
+
+.score-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.score-label {
+    font-size: 14px;
+    color: #bcdcff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+canvas#snake-game {
+    background: rgba(0, 0, 0, 0.9);
+    border: 4px solid #00ffff;
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+    max-width: 100%;
+}
+
+.controls-info {
+    margin-top: 20px;
+    color: #bcdcff;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+.game-over-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(5px);
+}
+
+.game-over-content {
+    background: #0a0a0a;
+    border: 3px solid #ff00ff;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 0 50px rgba(255, 0, 255, 0.4);
+    max-width: 400px;
+    width: 90%;
+}
+
+.game-over-title {
+    font-size: 48px;
+    color: #ff00ff;
+    margin: 0 0 20px 0;
+    text-transform: uppercase;
+    text-shadow: 0 0 20px rgba(255, 0, 255, 0.6);
+    font-weight: 900;
+}
+
+.final-score {
+    font-size: 24px;
+    color: #00ffff;
+    margin-bottom: 30px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.restart-btn {
+    background: transparent;
+    color: #00ffff;
+    border: 2px solid #00ffff;
+    padding: 12px 30px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.restart-btn:hover {
+    background: rgba(0, 255, 255, 0.2);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+    transform: translateY(-2px);
+}
+
