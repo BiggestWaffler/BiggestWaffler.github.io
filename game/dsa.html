@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSA Quest - Ethan Liu</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/game/styles/games.css">
+    <link rel="stylesheet" href="/game/styles/dsa.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="wrap">
+        <header class="topbar">
+            <h1>DSA Quest</h1>
+            <a class="home" href="/game/">← Back</a>
+        </header>
+        <main class="game-container">
+            <div id="menu" class="screen active">
+                <h2>Select Challenge</h2>
+                <div class="level-grid">
+                    <button class="level-btn" onclick="game.startLevel('bubble-sort')">
+                        <h3>Bubble Sort</h3>
+                        <p>Swap adjacent elements to sort the array.</p>
+                    </button>
+                    <button class="level-btn" onclick="game.startLevel('binary-search')">
+                        <h3>Binary Search</h3>
+                        <p>Find the target number efficiently.</p>
+                    </button>
+                    <!-- More levels later -->
+                </div>
+            </div>
+
+            <div id="game-area" class="screen">
+                <div class="hud">
+                    <div>
+                        <h2 id="level-title">Level Title</h2>
+                        <div id="instructions">Instructions go here</div>
+                    </div>
+                    <div class="stats-box">
+                        <div id="stats">Moves: 0</div>
+                        <button class="btn-small" onclick="game.showMenu()">Exit</button>
+                    </div>
+                </div>
+                <div id="canvas-wrapper">
+                    <!-- Game elements injected here -->
+                </div>
+                <div id="controls">
+                    <!-- Context specific controls -->
+                </div>
+            </div>
+             
+             <div id="victory-modal" class="modal">
+                <div class="modal-backdrop"></div>
+                <div class="modal-content">
+                    <h2>Level Complete!</h2>
+                    <p id="victory-message">Great job!</p>
+                    <div class="modal-actions">
+                        <button class="btn-primary" onclick="game.showMenu()">Back to Menu</button>
+                        <button class="btn-secondary" onclick="game.retryLevel()">Replay</button>
+                    </div>
+                </div>
+             </div>
+        </main>
+    </div>
+    <script src="/game/src/dsa.js"></script>
+</body>
+</html>
+
