@@ -27,7 +27,14 @@
                         <h3>Binary Search</h3>
                         <p>Find the target number efficiently.</p>
                     </button>
-                    <!-- More levels later -->
+                    <button class="level-btn" onclick="game.startLevel('bst-search')">
+                        <h3>BST Search</h3>
+                        <p>Navigate a Binary Search Tree to find a value.</p>
+                    </button>
+                    <button class="level-btn" onclick="game.startLevel('bfs-grid')">
+                        <h3>Graph BFS</h3>
+                        <p>Find the shortest path through the grid.</p>
+                    </button>
                 </div>
             </div>
 
@@ -39,14 +46,20 @@
                     </div>
                     <div class="stats-box">
                         <div id="stats">Moves: 0</div>
+                        <div id="accuracy-display" style="display:none; color: #aaa; font-size: 0.9rem;">Accuracy: --%</div>
                         <button class="btn-small" onclick="game.showMenu()">Exit</button>
                     </div>
                 </div>
+                
                 <div id="canvas-wrapper">
                     <!-- Game elements injected here -->
                 </div>
-                <div id="controls">
-                    <!-- Context specific controls -->
+
+                <div class="info-box">
+                    <h3><span class="icon">ℹ️</span> How it Works</h3>
+                    <p id="level-explanation">
+                        Explanation of the algorithm...
+                    </p>
                 </div>
             </div>
              
@@ -55,6 +68,9 @@
                 <div class="modal-content">
                     <h2>Level Complete!</h2>
                     <p id="victory-message">Great job!</p>
+                    <div class="stats-summary" id="victory-stats">
+                        <!-- Injected stats -->
+                    </div>
                     <div class="modal-actions">
                         <button class="btn-primary" onclick="game.showMenu()">Back to Menu</button>
                         <button class="btn-secondary" onclick="game.retryLevel()">Replay</button>
@@ -66,4 +82,3 @@
     <script src="/game/src/dsa.js"></script>
 </body>
 </html>
-
