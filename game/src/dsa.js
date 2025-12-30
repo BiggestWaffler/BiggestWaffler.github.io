@@ -13,7 +13,8 @@ class DSAGame {
             accuracyDisplay: document.getElementById('accuracy-display'),
             victoryModal: document.getElementById('victory-modal'),
             victoryMessage: document.getElementById('victory-message'),
-            victoryStats: document.getElementById('victory-stats')
+            victoryStats: document.getElementById('victory-stats'),
+            btnShowOptimal: document.getElementById('btn-show-optimal')
         };
     }
 
@@ -24,6 +25,9 @@ class DSAGame {
         this.elements.victoryModal.classList.remove('open');
         this.elements.canvasWrapper.innerHTML = '';
         this.elements.accuracyDisplay.style.display = 'none';
+        
+        // Reset showing optimal state
+        this.showingOptimal = false;
         
         switch(levelId) {
             case 'bubble-sort': this.initBubbleSort(); break;
@@ -50,6 +54,22 @@ class DSAGame {
         this.elements.victoryMessage.textContent = message;
         this.elements.victoryStats.innerHTML = statsHTML;
         this.elements.victoryModal.classList.add('open');
+        
+        // Show/Hide "View Optimal" button based on level support
+        if (this.currentLevel === 'bfs-grid') {
+             this.elements.btnShowOptimal.style.display = 'inline-block';
+        } else {
+             this.elements.btnShowOptimal.style.display = 'none';
+        }
+    }
+
+    showOptimal() {
+        this.elements.victoryModal.classList.remove('open');
+        this.showingOptimal = true;
+        
+        if (this.currentLevel === 'bfs-grid') {
+            this.renderBFS(true); // render with optimal path overlay
+        }
     }
 
     updateStats(text) {
@@ -112,11 +132,15 @@ class DSAGame {
             label.textContent = value;
             bar.appendChild(label);
 
-            bar.onclick = () => this.handleBubbleSortClick(index);
+            if (!this.showingOptimal) {
+                bar.onclick = () => this.handleBubbleSortClick(index);
+            }
             wrapper.appendChild(bar);
         });
         
-        this.checkBubbleSortWin();
+        if (!this.showingOptimal) {
+            this.checkBubbleSortWin();
+        }
     }
 
     handleBubbleSortClick(index) {
@@ -296,14 +320,7 @@ class DSAGame {
         `;
 
         // Generate a simple BST
-        // We'll use a fixed structure or careful random generation to keep it nice visually
-        // Let's use a standard array-based representation for a complete binary tree for simplicity of coordinates
-        // 15 nodes max (depth 4)
-        
         const values = [50, 25, 75, 12, 37, 62, 87, 6, 18, 31, 43, 55, 68, 81, 93];
-        // This is a perfect BST if inserted in level order? No, array rep of heap.
-        // Let's map these to heap indices: 0 is root.
-        // Left child of i is 2*i + 1, Right is 2*i + 2.
         
         const nodes = [];
         values.forEach((v, i) => nodes.push({ val: v, id: i, visited: false }));
@@ -352,10 +369,6 @@ class DSAGame {
             el.textContent = node.val;
             
             // Positioning
-            // Depth 0: 1 node (50%)
-            // Depth 1: 2 nodes (25%, 75%)
-            // Depth 2: 4 nodes (12.5%, 37.5%, 62.5%, 87.5%)
-            // etc
             const depth = Math.floor(Math.log2(i + 1));
             const levelStart = Math.pow(2, depth) - 1;
             const positionInLevel = i - levelStart;
@@ -403,26 +416,7 @@ class DSAGame {
     }
 
     drawLink(container, parentIdx, childIdx) {
-        // Calculate coords again (simplified)
-        const getCoords = (i) => {
-            const depth = Math.floor(Math.log2(i + 1));
-            const levelStart = Math.pow(2, depth) - 1;
-            const pos = i - levelStart;
-            const total = Math.pow(2, depth);
-            return {
-                x: (pos + 0.5) * (container.offsetWidth / total),
-                y: depth * 80 + 40 + 25 // +25 for center of node
-            };
-        };
-
-        // Need to wait for container to be in DOM or use percentages
-        // For simplicity using CSS transforms on a line
-        // Actually, lines are hard with just CSS percentages if we don't know width
-        // Let's use SVG for lines in next iteration or simple rotation
-        // For now, skip visual lines or use simple approximation
-        
-        // Simplified: use JS to draw line after render? 
-        // Let's just create a div line
+        // Simplified link drawing logic or placeholder
     }
 
     handleBSTClick(index) {
@@ -485,12 +479,10 @@ class DSAGame {
             }
         }
         
-        // Ensure path exists (simple BFS check, if not regenerate - simplified here assuming probability is high or just let user fail/retry)
-        // Calculating optimal path (BFS)
+        // Ensure path exists
         const optimal = this.calculateBFS(grid, start, end);
         
-        if (optimal === -1) {
-            // Retry init if no path (simple recursion)
+        if (optimal.dist === -1) {
             this.initBFS(); 
             return; 
         }
@@ -498,9 +490,10 @@ class DSAGame {
         this.gameState = {
             grid, rows, cols,
             start, end,
-            current: [start], // frontier
+            current: [start], 
             moves: 0,
-            optimalMoves: optimal,
+            optimalDist: optimal.dist,
+            optimalPath: optimal.path, // Array of {r, c}
             userPathLength: 0
         };
 
@@ -509,7 +502,8 @@ class DSAGame {
     }
 
     calculateBFS(grid, start, end) {
-        const q = [{r: start.r, c: start.c, d: 0}];
+        // Return dist and path
+        const q = [{r: start.r, c: start.c, d: 0, path: []}];
         const visited = new Set();
         visited.add(`${start.r},${start.c}`);
         
@@ -517,8 +511,10 @@ class DSAGame {
         const dc = [1, -1, 0, 0];
 
         while(q.length > 0) {
-            const {r, c, d} = q.shift();
-            if (r === end.r && c === end.c) return d;
+            const {r, c, d, path} = q.shift();
+            const currentPath = [...path, {r, c}];
+            
+            if (r === end.r && c === end.c) return { dist: d, path: currentPath };
             
             for(let i=0; i<4; i++) {
                 const nr = r + dr[i];
@@ -528,14 +524,14 @@ class DSAGame {
                     !visited.has(`${nr},${nc}`) && 
                     grid[nr][nc].type !== 'wall') {
                     visited.add(`${nr},${nc}`);
-                    q.push({r: nr, c: nc, d: d+1});
+                    q.push({r: nr, c: nc, d: d+1, path: currentPath});
                 }
             }
         }
-        return -1;
+        return { dist: -1, path: [] };
     }
 
-    renderBFS() {
+    renderBFS(showOptimal = false) {
         const wrapper = this.elements.canvasWrapper;
         wrapper.innerHTML = '';
         wrapper.style.display = 'block';
@@ -543,6 +539,12 @@ class DSAGame {
         const container = document.createElement('div');
         container.className = 'grid-container';
         container.style.gridTemplateColumns = `repeat(${this.gameState.cols}, 30px)`;
+
+        // Create a lookup for optimal path
+        const optimalSet = new Set();
+        if (showOptimal && this.gameState.optimalPath) {
+            this.gameState.optimalPath.forEach(p => optimalSet.add(`${p.r},${p.c}`));
+        }
 
         this.gameState.grid.forEach(row => {
             row.forEach(cell => {
@@ -553,8 +555,15 @@ class DSAGame {
                 if (cell.type === 'end') el.classList.add('end');
                 if (cell.visited) el.classList.add('visited');
                 
+                // Show optimal path overlay
+                if (showOptimal && optimalSet.has(`${cell.r},${cell.c}`) && cell.type !== 'start' && cell.type !== 'end') {
+                    el.style.backgroundColor = '#ffff00'; // Yellow path
+                    el.style.color = 'black';
+                    el.textContent = '•';
+                }
+
                 // Interaction: click neighbor of visited to expand
-                if (!cell.visited && cell.type !== 'wall') {
+                if (!showOptimal && !cell.visited && cell.type !== 'wall') {
                     if (this.isNeighborOfVisited(cell.r, cell.c)) {
                         el.style.cursor = 'pointer';
                         el.style.border = '1px solid #555'; // hint
@@ -585,33 +594,15 @@ class DSAGame {
 
     handleBFSClick(r, c) {
         this.gameState.grid[r][c].visited = true;
-        // Approximation of path length: strictly increasing dist not perfect but tracking "expansion steps"
-        // Better: We track BFS layers.
-        // Actually, let's just count clicks. If they click randomly it's inefficient.
-        // But for true BFS, you should click ALL nodes at distance D before D+1.
-        // Let's simplify: Just counting cells visited to reach target.
         this.gameState.userPathLength++; 
 
         if (r === this.gameState.end.r && c === this.gameState.end.c) {
             this.renderBFS();
             
-            // Accuracy: Optimal path length vs User clicks?
-            // User clicks is area expanded. BFS expands area.
-            // If optimal is 10 steps, BFS might visit 50 nodes.
-            // Let's compare "User Path Length" to "Optimal Distance" isn't fair because BFS visits many nodes.
-            // Accuracy for BFS game: Did they expand mostly in the right direction?
-            // Actually, let's just show distance found vs optimal distance.
-            // But here the user is *performing* the search. 
-            // Let's say: "Path Found: X".
-            // Wait, clicking cells marks them visited. We want to find the shortest path.
-            // Visualizing the path backtrace would be cool.
-            
-            // Let's just output the optimal distance.
-            
             setTimeout(() => {
                 this.showVictory(
                     `Destination Reached!`,
-                    `Shortest Path Possible: ${this.gameState.optimalMoves}<br>(You explored ${this.gameState.userPathLength} nodes)`
+                    `Shortest Path Possible: ${this.gameState.optimalDist}<br>(You explored ${this.gameState.userPathLength} nodes)`
                 );
             }, 500);
         } else {
