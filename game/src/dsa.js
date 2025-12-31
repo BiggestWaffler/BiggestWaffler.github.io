@@ -56,7 +56,7 @@ class DSAGame {
         this.elements.victoryModal.classList.add('open');
         
         // Show/Hide "View Optimal" button based on level support
-        if (this.currentLevel === 'bfs-grid') {
+        if (this.currentLevel === 'bfs-grid' || this.currentLevel === 'binary-search' || this.currentLevel === 'bst-search') {
              this.elements.btnShowOptimal.style.display = 'inline-block';
         } else {
              this.elements.btnShowOptimal.style.display = 'none';
@@ -68,7 +68,11 @@ class DSAGame {
         this.showingOptimal = true;
         
         if (this.currentLevel === 'bfs-grid') {
-            this.renderBFS(true); // render with optimal path overlay
+            this.renderBFS(true); 
+        } else if (this.currentLevel === 'binary-search') {
+            this.renderBinarySearch(true);
+        } else if (this.currentLevel === 'bst-search') {
+            this.renderBST(true);
         }
     }
 
@@ -215,13 +219,15 @@ class DSAGame {
         const targetIndex = Math.floor(Math.random() * size);
         const targetValue = arr[targetIndex];
 
-        // Calculate optimal moves
-        // Simulate binary search
+        // Calculate optimal moves and path
         let optMoves = 0;
         let l = 0, r = size - 1;
+        let optimalPath = []; // Indices to click
+        
         while (l <= r) {
             optMoves++;
             let mid = Math.floor((l + r) / 2);
+            optimalPath.push(mid);
             if (arr[mid] === targetValue) break;
             if (arr[mid] < targetValue) l = mid + 1;
             else r = mid - 1;
@@ -232,6 +238,7 @@ class DSAGame {
             target: targetValue,
             clicks: 0,
             optimalMoves: optMoves,
+            optimalPath: optimalPath,
             low: 0,
             high: size - 1,
             history: []
@@ -241,7 +248,7 @@ class DSAGame {
         this.renderBinarySearch();
     }
 
-    renderBinarySearch() {
+    renderBinarySearch(showOptimal = false) {
         const wrapper = this.elements.canvasWrapper;
         wrapper.innerHTML = '';
         wrapper.style.alignItems = 'center';
@@ -258,21 +265,37 @@ class DSAGame {
             const isRevealed = this.gameState.history.includes(index);
             const inRange = index >= this.gameState.low && index <= this.gameState.high;
 
-            if (isRevealed) {
-                cell.textContent = value;
-                if (value === this.gameState.target) {
-                    cell.classList.add('found');
+            // In optimal view, reveal optimal path and target
+            if (showOptimal) {
+                if (this.gameState.optimalPath.includes(index)) {
+                     cell.textContent = value;
+                     cell.classList.add('checked');
+                     cell.style.borderColor = '#ffff00'; // Optimal path color
+                     if (value === this.gameState.target) {
+                         cell.classList.remove('checked');
+                         cell.classList.add('found');
+                     }
                 } else {
-                    cell.classList.add('checked');
+                    cell.style.opacity = '0.3';
                 }
-            } else if (!inRange) {
-                cell.style.opacity = '0.3';
-            }
-
-            if (inRange && !isRevealed) {
-                cell.onclick = () => this.handleBinarySearchClick(index, value);
             } else {
-                cell.style.cursor = 'default';
+                // Normal game view
+                if (isRevealed) {
+                    cell.textContent = value;
+                    if (value === this.gameState.target) {
+                        cell.classList.add('found');
+                    } else {
+                        cell.classList.add('checked');
+                    }
+                } else if (!inRange) {
+                    cell.style.opacity = '0.3';
+                }
+
+                if (inRange && !isRevealed) {
+                    cell.onclick = () => this.handleBinarySearchClick(index, value);
+                } else {
+                    cell.style.cursor = 'default';
+                }
             }
 
             wrapper.appendChild(cell);
@@ -328,9 +351,21 @@ class DSAGame {
         const targetIdx = Math.floor(Math.random() * nodes.length);
         const targetVal = nodes[targetIdx].val;
 
-        // Calculate optimal path depth (level of node)
-        // Root is depth 1.
-        let optimalMoves = Math.floor(Math.log2(targetIdx + 1)) + 1;
+        // Calculate optimal path
+        // Root is 0. Move down until target.
+        let optimalPath = [];
+        let curr = 0;
+        while(curr < nodes.length) {
+            optimalPath.push(curr);
+            if(nodes[curr].val === targetVal) break;
+            if(targetVal < nodes[curr].val) {
+                curr = 2 * curr + 1; // Left
+            } else {
+                curr = 2 * curr + 2; // Right
+            }
+        }
+        
+        let optimalMoves = optimalPath.length;
 
         this.gameState = {
             nodes: nodes,
@@ -338,6 +373,7 @@ class DSAGame {
             currentIdx: 0, // start at root
             moves: 0,
             optimalMoves: optimalMoves,
+            optimalPath: optimalPath,
             path: [0]
         };
         
@@ -345,7 +381,7 @@ class DSAGame {
         this.renderBST();
     }
 
-    renderBST() {
+    renderBST(showOptimal = false) {
         const wrapper = this.elements.canvasWrapper;
         wrapper.innerHTML = '';
         wrapper.style.display = 'block'; // Reset flex
@@ -379,33 +415,45 @@ class DSAGame {
             el.style.left = `calc(${x}% - 25px)`;
             el.style.top = `${y}px`;
 
-            if (this.gameState.path.includes(i)) {
-                el.classList.add('visited');
-            }
-            
-            if (node.val === this.gameState.target) {
-                el.classList.add('target');
-            }
-
-            if (i === this.gameState.currentIdx) {
-                el.style.borderColor = '#00ffff';
-                el.style.backgroundColor = '#222';
-            }
-
-            // Click handling: only children of current
-            const leftChild = 2 * this.gameState.currentIdx + 1;
-            const rightChild = 2 * this.gameState.currentIdx + 2;
-            
-            if (i === leftChild || i === rightChild) {
-                el.style.cursor = 'pointer';
-                el.onclick = () => this.handleBSTClick(i);
+            if (showOptimal) {
+                if (this.gameState.optimalPath.includes(i)) {
+                    el.style.borderColor = '#ffff00'; // Optimal path
+                    el.style.borderWidth = '3px';
+                    if (node.val === this.gameState.target) {
+                        el.classList.add('found');
+                    }
+                } else {
+                    el.style.opacity = '0.3';
+                }
             } else {
-                el.style.cursor = 'default';
-            }
-            
-            // Highlight target if found
-            if (i === this.gameState.currentIdx && node.val === this.gameState.target) {
-                el.classList.add('found');
+                // Normal view
+                if (this.gameState.path.includes(i)) {
+                    el.classList.add('visited');
+                }
+                
+                if (node.val === this.gameState.target) {
+                    el.classList.add('target');
+                }
+
+                if (i === this.gameState.currentIdx) {
+                    el.style.borderColor = '#00ffff';
+                    el.style.backgroundColor = '#222';
+                }
+
+                // Click handling
+                const leftChild = 2 * this.gameState.currentIdx + 1;
+                const rightChild = 2 * this.gameState.currentIdx + 2;
+                
+                if (i === leftChild || i === rightChild) {
+                    el.style.cursor = 'pointer';
+                    el.onclick = () => this.handleBSTClick(i);
+                } else {
+                    el.style.cursor = 'default';
+                }
+                
+                if (i === this.gameState.currentIdx && node.val === this.gameState.target) {
+                    el.classList.add('found');
+                }
             }
 
             container.appendChild(el);
