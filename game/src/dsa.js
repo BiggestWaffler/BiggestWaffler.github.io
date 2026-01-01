@@ -2,6 +2,14 @@ class DSAGame {
     constructor() {
         this.currentLevel = null;
         this.gameState = {};
+        this.playback = {
+            active: false,
+            playing: false,
+            step: 0,
+            maxSteps: 0,
+            interval: null,
+            sequence: [] // stores state snapshots or action objects
+        };
         this.elements = {
             menu: document.getElementById('menu'),
             gameArea: document.getElementById('game-area'),
@@ -14,7 +22,10 @@ class DSAGame {
             victoryModal: document.getElementById('victory-modal'),
             victoryMessage: document.getElementById('victory-message'),
             victoryStats: document.getElementById('victory-stats'),
-            btnShowOptimal: document.getElementById('btn-show-optimal')
+            btnShowOptimal: document.getElementById('btn-show-optimal'),
+            playbackControls: document.getElementById('playback-controls'),
+            playbackStatus: document.getElementById('playback-status'),
+            btnPlay: document.getElementById('btn-play')
         };
     }
 
@@ -25,9 +36,11 @@ class DSAGame {
         this.elements.victoryModal.classList.remove('open');
         this.elements.canvasWrapper.innerHTML = '';
         this.elements.accuracyDisplay.style.display = 'none';
+        this.elements.playbackControls.style.display = 'none';
+        this.stopPlayback();
         
         // Reset showing optimal state
-        this.showingOptimal = false;
+        this.playback.active = false;
         
         switch(levelId) {
             case 'bubble-sort': this.initBubbleSort(); break;
@@ -38,6 +51,7 @@ class DSAGame {
     }
 
     showMenu() {
+        this.stopPlayback();
         this.elements.gameArea.classList.remove('active');
         this.elements.menu.classList.add('active');
         this.elements.victoryModal.classList.remove('open');
@@ -54,26 +68,280 @@ class DSAGame {
         this.elements.victoryMessage.textContent = message;
         this.elements.victoryStats.innerHTML = statsHTML;
         this.elements.victoryModal.classList.add('open');
-        
-        // Show/Hide "View Optimal" button based on level support
-        if (this.currentLevel === 'bfs-grid' || this.currentLevel === 'binary-search' || this.currentLevel === 'bst-search') {
-             this.elements.btnShowOptimal.style.display = 'inline-block';
-        } else {
-             this.elements.btnShowOptimal.style.display = 'none';
-        }
+        this.elements.btnShowOptimal.style.display = 'inline-block';
     }
 
     showOptimal() {
         this.elements.victoryModal.classList.remove('open');
-        this.showingOptimal = true;
+        this.playback.active = true;
+        this.playback.step = 0;
+        this.playback.playing = false;
+        this.elements.playbackControls.style.display = 'flex';
+        this.updatePlayButton();
         
-        if (this.currentLevel === 'bfs-grid') {
-            this.renderBFS(true); 
+        this.prepareOptimalSequence();
+        this.renderFrame();
+    }
+
+    // --- Playback System ---
+
+    prepareOptimalSequence() {
+        this.playback.sequence = [];
+        
+        if (this.currentLevel === 'bubble-sort') {
+            // Generate standard bubble sort swaps
+            let arr = [...this.gameState.initialArray];
+            this.playback.sequence.push({ type: 'init', arr: [...arr], selected: [] });
+            
+            let n = arr.length;
+            for (let i = 0; i < n - 1; i++) {
+                for (let j = 0; j < n - i - 1; j++) {
+                    // Highlight comparison
+                    this.playback.sequence.push({ type: 'compare', arr: [...arr], selected: [j, j+1] });
+                    
+                    if (arr[j] > arr[j + 1]) {
+                        // Swap
+                        let temp = arr[j];
+                        arr[j] = arr[j + 1];
+                        arr[j + 1] = temp;
+                        this.playback.sequence.push({ type: 'swap', arr: [...arr], selected: [j, j+1] });
+                    }
+                }
+                // Mark sorted
+                // We can infer sorted elements in render based on i
+            }
+            this.playback.sequence.push({ type: 'done', arr: [...arr], selected: [] });
+            
         } else if (this.currentLevel === 'binary-search') {
-            this.renderBinarySearch(true);
+            // Optimal path is stored in gameState.optimalPath
+            // Generate sequence of narrowing ranges
+            const arr = this.gameState.array;
+            const target = this.gameState.target;
+            const path = this.gameState.optimalPath; // indices
+            let l = 0, r = arr.length - 1;
+            
+            this.playback.sequence.push({ low: l, high: r, mid: null, found: false });
+            
+            path.forEach(idx => {
+                this.playback.sequence.push({ low: l, high: r, mid: idx, found: false });
+                if (arr[idx] === target) {
+                    this.playback.sequence.push({ low: l, high: r, mid: idx, found: true });
+                } else if (arr[idx] < target) {
+                    l = idx + 1;
+                    this.playback.sequence.push({ low: l, high: r, mid: null, found: false });
+                } else {
+                    r = idx - 1;
+                    this.playback.sequence.push({ low: l, high: r, mid: null, found: false });
+                }
+            });
+
         } else if (this.currentLevel === 'bst-search') {
-            this.renderBST(true);
+            // Path is in gameState.optimalPath
+            const path = this.gameState.optimalPath;
+            this.playback.sequence.push({ visited: [], current: null });
+            
+            for(let i=0; i<path.length; i++) {
+                const visited = path.slice(0, i+1);
+                const current = path[i];
+                this.playback.sequence.push({ visited, current });
+            }
+            // Final state found
+            this.playback.sequence.push({ visited: path, current: path[path.length-1], found: true });
+
+        } else if (this.currentLevel === 'bfs-grid') {
+            // Re-run BFS to get full expansion order for animation? 
+            // Or just animate the path?
+            // "Optimal solution" usually implies showing the path. 
+            // Let's animate the optimal path drawing.
+            const path = this.gameState.optimalPath;
+            this.playback.sequence.push({ path: [] });
+            for(let i=0; i<path.length; i++) {
+                this.playback.sequence.push({ path: path.slice(0, i+1) });
+            }
         }
+        
+        this.playback.maxSteps = this.playback.sequence.length - 1;
+        this.updatePlaybackStatus();
+    }
+
+    renderFrame() {
+        const stepIndex = this.playback.step;
+        const state = this.playback.sequence[stepIndex];
+        
+        if (this.currentLevel === 'bubble-sort') {
+            const wrapper = this.elements.canvasWrapper;
+            wrapper.innerHTML = '';
+            wrapper.style.alignItems = 'flex-end';
+            
+            state.arr.forEach((value, index) => {
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                bar.style.height = `${value * 3}px`;
+                
+                if (state.selected.includes(index)) {
+                    bar.classList.add('selected');
+                }
+                
+                const label = document.createElement('div');
+                label.className = 'bar-value';
+                label.textContent = value;
+                bar.appendChild(label);
+                wrapper.appendChild(bar);
+            });
+            
+        } else if (this.currentLevel === 'binary-search') {
+            const wrapper = this.elements.canvasWrapper;
+            wrapper.innerHTML = '';
+            wrapper.style.alignItems = 'center';
+            wrapper.style.flexWrap = 'wrap';
+            wrapper.style.alignContent = 'center';
+            
+            this.gameState.array.forEach((value, index) => {
+                const cell = document.createElement('div');
+                cell.className = 'array-cell';
+                cell.textContent = '?';
+                
+                // Show values in current range or if found/mid
+                const inRange = index >= state.low && index <= state.high;
+                
+                if (index === state.mid) {
+                    cell.textContent = value;
+                    cell.style.borderColor = '#ffff00';
+                    cell.style.borderWidth = '2px';
+                    if (state.found) cell.classList.add('found');
+                    else cell.classList.add('checked');
+                } else if (!inRange) {
+                    cell.style.opacity = '0.3';
+                }
+                
+                wrapper.appendChild(cell);
+            });
+
+        } else if (this.currentLevel === 'bst-search') {
+            // Render BST with custom highlighting
+            // We reuse renderBST but modify it or copy logic?
+            // Copy logic is safer to avoid polluting game logic
+            const wrapper = this.elements.canvasWrapper;
+            wrapper.innerHTML = '';
+            const container = document.createElement('div');
+            container.className = 'tree-container';
+            
+            this.gameState.nodes.forEach((node, i) => {
+                if (i > 0) {
+                     // Draw links (simplified for now as before)
+                }
+            });
+
+            this.gameState.nodes.forEach((node, i) => {
+                const el = document.createElement('div');
+                el.className = 'tree-node';
+                el.textContent = node.val;
+                
+                const depth = Math.floor(Math.log2(i + 1));
+                const levelStart = Math.pow(2, depth) - 1;
+                const positionInLevel = i - levelStart;
+                const totalInLevel = Math.pow(2, depth);
+                const x = (positionInLevel + 0.5) * (100 / totalInLevel);
+                const y = depth * 80 + 40;
+                
+                el.style.left = `calc(${x}% - 25px)`;
+                el.style.top = `${y}px`;
+
+                if (state.visited.includes(i)) {
+                    el.classList.add('visited');
+                    el.style.borderColor = '#ffff00';
+                }
+                if (i === state.current) {
+                    el.style.backgroundColor = '#333';
+                    if (state.found) el.classList.add('found');
+                }
+                
+                container.appendChild(el);
+            });
+            wrapper.appendChild(container);
+
+        } else if (this.currentLevel === 'bfs-grid') {
+            const wrapper = this.elements.canvasWrapper;
+            wrapper.innerHTML = '';
+            const container = document.createElement('div');
+            container.className = 'grid-container';
+            container.style.gridTemplateColumns = `repeat(${this.gameState.cols}, 30px)`;
+
+            const pathSet = new Set(state.path.map(p => `${p.r},${p.c}`));
+
+            this.gameState.grid.forEach(row => {
+                row.forEach(cell => {
+                    const el = document.createElement('div');
+                    el.className = 'grid-cell';
+                    if (cell.type === 'wall') el.classList.add('wall');
+                    if (cell.type === 'start') el.classList.add('start');
+                    if (cell.type === 'end') el.classList.add('end');
+                    
+                    if (pathSet.has(`${cell.r},${cell.c}`) && cell.type !== 'start' && cell.type !== 'end') {
+                         el.style.backgroundColor = '#ffff00'; 
+                         el.textContent = '•';
+                         el.style.color = 'black';
+                    }
+                    container.appendChild(el);
+                });
+            });
+            wrapper.appendChild(container);
+        }
+        
+        this.updatePlaybackStatus();
+    }
+
+    // Controls
+    togglePlay() {
+        if (this.playback.playing) {
+            this.stopPlayback();
+        } else {
+            this.startPlayback();
+        }
+    }
+
+    startPlayback() {
+        if (this.playback.step >= this.playback.maxSteps) {
+            this.playback.step = 0;
+        }
+        this.playback.playing = true;
+        this.updatePlayButton();
+        this.playback.interval = setInterval(() => {
+            if (this.playback.step < this.playback.maxSteps) {
+                this.playback.step++;
+                this.renderFrame();
+            } else {
+                this.stopPlayback();
+            }
+        }, 600);
+    }
+
+    stopPlayback() {
+        this.playback.playing = false;
+        clearInterval(this.playback.interval);
+        this.updatePlayButton();
+    }
+
+    stepPlayback() {
+        this.stopPlayback();
+        if (this.playback.step < this.playback.maxSteps) {
+            this.playback.step++;
+            this.renderFrame();
+        }
+    }
+
+    resetPlayback() {
+        this.stopPlayback();
+        this.playback.step = 0;
+        this.renderFrame();
+    }
+
+    updatePlayButton() {
+        this.elements.btnPlay.textContent = this.playback.playing ? "⏸ Pause" : "▶ Play";
+    }
+
+    updatePlaybackStatus() {
+        this.elements.playbackStatus.textContent = `Step ${this.playback.step} / ${this.playback.maxSteps}`;
     }
 
     updateStats(text) {
@@ -87,17 +355,15 @@ class DSAGame {
         this.elements.levelExplanation.innerHTML = `
             <strong>Bubble Sort</strong> works by repeatedly stepping through the list, comparing adjacent elements and swapping them if they are in the wrong order. 
             <br><br>
-            It's called "Bubble Sort" because smaller elements "bubble" to the top (or larger ones to the end) of the list.
+            Efficiency: <span style="color:#ff5555">O(N²)</span>
             <br>
-            Efficiency: <span style="color:#ff5555">O(N²)</span> - Simple but inefficient for large lists.
-            <br>
-            <strong>Goal:</strong> Sort the bars by height using the minimum number of swaps (inversions).
+            <strong>Goal:</strong> Sort the bars by height.
         `;
         
         const size = 8;
         const array = Array.from({length: size}, () => Math.floor(Math.random() * 80) + 10);
         
-        // Calculate optimal moves (number of inversions)
+        // Calculate optimal moves
         let inversions = 0;
         const tempArr = [...array];
         for(let i=0; i<size; i++) {
@@ -107,6 +373,7 @@ class DSAGame {
         }
 
         this.gameState = {
+            initialArray: [...array], // Save initial for reset
             array: array,
             moves: 0,
             optimalMoves: inversions,
@@ -136,13 +403,13 @@ class DSAGame {
             label.textContent = value;
             bar.appendChild(label);
 
-            if (!this.showingOptimal) {
+            if (!this.playback.active) {
                 bar.onclick = () => this.handleBubbleSortClick(index);
             }
             wrapper.appendChild(bar);
         });
         
-        if (!this.showingOptimal) {
+        if (!this.playback.active) {
             this.checkBubbleSortWin();
         }
     }
@@ -199,13 +466,11 @@ class DSAGame {
         this.elements.levelTitle.textContent = "Binary Search";
         this.elements.instructions.innerHTML = `Find the hidden number. Click indices to reveal.`;
         this.elements.levelExplanation.innerHTML = `
-            <strong>Binary Search</strong> is an efficient algorithm for finding an item from a <em>sorted</em> list of items.
-            <br><br>
-            It works by repeatedly dividing in half the portion of the list that could contain the item, until you've narrowed down the possible locations to just one.
+            <strong>Binary Search</strong> is an efficient algorithm for finding an item from a <em>sorted</em> list.
             <br>
-            Efficiency: <span style="color:#00ff00">O(log N)</span> - Very fast!
+            Efficiency: <span style="color:#00ff00">O(log N)</span>
             <br>
-            <strong>Goal:</strong> Find the target by always choosing the middle element of the remaining range.
+            <strong>Goal:</strong> Find the target by splitting the range in half.
         `;
         
         const size = 15;
@@ -219,10 +484,10 @@ class DSAGame {
         const targetIndex = Math.floor(Math.random() * size);
         const targetValue = arr[targetIndex];
 
-        // Calculate optimal moves and path
+        // Calculate optimal moves
         let optMoves = 0;
         let l = 0, r = size - 1;
-        let optimalPath = []; // Indices to click
+        let optimalPath = []; 
         
         while (l <= r) {
             optMoves++;
@@ -248,7 +513,7 @@ class DSAGame {
         this.renderBinarySearch();
     }
 
-    renderBinarySearch(showOptimal = false) {
+    renderBinarySearch() {
         const wrapper = this.elements.canvasWrapper;
         wrapper.innerHTML = '';
         wrapper.style.alignItems = 'center';
@@ -265,37 +530,21 @@ class DSAGame {
             const isRevealed = this.gameState.history.includes(index);
             const inRange = index >= this.gameState.low && index <= this.gameState.high;
 
-            // In optimal view, reveal optimal path and target
-            if (showOptimal) {
-                if (this.gameState.optimalPath.includes(index)) {
-                     cell.textContent = value;
-                     cell.classList.add('checked');
-                     cell.style.borderColor = '#ffff00'; // Optimal path color
-                     if (value === this.gameState.target) {
-                         cell.classList.remove('checked');
-                         cell.classList.add('found');
-                     }
+            if (isRevealed) {
+                cell.textContent = value;
+                if (value === this.gameState.target) {
+                    cell.classList.add('found');
                 } else {
-                    cell.style.opacity = '0.3';
+                    cell.classList.add('checked');
                 }
-            } else {
-                // Normal game view
-                if (isRevealed) {
-                    cell.textContent = value;
-                    if (value === this.gameState.target) {
-                        cell.classList.add('found');
-                    } else {
-                        cell.classList.add('checked');
-                    }
-                } else if (!inRange) {
-                    cell.style.opacity = '0.3';
-                }
+            } else if (!inRange) {
+                cell.style.opacity = '0.3';
+            }
 
-                if (inRange && !isRevealed) {
-                    cell.onclick = () => this.handleBinarySearchClick(index, value);
-                } else {
-                    cell.style.cursor = 'default';
-                }
+            if (!this.playback.active && inRange && !isRevealed) {
+                cell.onclick = () => this.handleBinarySearchClick(index, value);
+            } else {
+                cell.style.cursor = 'default';
             }
 
             wrapper.appendChild(cell);
@@ -333,35 +582,29 @@ class DSAGame {
     initBST() {
         this.elements.levelTitle.textContent = "BST Search";
         this.elements.levelExplanation.innerHTML = `
-            A <strong>Binary Search Tree (BST)</strong> is a tree data structure where each node has at most two children.
+            <strong>Binary Search Tree (BST)</strong>: Left child < Node < Right child.
             <br>
-            Property: For any node, all values in the <strong>left</strong> subtree are smaller, and all values in the <strong>right</strong> subtree are larger.
+            Efficiency: <span style="color:#00ff00">O(log N)</span>
             <br>
-            Efficiency: <span style="color:#00ff00">O(h)</span> where h is height (avg O(log N)).
-            <br>
-            <strong>Goal:</strong> Find the target node by traversing down the tree.
+            <strong>Goal:</strong> Find the target node.
         `;
 
-        // Generate a simple BST
         const values = [50, 25, 75, 12, 37, 62, 87, 6, 18, 31, 43, 55, 68, 81, 93];
-        
         const nodes = [];
         values.forEach((v, i) => nodes.push({ val: v, id: i, visited: false }));
         
         const targetIdx = Math.floor(Math.random() * nodes.length);
         const targetVal = nodes[targetIdx].val;
 
-        // Calculate optimal path
-        // Root is 0. Move down until target.
         let optimalPath = [];
         let curr = 0;
         while(curr < nodes.length) {
             optimalPath.push(curr);
             if(nodes[curr].val === targetVal) break;
             if(targetVal < nodes[curr].val) {
-                curr = 2 * curr + 1; // Left
+                curr = 2 * curr + 1;
             } else {
-                curr = 2 * curr + 2; // Right
+                curr = 2 * curr + 2;
             }
         }
         
@@ -370,41 +613,31 @@ class DSAGame {
         this.gameState = {
             nodes: nodes,
             target: targetVal,
-            currentIdx: 0, // start at root
+            currentIdx: 0, 
             moves: 0,
             optimalMoves: optimalMoves,
             optimalPath: optimalPath,
             path: [0]
         };
         
-        this.elements.instructions.innerHTML = `Locate the value <span style="color:#ff00ff; font-weight:bold;">${targetVal}</span> starting from the root (top).`;
+        this.elements.instructions.innerHTML = `Locate the value <span style="color:#ff00ff; font-weight:bold;">${targetVal}</span>.`;
         this.renderBST();
     }
 
-    renderBST(showOptimal = false) {
+    renderBST() {
         const wrapper = this.elements.canvasWrapper;
         wrapper.innerHTML = '';
-        wrapper.style.display = 'block'; // Reset flex
+        wrapper.style.display = 'block'; 
         wrapper.style.position = 'relative';
 
         const container = document.createElement('div');
         container.className = 'tree-container';
         
-        // Render links first
-        this.gameState.nodes.forEach((node, i) => {
-            if (i > 0) {
-                const parentIdx = Math.floor((i - 1) / 2);
-                this.drawLink(container, parentIdx, i);
-            }
-        });
-
-        // Render nodes
         this.gameState.nodes.forEach((node, i) => {
             const el = document.createElement('div');
             el.className = 'tree-node';
             el.textContent = node.val;
             
-            // Positioning
             const depth = Math.floor(Math.log2(i + 1));
             const levelStart = Math.pow(2, depth) - 1;
             const positionInLevel = i - levelStart;
@@ -415,45 +648,30 @@ class DSAGame {
             el.style.left = `calc(${x}% - 25px)`;
             el.style.top = `${y}px`;
 
-            if (showOptimal) {
-                if (this.gameState.optimalPath.includes(i)) {
-                    el.style.borderColor = '#ffff00'; // Optimal path
-                    el.style.borderWidth = '3px';
-                    if (node.val === this.gameState.target) {
-                        el.classList.add('found');
-                    }
-                } else {
-                    el.style.opacity = '0.3';
-                }
-            } else {
-                // Normal view
-                if (this.gameState.path.includes(i)) {
-                    el.classList.add('visited');
-                }
-                
-                if (node.val === this.gameState.target) {
-                    el.classList.add('target');
-                }
+            if (this.gameState.path.includes(i)) {
+                el.classList.add('visited');
+            }
+            
+            if (node.val === this.gameState.target) {
+                el.classList.add('target');
+            }
 
-                if (i === this.gameState.currentIdx) {
-                    el.style.borderColor = '#00ffff';
-                    el.style.backgroundColor = '#222';
-                }
+            if (i === this.gameState.currentIdx) {
+                el.style.borderColor = '#00ffff';
+                el.style.backgroundColor = '#222';
+            }
 
-                // Click handling
+            if (!this.playback.active) {
                 const leftChild = 2 * this.gameState.currentIdx + 1;
                 const rightChild = 2 * this.gameState.currentIdx + 2;
-                
                 if (i === leftChild || i === rightChild) {
                     el.style.cursor = 'pointer';
                     el.onclick = () => this.handleBSTClick(i);
-                } else {
-                    el.style.cursor = 'default';
                 }
-                
-                if (i === this.gameState.currentIdx && node.val === this.gameState.target) {
-                    el.classList.add('found');
-                }
+            }
+
+            if (i === this.gameState.currentIdx && node.val === this.gameState.target) {
+                el.classList.add('found');
             }
 
             container.appendChild(el);
@@ -461,10 +679,6 @@ class DSAGame {
 
         wrapper.appendChild(container);
         this.updateStats(`Steps: ${this.gameState.moves}`);
-    }
-
-    drawLink(container, parentIdx, childIdx) {
-        // Simplified link drawing logic or placeholder
     }
 
     handleBSTClick(index) {
@@ -493,14 +707,13 @@ class DSAGame {
     initBFS() {
         this.elements.levelTitle.textContent = "Graph BFS";
         this.elements.levelExplanation.innerHTML = `
-            <strong>Breadth-First Search (BFS)</strong> explores a graph layer by layer. It starts at the root (or start node) and explores all neighbors at the present depth before moving to nodes at the next depth level.
+            <strong>Breadth-First Search (BFS)</strong> explores neighbor nodes layer by layer.
             <br>
-            Efficiency: <span style="color:#00ff00">O(V + E)</span>.
+            Efficiency: <span style="color:#00ff00">O(V + E)</span>
             <br>
-            <strong>Goal:</strong> Find the shortest path from START (Cyan) to END (Magenta) avoiding walls.
+            <strong>Goal:</strong> Find shortest path to END.
         `;
 
-        // Grid 10x10
         const rows = 10, cols = 10;
         const grid = [];
         for(let r=0; r<rows; r++) {
@@ -511,14 +724,12 @@ class DSAGame {
             grid.push(row);
         }
         
-        // Start and End
         const start = {r: 1, c: 1};
         const end = {r: 8, c: 8};
         grid[start.r][start.c].type = 'start';
         grid[end.r][end.c].type = 'end';
         grid[start.r][start.c].visited = true;
 
-        // Add some random walls
         for(let i=0; i<25; i++) {
             const wr = Math.floor(Math.random()*rows);
             const wc = Math.floor(Math.random()*cols);
@@ -527,7 +738,6 @@ class DSAGame {
             }
         }
         
-        // Ensure path exists
         const optimal = this.calculateBFS(grid, start, end);
         
         if (optimal.dist === -1) {
@@ -541,16 +751,15 @@ class DSAGame {
             current: [start], 
             moves: 0,
             optimalDist: optimal.dist,
-            optimalPath: optimal.path, // Array of {r, c}
+            optimalPath: optimal.path, 
             userPathLength: 0
         };
 
-        this.elements.instructions.innerHTML = `Click neighbors of the current visited area to expand the search.`;
+        this.elements.instructions.innerHTML = `Click neighbors of visited area to expand.`;
         this.renderBFS();
     }
 
     calculateBFS(grid, start, end) {
-        // Return dist and path
         const q = [{r: start.r, c: start.c, d: 0, path: []}];
         const visited = new Set();
         visited.add(`${start.r},${start.c}`);
@@ -579,7 +788,7 @@ class DSAGame {
         return { dist: -1, path: [] };
     }
 
-    renderBFS(showOptimal = false) {
+    renderBFS() {
         const wrapper = this.elements.canvasWrapper;
         wrapper.innerHTML = '';
         wrapper.style.display = 'block';
@@ -587,12 +796,6 @@ class DSAGame {
         const container = document.createElement('div');
         container.className = 'grid-container';
         container.style.gridTemplateColumns = `repeat(${this.gameState.cols}, 30px)`;
-
-        // Create a lookup for optimal path
-        const optimalSet = new Set();
-        if (showOptimal && this.gameState.optimalPath) {
-            this.gameState.optimalPath.forEach(p => optimalSet.add(`${p.r},${p.c}`));
-        }
 
         this.gameState.grid.forEach(row => {
             row.forEach(cell => {
@@ -603,18 +806,10 @@ class DSAGame {
                 if (cell.type === 'end') el.classList.add('end');
                 if (cell.visited) el.classList.add('visited');
                 
-                // Show optimal path overlay
-                if (showOptimal && optimalSet.has(`${cell.r},${cell.c}`) && cell.type !== 'start' && cell.type !== 'end') {
-                    el.style.backgroundColor = '#ffff00'; // Yellow path
-                    el.style.color = 'black';
-                    el.textContent = '•';
-                }
-
-                // Interaction: click neighbor of visited to expand
-                if (!showOptimal && !cell.visited && cell.type !== 'wall') {
+                if (!this.playback.active && !cell.visited && cell.type !== 'wall') {
                     if (this.isNeighborOfVisited(cell.r, cell.c)) {
                         el.style.cursor = 'pointer';
-                        el.style.border = '1px solid #555'; // hint
+                        el.style.border = '1px solid #555'; 
                         el.onclick = () => this.handleBFSClick(cell.r, cell.c);
                     }
                 }

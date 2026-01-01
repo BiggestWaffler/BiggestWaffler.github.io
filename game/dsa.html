@@ -55,6 +55,14 @@
                     <!-- Game elements injected here -->
                 </div>
 
+                <!-- Playback Controls -->
+                <div id="playback-controls" style="display:none;" class="controls-bar">
+                    <button class="btn-control" onclick="game.resetPlayback()">⏮ Reset</button>
+                    <button class="btn-control" onclick="game.togglePlay()" id="btn-play">▶ Play</button>
+                    <button class="btn-control" onclick="game.stepPlayback()">⏭ Step</button>
+                    <span id="playback-status" style="margin-left: 10px; color: #aaa; font-size: 0.9rem;"></span>
+                </div>
+
                 <div class="info-box">
                     <h3><span class="icon">ℹ️</span> How it Works</h3>
                     <p id="level-explanation">
