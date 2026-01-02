@@ -47,6 +47,7 @@ class DSAGame {
             case 'binary-search': this.initBinarySearch(); break;
             case 'bst-search': this.initBST(); break;
             case 'bfs-grid': this.initBFS(); break;
+            case 'dijkstra': this.initDijkstra(); break;
         }
     }
 
@@ -107,17 +108,13 @@ class DSAGame {
                         this.playback.sequence.push({ type: 'swap', arr: [...arr], selected: [j, j+1] });
                     }
                 }
-                // Mark sorted
-                // We can infer sorted elements in render based on i
             }
             this.playback.sequence.push({ type: 'done', arr: [...arr], selected: [] });
             
         } else if (this.currentLevel === 'binary-search') {
-            // Optimal path is stored in gameState.optimalPath
-            // Generate sequence of narrowing ranges
             const arr = this.gameState.array;
             const target = this.gameState.target;
-            const path = this.gameState.optimalPath; // indices
+            const path = this.gameState.optimalPath; 
             let l = 0, r = arr.length - 1;
             
             this.playback.sequence.push({ low: l, high: r, mid: null, found: false });
@@ -136,7 +133,6 @@ class DSAGame {
             });
 
         } else if (this.currentLevel === 'bst-search') {
-            // Path is in gameState.optimalPath
             const path = this.gameState.optimalPath;
             this.playback.sequence.push({ visited: [], current: null });
             
@@ -145,23 +141,155 @@ class DSAGame {
                 const current = path[i];
                 this.playback.sequence.push({ visited, current });
             }
-            // Final state found
             this.playback.sequence.push({ visited: path, current: path[path.length-1], found: true });
 
         } else if (this.currentLevel === 'bfs-grid') {
-            // Re-run BFS to get full expansion order for animation? 
-            // Or just animate the path?
-            // "Optimal solution" usually implies showing the path. 
-            // Let's animate the optimal path drawing.
-            const path = this.gameState.optimalPath;
-            this.playback.sequence.push({ path: [] });
-            for(let i=0; i<path.length; i++) {
-                this.playback.sequence.push({ path: path.slice(0, i+1) });
-            }
+            // For BFS, show the expansion order. 
+            // We need to re-run BFS but record every step of "visiting"
+            const expansion = this.getBFSExpansionOrder(this.gameState.grid, this.gameState.start, this.gameState.end);
+            this.playback.sequence = expansion;
+
+        } else if (this.currentLevel === 'dijkstra') {
+            // Re-run Dijkstra to get expansion order
+            const expansion = this.getDijkstraExpansionOrder(this.gameState.grid, this.gameState.start, this.gameState.end);
+            this.playback.sequence = expansion;
         }
         
         this.playback.maxSteps = this.playback.sequence.length - 1;
         this.updatePlaybackStatus();
+    }
+
+    getBFSExpansionOrder(grid, start, end) {
+        const steps = [];
+        const q = [{r: start.r, c: start.c}];
+        const visited = new Set();
+        visited.add(`${start.r},${start.c}`);
+        
+        const visitedList = [`${start.r},${start.c}`];
+        steps.push({ visited: [...visitedList], path: [], current: {r: start.r, c: start.c} });
+
+        // Map for reconstructing path
+        const parent = new Map();
+
+        const dr = [0, 0, 1, -1];
+        const dc = [1, -1, 0, 0];
+        
+        let found = false;
+
+        while(q.length > 0) {
+            const curr = q.shift();
+            
+            if (curr.r === end.r && curr.c === end.c) {
+                found = true;
+                break;
+            }
+            
+            for(let i=0; i<4; i++) {
+                const nr = curr.r + dr[i];
+                const nc = curr.c + dc[i];
+                const key = `${nr},${nc}`;
+                
+                if (nr>=0 && nr<10 && nc>=0 && nc<10 && 
+                    !visited.has(key) && grid[nr][nc].type !== 'wall') {
+                    
+                    visited.add(key);
+                    visitedList.push(key);
+                    parent.set(key, curr);
+                    q.push({r: nr, c: nc});
+                    
+                    steps.push({ visited: [...visitedList], path: [], current: {r: nr, c: nc} });
+                    
+                    if (nr === end.r && nc === end.c) {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if(found) break;
+        }
+        
+        // Reconstruct path
+        const path = [];
+        let curr = {r: end.r, c: end.c};
+        while(curr) {
+            path.push(curr);
+            const key = `${curr.r},${curr.c}`;
+            if (curr.r === start.r && curr.c === start.c) break;
+            curr = parent.get(key);
+        }
+        path.reverse(); // Start to End
+        
+        steps.push({ visited: [...visitedList], path: path, current: null });
+        return steps;
+    }
+    
+    getDijkstraExpansionOrder(grid, start, end) {
+        // Dijkstra with priority queue (simulated with sorting)
+        const steps = [];
+        const pq = [{r: start.r, c: start.c, dist: 0}];
+        const dists = new Map();
+        const parent = new Map();
+        const visitedList = [];
+        
+        dists.set(`${start.r},${start.c}`, 0);
+        
+        const dr = [0, 0, 1, -1];
+        const dc = [1, -1, 0, 0];
+        
+        let found = false;
+        
+        while(pq.length > 0) {
+            // Sort by dist (min heap simulation)
+            pq.sort((a, b) => a.dist - b.dist);
+            const curr = pq.shift();
+            const currKey = `${curr.r},${curr.c}`;
+            
+            // If we found a shorter path to this node already, skip (lazy deletion)
+            // But here we just process.
+            
+            if (!visitedList.includes(currKey)) {
+                visitedList.push(currKey);
+                steps.push({ visited: [...visitedList], path: [], current: curr });
+            }
+
+            if (curr.r === end.r && curr.c === end.c) {
+                found = true;
+                break;
+            }
+
+            for(let i=0; i<4; i++) {
+                const nr = curr.r + dr[i];
+                const nc = curr.c + dc[i];
+                const nKey = `${nr},${nc}`;
+                
+                if (nr>=0 && nr<10 && nc>=0 && nc<10 && grid[nr][nc].type !== 'wall') {
+                    const weight = grid[nr][nc].weight;
+                    const newDist = curr.dist + weight;
+                    
+                    if (!dists.has(nKey) || newDist < dists.get(nKey)) {
+                        dists.set(nKey, newDist);
+                        parent.set(nKey, curr);
+                        pq.push({r: nr, c: nc, dist: newDist});
+                    }
+                }
+            }
+        }
+        
+        // Reconstruct path
+        const path = [];
+        let curr = {r: end.r, c: end.c};
+        // Only if found
+        if (dists.has(`${end.r},${end.c}`)) {
+             while(curr) {
+                path.push(curr);
+                if (curr.r === start.r && curr.c === start.c) break;
+                curr = parent.get(`${curr.r},${curr.c}`);
+            }
+            path.reverse();
+        }
+
+        steps.push({ visited: [...visitedList], path: path, current: null });
+        return steps;
     }
 
     renderFrame() {
@@ -177,10 +305,7 @@ class DSAGame {
                 const bar = document.createElement('div');
                 bar.className = 'bar';
                 bar.style.height = `${value * 3}px`;
-                
-                if (state.selected.includes(index)) {
-                    bar.classList.add('selected');
-                }
+                if (state.selected.includes(index)) bar.classList.add('selected');
                 
                 const label = document.createElement('div');
                 label.className = 'bar-value';
@@ -201,7 +326,6 @@ class DSAGame {
                 cell.className = 'array-cell';
                 cell.textContent = '?';
                 
-                // Show values in current range or if found/mid
                 const inRange = index >= state.low && index <= state.high;
                 
                 if (index === state.mid) {
@@ -213,35 +337,23 @@ class DSAGame {
                 } else if (!inRange) {
                     cell.style.opacity = '0.3';
                 }
-                
                 wrapper.appendChild(cell);
             });
 
         } else if (this.currentLevel === 'bst-search') {
-            // Render BST with custom highlighting
-            // We reuse renderBST but modify it or copy logic?
-            // Copy logic is safer to avoid polluting game logic
             const wrapper = this.elements.canvasWrapper;
             wrapper.innerHTML = '';
             const container = document.createElement('div');
             container.className = 'tree-container';
             
             this.gameState.nodes.forEach((node, i) => {
-                if (i > 0) {
-                     // Draw links (simplified for now as before)
-                }
-            });
-
-            this.gameState.nodes.forEach((node, i) => {
                 const el = document.createElement('div');
                 el.className = 'tree-node';
                 el.textContent = node.val;
                 
                 const depth = Math.floor(Math.log2(i + 1));
-                const levelStart = Math.pow(2, depth) - 1;
-                const positionInLevel = i - levelStart;
                 const totalInLevel = Math.pow(2, depth);
-                const x = (positionInLevel + 0.5) * (100 / totalInLevel);
+                const x = ((i - (totalInLevel - 1)) + 0.5) * (100 / totalInLevel);
                 const y = depth * 80 + 40;
                 
                 el.style.left = `calc(${x}% - 25px)`;
@@ -255,33 +367,48 @@ class DSAGame {
                     el.style.backgroundColor = '#333';
                     if (state.found) el.classList.add('found');
                 }
-                
                 container.appendChild(el);
             });
             wrapper.appendChild(container);
 
-        } else if (this.currentLevel === 'bfs-grid') {
+        } else if (this.currentLevel === 'bfs-grid' || this.currentLevel === 'dijkstra') {
             const wrapper = this.elements.canvasWrapper;
             wrapper.innerHTML = '';
             const container = document.createElement('div');
             container.className = 'grid-container';
             container.style.gridTemplateColumns = `repeat(${this.gameState.cols}, 30px)`;
 
+            const visitedSet = new Set(state.visited);
             const pathSet = new Set(state.path.map(p => `${p.r},${p.c}`));
 
             this.gameState.grid.forEach(row => {
                 row.forEach(cell => {
                     const el = document.createElement('div');
                     el.className = 'grid-cell';
+                    if (this.currentLevel === 'dijkstra') {
+                        el.classList.add('dijkstra');
+                        if (cell.type !== 'wall') el.textContent = cell.weight;
+                    }
+
                     if (cell.type === 'wall') el.classList.add('wall');
                     if (cell.type === 'start') el.classList.add('start');
                     if (cell.type === 'end') el.classList.add('end');
                     
-                    if (pathSet.has(`${cell.r},${cell.c}`) && cell.type !== 'start' && cell.type !== 'end') {
+                    const key = `${cell.r},${cell.c}`;
+                    if (visitedSet.has(key) && cell.type !== 'start' && cell.type !== 'end') {
+                         el.classList.add('visited');
+                         // For Dijkstra, maybe show faint color? BFS visited is already dark cyan.
+                    }
+                    
+                    if (pathSet.has(key) && cell.type !== 'start' && cell.type !== 'end') {
                          el.style.backgroundColor = '#ffff00'; 
-                         el.textContent = '•';
                          el.style.color = 'black';
                     }
+                    
+                    if (state.current && state.current.r === cell.r && state.current.c === cell.c) {
+                        el.style.border = '2px solid #ffffff';
+                    }
+
                     container.appendChild(el);
                 });
             });
@@ -313,7 +440,7 @@ class DSAGame {
             } else {
                 this.stopPlayback();
             }
-        }, 600);
+        }, this.currentLevel === 'bubble-sort' ? 200 : 100); // Faster for grid
     }
 
     stopPlayback() {
@@ -363,7 +490,6 @@ class DSAGame {
         const size = 8;
         const array = Array.from({length: size}, () => Math.floor(Math.random() * 80) + 10);
         
-        // Calculate optimal moves
         let inversions = 0;
         const tempArr = [...array];
         for(let i=0; i<size; i++) {
@@ -373,7 +499,7 @@ class DSAGame {
         }
 
         this.gameState = {
-            initialArray: [...array], // Save initial for reset
+            initialArray: [...array],
             array: array,
             moves: 0,
             optimalMoves: inversions,
@@ -386,7 +512,7 @@ class DSAGame {
     renderBubbleSort() {
         const wrapper = this.elements.canvasWrapper;
         wrapper.innerHTML = '';
-        wrapper.style.alignItems = 'flex-end'; // Align bars to bottom
+        wrapper.style.alignItems = 'flex-end';
         this.updateStats(`Moves: ${this.gameState.moves} / Optimal: ${this.gameState.optimalMoves}`);
 
         this.gameState.array.forEach((value, index) => {
@@ -484,7 +610,6 @@ class DSAGame {
         const targetIndex = Math.floor(Math.random() * size);
         const targetValue = arr[targetIndex];
 
-        // Calculate optimal moves
         let optMoves = 0;
         let l = 0, r = size - 1;
         let optimalPath = []; 
@@ -639,10 +764,8 @@ class DSAGame {
             el.textContent = node.val;
             
             const depth = Math.floor(Math.log2(i + 1));
-            const levelStart = Math.pow(2, depth) - 1;
-            const positionInLevel = i - levelStart;
             const totalInLevel = Math.pow(2, depth);
-            const x = (positionInLevel + 0.5) * (100 / totalInLevel);
+            const x = ((i - (totalInLevel - 1)) + 0.5) * (100 / totalInLevel);
             const y = depth * 80 + 40;
             
             el.style.left = `calc(${x}% - 25px)`;
@@ -850,6 +973,141 @@ class DSAGame {
             }, 500);
         } else {
             this.renderBFS();
+        }
+    }
+
+    // --- Level 5: Dijkstra ---
+    initDijkstra() {
+        this.elements.levelTitle.textContent = "Dijkstra's Algo";
+        this.elements.levelExplanation.innerHTML = `
+            <strong>Dijkstra's Algorithm</strong> finds the shortest path in a graph with weighted edges.
+            <br>
+            It greedily selects the unvisited node with the smallest tentative distance.
+            <br>
+            Efficiency: <span style="color:#00ff00">O(E + V log V)</span>
+            <br>
+            <strong>Goal:</strong> Find the path with minimum total cost.
+        `;
+
+        const rows = 10, cols = 10;
+        const grid = [];
+        for(let r=0; r<rows; r++) {
+            const row = [];
+            for(let c=0; c<cols; c++) {
+                // Random weights 1-9
+                row.push({ type: 'empty', visited: false, r, c, weight: Math.floor(Math.random() * 9) + 1 });
+            }
+            grid.push(row);
+        }
+        
+        const start = {r: 1, c: 1};
+        const end = {r: 8, c: 8};
+        grid[start.r][start.c].type = 'start';
+        grid[start.r][start.c].weight = 0; // Start has 0 cost to enter? Or just 0.
+        grid[end.r][end.c].type = 'end';
+        grid[start.r][start.c].visited = true;
+
+        // Walls
+        for(let i=0; i<15; i++) {
+            const wr = Math.floor(Math.random()*rows);
+            const wc = Math.floor(Math.random()*cols);
+            if (grid[wr][wc].type === 'empty') {
+                grid[wr][wc].type = 'wall';
+            }
+        }
+
+        // Calculate optimal
+        const optimalStep = this.getDijkstraExpansionOrder(grid, start, end).pop(); // Get last step which has path
+        const optimalPath = optimalStep ? optimalStep.path : [];
+        
+        // Calculate optimal cost
+        let optimalCost = 0;
+        optimalPath.forEach(p => {
+             if (p.r !== start.r || p.c !== start.c) {
+                 optimalCost += grid[p.r][p.c].weight;
+             }
+        });
+
+        if (optimalPath.length === 0) {
+            this.initDijkstra();
+            return;
+        }
+
+        this.gameState = {
+            grid, rows, cols,
+            start, end,
+            currentCost: 0,
+            optimalCost: optimalCost,
+            optimalPath: optimalPath,
+            path: [{r: start.r, c: start.c}]
+        };
+
+        this.elements.instructions.innerHTML = `Click neighbors to build the cheapest path. Watch the cost!`;
+        this.renderDijkstra();
+    }
+
+    renderDijkstra() {
+        const wrapper = this.elements.canvasWrapper;
+        wrapper.innerHTML = '';
+        wrapper.style.display = 'block';
+        
+        const container = document.createElement('div');
+        container.className = 'grid-container';
+        container.style.gridTemplateColumns = `repeat(${this.gameState.cols}, 30px)`;
+
+        const currentPathSet = new Set(this.gameState.path.map(p => `${p.r},${p.c}`));
+        const lastPos = this.gameState.path[this.gameState.path.length - 1];
+
+        this.gameState.grid.forEach(row => {
+            row.forEach(cell => {
+                const el = document.createElement('div');
+                el.className = 'grid-cell dijkstra';
+                el.textContent = cell.weight;
+                
+                if (cell.type === 'wall') el.classList.add('wall');
+                if (cell.type === 'start') el.classList.add('start');
+                if (cell.type === 'end') el.classList.add('end');
+                
+                if (currentPathSet.has(`${cell.r},${cell.c}`)) {
+                    el.classList.add('visited'); // Reusing visited style
+                    el.style.backgroundColor = '#00ffff';
+                    el.style.color = 'black';
+                }
+
+                if (!this.playback.active && cell.type !== 'wall' && !currentPathSet.has(`${cell.r},${cell.c}`)) {
+                     // Check if neighbor of lastPos
+                     if (Math.abs(cell.r - lastPos.r) + Math.abs(cell.c - lastPos.c) === 1) {
+                        el.style.cursor = 'pointer';
+                        el.style.border = '1px solid #fff';
+                        el.onclick = () => this.handleDijkstraClick(cell.r, cell.c);
+                     }
+                }
+
+                container.appendChild(el);
+            });
+        });
+        
+        wrapper.appendChild(container);
+        this.updateStats(`Cost: ${this.gameState.currentCost}`);
+    }
+
+    handleDijkstraClick(r, c) {
+        this.gameState.path.push({r, c});
+        this.gameState.currentCost += this.gameState.grid[r][c].weight;
+        
+        if (r === this.gameState.end.r && c === this.gameState.end.c) {
+            this.renderDijkstra();
+            
+            const accuracy = Math.max(0, Math.round((this.gameState.optimalCost / Math.max(1, this.gameState.currentCost)) * 100));
+            
+            setTimeout(() => {
+                this.showVictory(
+                    `Destination Reached!`,
+                    `Total Cost: ${this.gameState.currentCost}<br>Optimal Cost: ${this.gameState.optimalCost}<br>Accuracy: <span style="color:${this.getScoreColor(accuracy)}">${accuracy}%</span>`
+                );
+            }, 500);
+        } else {
+            this.renderDijkstra();
         }
     }
 
