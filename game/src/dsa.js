@@ -1,6 +1,8 @@
 class DSAGame {
     constructor() {
         this.currentLevel = null;
+        this.currentDifficulty = 'medium';
+        this.selectedLevelId = null; // For the modal
         this.gameState = {};
         this.playback = {
             active: false,
@@ -25,13 +27,29 @@ class DSAGame {
             btnShowOptimal: document.getElementById('btn-show-optimal'),
             playbackControls: document.getElementById('playback-controls'),
             playbackStatus: document.getElementById('playback-status'),
-            btnPlay: document.getElementById('btn-play')
+            btnPlay: document.getElementById('btn-play'),
+            difficultyModal: document.getElementById('difficulty-modal')
         };
     }
 
-    startLevel(levelId) {
+    selectLevel(levelId) {
+        this.selectedLevelId = levelId;
+        this.elements.difficultyModal.classList.add('open');
+    }
+
+    closeDifficultyModal() {
+        this.elements.difficultyModal.classList.remove('open');
+        this.selectedLevelId = null;
+    }
+
+    startLevel(difficulty) {
+        const levelId = this.selectedLevelId || this.currentLevel; // Use selected or retry current
+        if (!levelId) return;
+
         this.currentLevel = levelId;
+        this.currentDifficulty = difficulty;
         this.elements.menu.classList.remove('active');
+        this.elements.difficultyModal.classList.remove('open');
         this.elements.gameArea.classList.add('active');
         this.elements.victoryModal.classList.remove('open');
         this.elements.canvasWrapper.innerHTML = '';
@@ -56,12 +74,15 @@ class DSAGame {
         this.elements.gameArea.classList.remove('active');
         this.elements.menu.classList.add('active');
         this.elements.victoryModal.classList.remove('open');
+        this.elements.difficultyModal.classList.remove('open');
         this.currentLevel = null;
     }
 
     retryLevel() {
-        if (this.currentLevel) {
-            this.startLevel(this.currentLevel);
+        if (this.currentLevel && this.currentDifficulty) {
+            // Mock setting selectedLevelId so startLevel works
+            this.selectedLevelId = this.currentLevel;
+            this.startLevel(this.currentDifficulty);
         }
     }
 
@@ -144,13 +165,10 @@ class DSAGame {
             this.playback.sequence.push({ visited: path, current: path[path.length-1], found: true });
 
         } else if (this.currentLevel === 'bfs-grid') {
-            // For BFS, show the expansion order. 
-            // We need to re-run BFS but record every step of "visiting"
             const expansion = this.getBFSExpansionOrder(this.gameState.grid, this.gameState.start, this.gameState.end);
             this.playback.sequence = expansion;
 
         } else if (this.currentLevel === 'dijkstra') {
-            // Re-run Dijkstra to get expansion order
             const expansion = this.getDijkstraExpansionOrder(this.gameState.grid, this.gameState.start, this.gameState.end);
             this.playback.sequence = expansion;
         }
@@ -168,7 +186,6 @@ class DSAGame {
         const visitedList = [`${start.r},${start.c}`];
         steps.push({ visited: [...visitedList], path: [], current: {r: start.r, c: start.c} });
 
-        // Map for reconstructing path
         const parent = new Map();
 
         const dr = [0, 0, 1, -1];
@@ -208,7 +225,6 @@ class DSAGame {
             if(found) break;
         }
         
-        // Reconstruct path
         const path = [];
         let curr = {r: end.r, c: end.c};
         while(curr) {
@@ -217,14 +233,13 @@ class DSAGame {
             if (curr.r === start.r && curr.c === start.c) break;
             curr = parent.get(key);
         }
-        path.reverse(); // Start to End
+        path.reverse(); 
         
         steps.push({ visited: [...visitedList], path: path, current: null });
         return steps;
     }
     
     getDijkstraExpansionOrder(grid, start, end) {
-        // Dijkstra with priority queue (simulated with sorting)
         const steps = [];
         const pq = [{r: start.r, c: start.c, dist: 0}];
         const dists = new Map();
@@ -239,13 +254,9 @@ class DSAGame {
         let found = false;
         
         while(pq.length > 0) {
-            // Sort by dist (min heap simulation)
             pq.sort((a, b) => a.dist - b.dist);
             const curr = pq.shift();
             const currKey = `${curr.r},${curr.c}`;
-            
-            // If we found a shorter path to this node already, skip (lazy deletion)
-            // But here we just process.
             
             if (!visitedList.includes(currKey)) {
                 visitedList.push(currKey);
@@ -275,10 +286,8 @@ class DSAGame {
             }
         }
         
-        // Reconstruct path
         const path = [];
         let curr = {r: end.r, c: end.c};
-        // Only if found
         if (dists.has(`${end.r},${end.c}`)) {
              while(curr) {
                 path.push(curr);
@@ -304,11 +313,13 @@ class DSAGame {
             state.arr.forEach((value, index) => {
                 const bar = document.createElement('div');
                 bar.className = 'bar';
+                if (this.currentDifficulty === 'hard') bar.style.width = '20px'; // thinner bars
                 bar.style.height = `${value * 3}px`;
                 if (state.selected.includes(index)) bar.classList.add('selected');
                 
                 const label = document.createElement('div');
                 label.className = 'bar-value';
+                if (this.currentDifficulty === 'hard') label.style.display = 'none'; // Hide text for hard
                 label.textContent = value;
                 bar.appendChild(label);
                 wrapper.appendChild(bar);
@@ -324,6 +335,7 @@ class DSAGame {
             this.gameState.array.forEach((value, index) => {
                 const cell = document.createElement('div');
                 cell.className = 'array-cell';
+                if (this.currentDifficulty === 'hard') cell.style.width = '30px'; // smaller cells for hard
                 cell.textContent = '?';
                 
                 const inRange = index >= state.low && index <= state.high;
@@ -346,17 +358,24 @@ class DSAGame {
             const container = document.createElement('div');
             container.className = 'tree-container';
             
+            const totalNodes = this.gameState.nodes.length;
+            
             this.gameState.nodes.forEach((node, i) => {
                 const el = document.createElement('div');
                 el.className = 'tree-node';
+                if (totalNodes > 15) {
+                    el.style.width = '30px';
+                    el.style.height = '30px';
+                    el.style.fontSize = '10px';
+                }
                 el.textContent = node.val;
                 
                 const depth = Math.floor(Math.log2(i + 1));
                 const totalInLevel = Math.pow(2, depth);
                 const x = ((i - (totalInLevel - 1)) + 0.5) * (100 / totalInLevel);
-                const y = depth * 80 + 40;
+                const y = depth * (totalNodes > 15 ? 60 : 80) + 40;
                 
-                el.style.left = `calc(${x}% - 25px)`;
+                el.style.left = `calc(${x}% - ${totalNodes > 15 ? 15 : 25}px)`;
                 el.style.top = `${y}px`;
 
                 if (state.visited.includes(i)) {
@@ -376,7 +395,9 @@ class DSAGame {
             wrapper.innerHTML = '';
             const container = document.createElement('div');
             container.className = 'grid-container';
-            container.style.gridTemplateColumns = `repeat(${this.gameState.cols}, 30px)`;
+            // Adjust cell size for Hard difficulty
+            const cellSize = this.currentDifficulty === 'hard' ? 20 : 30;
+            container.style.gridTemplateColumns = `repeat(${this.gameState.cols}, ${cellSize}px)`;
 
             const visitedSet = new Set(state.visited);
             const pathSet = new Set(state.path.map(p => `${p.r},${p.c}`));
@@ -385,6 +406,12 @@ class DSAGame {
                 row.forEach(cell => {
                     const el = document.createElement('div');
                     el.className = 'grid-cell';
+                    if (this.currentDifficulty === 'hard') {
+                         el.style.width = '20px';
+                         el.style.height = '20px';
+                         el.style.fontSize = '8px';
+                    }
+
                     if (this.currentLevel === 'dijkstra') {
                         el.classList.add('dijkstra');
                         if (cell.type !== 'wall') el.textContent = cell.weight;
@@ -397,7 +424,6 @@ class DSAGame {
                     const key = `${cell.r},${cell.c}`;
                     if (visitedSet.has(key) && cell.type !== 'start' && cell.type !== 'end') {
                          el.classList.add('visited');
-                         // For Dijkstra, maybe show faint color? BFS visited is already dark cyan.
                     }
                     
                     if (pathSet.has(key) && cell.type !== 'start' && cell.type !== 'end') {
@@ -440,7 +466,7 @@ class DSAGame {
             } else {
                 this.stopPlayback();
             }
-        }, this.currentLevel === 'bubble-sort' ? 200 : 100); // Faster for grid
+        }, this.currentLevel === 'bubble-sort' ? 200 : 100); 
     }
 
     stopPlayback() {
@@ -487,7 +513,10 @@ class DSAGame {
             <strong>Goal:</strong> Sort the bars by height.
         `;
         
-        const size = 8;
+        let size = 8; // Medium
+        if (this.currentDifficulty === 'easy') size = 5;
+        if (this.currentDifficulty === 'hard') size = 12;
+
         const array = Array.from({length: size}, () => Math.floor(Math.random() * 80) + 10);
         
         let inversions = 0;
@@ -518,6 +547,7 @@ class DSAGame {
         this.gameState.array.forEach((value, index) => {
             const bar = document.createElement('div');
             bar.className = 'bar';
+            if (this.currentDifficulty === 'hard') bar.style.width = '20px'; // thinner
             bar.style.height = `${value * 3}px`;
             
             if (this.gameState.selected === index) {
@@ -526,6 +556,7 @@ class DSAGame {
             
             const label = document.createElement('div');
             label.className = 'bar-value';
+            if (this.currentDifficulty === 'hard') label.style.display = 'none';
             label.textContent = value;
             bar.appendChild(label);
 
@@ -599,7 +630,10 @@ class DSAGame {
             <strong>Goal:</strong> Find the target by splitting the range in half.
         `;
         
-        const size = 15;
+        let size = 15;
+        if (this.currentDifficulty === 'easy') size = 10;
+        if (this.currentDifficulty === 'hard') size = 30;
+
         let arr = [];
         let current = 10;
         for(let i=0; i<size; i++) {
@@ -650,6 +684,7 @@ class DSAGame {
         this.gameState.array.forEach((value, index) => {
             const cell = document.createElement('div');
             cell.className = 'array-cell';
+            if (this.currentDifficulty === 'hard') cell.style.width = '30px';
             cell.textContent = '?';
             
             const isRevealed = this.gameState.history.includes(index);
@@ -714,9 +749,41 @@ class DSAGame {
             <strong>Goal:</strong> Find the target node.
         `;
 
-        const values = [50, 25, 75, 12, 37, 62, 87, 6, 18, 31, 43, 55, 68, 81, 93];
+        // Difficulty scaling for BST
+        // Easy: 7 nodes (Depth 3)
+        // Medium: 15 nodes (Depth 4)
+        // Hard: 31 nodes (Depth 5) - Requires careful rendering
+        
+        let numNodes = 15;
+        if (this.currentDifficulty === 'easy') numNodes = 7;
+        if (this.currentDifficulty === 'hard') numNodes = 31;
+
+        // Generate values for complete BST to keep it balanced and easy to render
+        const values = [];
+        for(let i=0; i<numNodes; i++) values.push(0); // placeholder
+        
+        // Fill with sorted randoms based on heap indices
+        const indicesInOrder = [];
+        const traverse = (idx) => {
+            if (idx >= numNodes) return;
+            traverse(2*idx + 1);
+            indicesInOrder.push(idx);
+            traverse(2*idx + 2);
+        };
+        traverse(0);
+        
+        const sortedValues = Array.from({length: numNodes}, () => Math.floor(Math.random() * 100) + 1).sort((a,b)=>a-b);
+        // Ensure distinct (simple attempt)
+        for(let i=1; i<numNodes; i++) {
+             if (sortedValues[i] <= sortedValues[i-1]) sortedValues[i] = sortedValues[i-1] + 1;
+        }
+        
         const nodes = [];
-        values.forEach((v, i) => nodes.push({ val: v, id: i, visited: false }));
+        for(let i=0; i<numNodes; i++) nodes.push({});
+        
+        indicesInOrder.forEach((idx, i) => {
+             nodes[idx] = { val: sortedValues[i], id: idx, visited: false };
+        });
         
         const targetIdx = Math.floor(Math.random() * nodes.length);
         const targetVal = nodes[targetIdx].val;
@@ -758,17 +825,25 @@ class DSAGame {
         const container = document.createElement('div');
         container.className = 'tree-container';
         
+        const totalNodes = this.gameState.nodes.length;
+
         this.gameState.nodes.forEach((node, i) => {
             const el = document.createElement('div');
             el.className = 'tree-node';
+            if (totalNodes > 15) {
+                el.style.width = '30px';
+                el.style.height = '30px';
+                el.style.fontSize = '10px';
+            }
             el.textContent = node.val;
             
             const depth = Math.floor(Math.log2(i + 1));
             const totalInLevel = Math.pow(2, depth);
             const x = ((i - (totalInLevel - 1)) + 0.5) * (100 / totalInLevel);
-            const y = depth * 80 + 40;
+            // Compress height for Hard mode
+            const y = depth * (totalNodes > 15 ? 60 : 80) + 40;
             
-            el.style.left = `calc(${x}% - 25px)`;
+            el.style.left = `calc(${x}% - ${totalNodes > 15 ? 15 : 25}px)`;
             el.style.top = `${y}px`;
 
             if (this.gameState.path.includes(i)) {
@@ -837,7 +912,12 @@ class DSAGame {
             <strong>Goal:</strong> Find shortest path to END.
         `;
 
-        const rows = 10, cols = 10;
+        let rows = 10, cols = 10;
+        let wallCount = 25;
+        
+        if (this.currentDifficulty === 'easy') { rows = 6; cols = 6; wallCount = 8; }
+        if (this.currentDifficulty === 'hard') { rows = 15; cols = 15; wallCount = 70; }
+
         const grid = [];
         for(let r=0; r<rows; r++) {
             const row = [];
@@ -848,12 +928,12 @@ class DSAGame {
         }
         
         const start = {r: 1, c: 1};
-        const end = {r: 8, c: 8};
+        const end = {r: rows-2, c: cols-2};
         grid[start.r][start.c].type = 'start';
         grid[end.r][end.c].type = 'end';
         grid[start.r][start.c].visited = true;
 
-        for(let i=0; i<25; i++) {
+        for(let i=0; i<wallCount; i++) {
             const wr = Math.floor(Math.random()*rows);
             const wc = Math.floor(Math.random()*cols);
             if (grid[wr][wc].type === 'empty') {
@@ -889,6 +969,8 @@ class DSAGame {
         
         const dr = [0, 0, 1, -1];
         const dc = [1, -1, 0, 0];
+        const rows = grid.length;
+        const cols = grid[0].length;
 
         while(q.length > 0) {
             const {r, c, d, path} = q.shift();
@@ -900,7 +982,7 @@ class DSAGame {
                 const nr = r + dr[i];
                 const nc = c + dc[i];
                 
-                if (nr>=0 && nr<10 && nc>=0 && nc<10 && 
+                if (nr>=0 && nr<rows && nc>=0 && nc<cols && 
                     !visited.has(`${nr},${nc}`) && 
                     grid[nr][nc].type !== 'wall') {
                     visited.add(`${nr},${nc}`);
@@ -918,12 +1000,20 @@ class DSAGame {
         
         const container = document.createElement('div');
         container.className = 'grid-container';
-        container.style.gridTemplateColumns = `repeat(${this.gameState.cols}, 30px)`;
+        // Adjust cell size for Hard difficulty
+        const cellSize = this.currentDifficulty === 'hard' ? 20 : 30;
+        container.style.gridTemplateColumns = `repeat(${this.gameState.cols}, ${cellSize}px)`;
 
         this.gameState.grid.forEach(row => {
             row.forEach(cell => {
                 const el = document.createElement('div');
                 el.className = 'grid-cell';
+                if (this.currentDifficulty === 'hard') {
+                    el.style.width = '20px';
+                    el.style.height = '20px';
+                    el.style.fontSize = '8px';
+                }
+
                 if (cell.type === 'wall') el.classList.add('wall');
                 if (cell.type === 'start') el.classList.add('start');
                 if (cell.type === 'end') el.classList.add('end');
@@ -989,7 +1079,12 @@ class DSAGame {
             <strong>Goal:</strong> Find the path with minimum total cost.
         `;
 
-        const rows = 10, cols = 10;
+        let rows = 10, cols = 10;
+        let wallCount = 15;
+        
+        if (this.currentDifficulty === 'easy') { rows = 6; cols = 6; wallCount = 5; }
+        if (this.currentDifficulty === 'hard') { rows = 15; cols = 15; wallCount = 40; }
+
         const grid = [];
         for(let r=0; r<rows; r++) {
             const row = [];
@@ -1001,14 +1096,14 @@ class DSAGame {
         }
         
         const start = {r: 1, c: 1};
-        const end = {r: 8, c: 8};
+        const end = {r: rows-2, c: cols-2};
         grid[start.r][start.c].type = 'start';
-        grid[start.r][start.c].weight = 0; // Start has 0 cost to enter? Or just 0.
+        grid[start.r][start.c].weight = 0; 
         grid[end.r][end.c].type = 'end';
         grid[start.r][start.c].visited = true;
 
         // Walls
-        for(let i=0; i<15; i++) {
+        for(let i=0; i<wallCount; i++) {
             const wr = Math.floor(Math.random()*rows);
             const wc = Math.floor(Math.random()*cols);
             if (grid[wr][wc].type === 'empty') {
@@ -1017,7 +1112,8 @@ class DSAGame {
         }
 
         // Calculate optimal
-        const optimalStep = this.getDijkstraExpansionOrder(grid, start, end).pop(); // Get last step which has path
+        const steps = this.getDijkstraExpansionOrder(grid, start, end);
+        const optimalStep = steps[steps.length - 1];
         const optimalPath = optimalStep ? optimalStep.path : [];
         
         // Calculate optimal cost
@@ -1053,7 +1149,8 @@ class DSAGame {
         
         const container = document.createElement('div');
         container.className = 'grid-container';
-        container.style.gridTemplateColumns = `repeat(${this.gameState.cols}, 30px)`;
+        const cellSize = this.currentDifficulty === 'hard' ? 20 : 30;
+        container.style.gridTemplateColumns = `repeat(${this.gameState.cols}, ${cellSize}px)`;
 
         const currentPathSet = new Set(this.gameState.path.map(p => `${p.r},${p.c}`));
         const lastPos = this.gameState.path[this.gameState.path.length - 1];
@@ -1062,6 +1159,12 @@ class DSAGame {
             row.forEach(cell => {
                 const el = document.createElement('div');
                 el.className = 'grid-cell dijkstra';
+                if (this.currentDifficulty === 'hard') {
+                    el.style.width = '20px';
+                    el.style.height = '20px';
+                    el.style.fontSize = '8px';
+                }
+                
                 el.textContent = cell.weight;
                 
                 if (cell.type === 'wall') el.classList.add('wall');
@@ -1069,7 +1172,7 @@ class DSAGame {
                 if (cell.type === 'end') el.classList.add('end');
                 
                 if (currentPathSet.has(`${cell.r},${cell.c}`)) {
-                    el.classList.add('visited'); // Reusing visited style
+                    el.classList.add('visited'); 
                     el.style.backgroundColor = '#00ffff';
                     el.style.color = 'black';
                 }

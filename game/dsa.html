@@ -19,28 +19,50 @@
             <div id="menu" class="screen active">
                 <h2>Select Challenge</h2>
                 <div class="level-grid">
-                    <button class="level-btn" onclick="game.startLevel('bubble-sort')">
+                    <button class="level-btn" onclick="game.selectLevel('bubble-sort')">
                         <h3>Bubble Sort</h3>
                         <p>Swap adjacent elements to sort the array.</p>
                     </button>
-                    <button class="level-btn" onclick="game.startLevel('binary-search')">
+                    <button class="level-btn" onclick="game.selectLevel('binary-search')">
                         <h3>Binary Search</h3>
                         <p>Find the target number efficiently.</p>
                     </button>
-                    <button class="level-btn" onclick="game.startLevel('bst-search')">
+                    <button class="level-btn" onclick="game.selectLevel('bst-search')">
                         <h3>BST Search</h3>
                         <p>Navigate a Binary Search Tree to find a value.</p>
                     </button>
-                    <button class="level-btn" onclick="game.startLevel('bfs-grid')">
+                    <button class="level-btn" onclick="game.selectLevel('bfs-grid')">
                         <h3>Graph BFS</h3>
                         <p>Find the shortest path through the grid.</p>
                     </button>
-                    <button class="level-btn" onclick="game.startLevel('dijkstra')">
+                    <button class="level-btn" onclick="game.selectLevel('dijkstra')">
                         <h3>Dijkstra's Algo</h3>
                         <p>Find the lowest cost path through weighted nodes.</p>
                     </button>
                 </div>
             </div>
+             
+             <!-- Difficulty Selection Modal -->
+             <div id="difficulty-modal" class="modal">
+                <div class="modal-backdrop" onclick="game.closeDifficultyModal()"></div>
+                <div class="modal-content">
+                    <h2>Select Difficulty</h2>
+                    <div class="difficulty-options">
+                        <button class="level-btn difficulty-btn easy" onclick="game.startLevel('easy')">
+                            <h3>Easy</h3>
+                            <p>Smaller size, simpler layout.</p>
+                        </button>
+                        <button class="level-btn difficulty-btn medium" onclick="game.startLevel('medium')">
+                            <h3>Medium</h3>
+                            <p>Standard challenge.</p>
+                        </button>
+                        <button class="level-btn difficulty-btn hard" onclick="game.startLevel('hard')">
+                            <h3>Hard</h3>
+                            <p>Large size, complex layout.</p>
+                        </button>
+                    </div>
+                </div>
+             </div>
 
             <div id="game-area" class="screen">
                 <div class="hud">

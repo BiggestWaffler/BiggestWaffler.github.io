@@ -59,6 +59,27 @@
     line-height: 1.4;
 }
 
+/* Difficulty Modal Options */
+.difficulty-options {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.difficulty-btn {
+    text-align: center;
+    padding: 15px;
+}
+
+.difficulty-btn.easy { border-color: #00ff00; }
+.difficulty-btn.medium { border-color: #ffff00; }
+.difficulty-btn.hard { border-color: #ff5555; }
+
+.difficulty-btn.easy:hover { background: rgba(0, 255, 0, 0.1); }
+.difficulty-btn.medium:hover { background: rgba(255, 255, 0, 0.1); }
+.difficulty-btn.hard:hover { background: rgba(255, 85, 85, 0.1); }
+
 /* HUD */
 .hud {
     display: flex;
