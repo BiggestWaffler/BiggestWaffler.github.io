@@ -55,6 +55,13 @@ class DSAGame {
         this.elements.canvasWrapper.innerHTML = '';
         this.elements.accuracyDisplay.style.display = 'none';
         this.elements.playbackControls.style.display = 'none';
+        
+        // Reset styles that might persist on the wrapper from previous games
+        this.elements.canvasWrapper.style.flexWrap = '';
+        this.elements.canvasWrapper.style.alignItems = '';
+        this.elements.canvasWrapper.style.flexDirection = '';
+        this.elements.canvasWrapper.style.alignContent = '';
+
         this.stopPlayback();
         
         // Reset showing optimal state
@@ -190,6 +197,8 @@ class DSAGame {
 
         const dr = [0, 0, 1, -1];
         const dc = [1, -1, 0, 0];
+        const rows = grid.length;
+        const cols = grid[0].length;
         
         let found = false;
 
@@ -206,7 +215,7 @@ class DSAGame {
                 const nc = curr.c + dc[i];
                 const key = `${nr},${nc}`;
                 
-                if (nr>=0 && nr<10 && nc>=0 && nc<10 && 
+                if (nr>=0 && nr<rows && nc>=0 && nc<cols && 
                     !visited.has(key) && grid[nr][nc].type !== 'wall') {
                     
                     visited.add(key);
@@ -245,6 +254,8 @@ class DSAGame {
         const dists = new Map();
         const parent = new Map();
         const visitedList = [];
+        const rows = grid.length;
+        const cols = grid[0].length;
         
         dists.set(`${start.r},${start.c}`, 0);
         
@@ -273,7 +284,7 @@ class DSAGame {
                 const nc = curr.c + dc[i];
                 const nKey = `${nr},${nc}`;
                 
-                if (nr>=0 && nr<10 && nc>=0 && nc<10 && grid[nr][nc].type !== 'wall') {
+                if (nr>=0 && nr<rows && nc>=0 && nc<cols && grid[nr][nc].type !== 'wall') {
                     const weight = grid[nr][nc].weight;
                     const newDist = curr.dist + weight;
                     
@@ -308,6 +319,9 @@ class DSAGame {
         if (this.currentLevel === 'bubble-sort') {
             const wrapper = this.elements.canvasWrapper;
             wrapper.innerHTML = '';
+            wrapper.style.display = 'flex';
+            wrapper.style.flexDirection = 'row';
+            wrapper.style.flexWrap = 'nowrap';
             wrapper.style.alignItems = 'flex-end';
             
             state.arr.forEach((value, index) => {
@@ -328,6 +342,7 @@ class DSAGame {
         } else if (this.currentLevel === 'binary-search') {
             const wrapper = this.elements.canvasWrapper;
             wrapper.innerHTML = '';
+            wrapper.style.display = 'flex';
             wrapper.style.alignItems = 'center';
             wrapper.style.flexWrap = 'wrap';
             wrapper.style.alignContent = 'center';
@@ -355,6 +370,7 @@ class DSAGame {
         } else if (this.currentLevel === 'bst-search') {
             const wrapper = this.elements.canvasWrapper;
             wrapper.innerHTML = '';
+            wrapper.style.display = 'block'; // Reset flex
             const container = document.createElement('div');
             container.className = 'tree-container';
             
@@ -373,9 +389,9 @@ class DSAGame {
                 const depth = Math.floor(Math.log2(i + 1));
                 const totalInLevel = Math.pow(2, depth);
                 const x = ((i - (totalInLevel - 1)) + 0.5) * (100 / totalInLevel);
-                const y = depth * (totalNodes > 15 ? 60 : 80) + 40;
+                const y = depth * 80 + 40;
                 
-                el.style.left = `calc(${x}% - ${totalNodes > 15 ? 15 : 25}px)`;
+                el.style.left = `calc(${x}% - 25px)`;
                 el.style.top = `${y}px`;
 
                 if (state.visited.includes(i)) {
@@ -393,6 +409,7 @@ class DSAGame {
         } else if (this.currentLevel === 'bfs-grid' || this.currentLevel === 'dijkstra') {
             const wrapper = this.elements.canvasWrapper;
             wrapper.innerHTML = '';
+            wrapper.style.display = 'block';
             const container = document.createElement('div');
             container.className = 'grid-container';
             // Adjust cell size for Hard difficulty
@@ -541,7 +558,13 @@ class DSAGame {
     renderBubbleSort() {
         const wrapper = this.elements.canvasWrapper;
         wrapper.innerHTML = '';
+        // Strict layout enforcement
+        wrapper.style.display = 'flex';
+        wrapper.style.flexDirection = 'row';
+        wrapper.style.flexWrap = 'nowrap';
         wrapper.style.alignItems = 'flex-end';
+        wrapper.style.alignContent = 'normal'; // Reset from binary search
+        
         this.updateStats(`Moves: ${this.gameState.moves} / Optimal: ${this.gameState.optimalMoves}`);
 
         this.gameState.array.forEach((value, index) => {
@@ -675,8 +698,9 @@ class DSAGame {
     renderBinarySearch() {
         const wrapper = this.elements.canvasWrapper;
         wrapper.innerHTML = '';
+        wrapper.style.display = 'flex'; // Ensure flex
         wrapper.style.alignItems = 'center';
-        wrapper.style.flexWrap = 'wrap';
+        wrapper.style.flexWrap = 'wrap'; // Ensure wrap
         wrapper.style.alignContent = 'center';
 
         this.updateStats(`Clicks: ${this.gameState.clicks}`);
@@ -862,7 +886,11 @@ class DSAGame {
             if (!this.playback.active) {
                 const leftChild = 2 * this.gameState.currentIdx + 1;
                 const rightChild = 2 * this.gameState.currentIdx + 2;
-                if (i === leftChild || i === rightChild) {
+                
+                const isChild = (i === leftChild || i === rightChild);
+                const isCurrentAndTarget = (i === this.gameState.currentIdx && node.val === this.gameState.target);
+
+                if (isChild || isCurrentAndTarget) {
                     el.style.cursor = 'pointer';
                     el.onclick = () => this.handleBSTClick(i);
                 }
@@ -880,9 +908,11 @@ class DSAGame {
     }
 
     handleBSTClick(index) {
-        this.gameState.moves++;
-        this.gameState.path.push(index);
-        this.gameState.currentIdx = index;
+        if (index !== this.gameState.currentIdx) {
+            this.gameState.moves++;
+            this.gameState.path.push(index);
+            this.gameState.currentIdx = index;
+        }
         
         const val = this.gameState.nodes[index].val;
         
