@@ -73,6 +73,7 @@ class DSAGame {
             case 'bst-search': this.initBST(); break;
             case 'bfs-grid': this.initBFS(); break;
             case 'dijkstra': this.initDijkstra(); break;
+            case 'hanoi': this.initHanoi(); break;
         }
     }
 
@@ -178,6 +179,33 @@ class DSAGame {
         } else if (this.currentLevel === 'dijkstra') {
             const expansion = this.getDijkstraExpansionOrder(this.gameState.grid, this.gameState.start, this.gameState.end);
             this.playback.sequence = expansion;
+
+        } else if (this.currentLevel === 'hanoi') {
+            // Reconstruct the optimal sequence
+            const sequence = [];
+            const n = this.gameState.numDisks;
+            
+            // Initial state
+            const initialTowers = [[], [], []];
+            for(let i=n; i>=1; i--) initialTowers[0].push(i);
+            
+            sequence.push({ towers: JSON.parse(JSON.stringify(initialTowers)), move: null });
+            
+            const moves = [];
+            this.getHanoiMoves(n, 0, 2, 1, moves);
+            
+            // Apply moves to generate states
+            let currentTowers = JSON.parse(JSON.stringify(initialTowers));
+            moves.forEach(move => {
+                const disk = currentTowers[move.from].pop();
+                currentTowers[move.to].push(disk);
+                sequence.push({ 
+                    towers: JSON.parse(JSON.stringify(currentTowers)), 
+                    move: { from: move.from, to: move.to } 
+                });
+            });
+            
+            this.playback.sequence = sequence;
         }
         
         this.playback.maxSteps = this.playback.sequence.length - 1;
@@ -310,6 +338,16 @@ class DSAGame {
 
         steps.push({ visited: [...visitedList], path: path, current: null });
         return steps;
+    }
+
+    getHanoiMoves(n, from, to, aux, moves) {
+        if (n === 1) {
+            moves.push({ from, to });
+            return;
+        }
+        this.getHanoiMoves(n - 1, from, aux, to, moves);
+        moves.push({ from, to });
+        this.getHanoiMoves(n - 1, aux, to, from, moves);
     }
 
     renderFrame() {
@@ -456,6 +494,48 @@ class DSAGame {
                 });
             });
             wrapper.appendChild(container);
+
+        } else if (this.currentLevel === 'hanoi') {
+            const wrapper = this.elements.canvasWrapper;
+            wrapper.innerHTML = '';
+            wrapper.style.display = 'flex';
+            wrapper.style.justifyContent = 'space-around';
+            wrapper.style.alignItems = 'flex-end';
+            wrapper.style.paddingBottom = '50px'; // Space for base
+            
+            // Render towers based on state.towers
+            state.towers.forEach((towerStack, towerIndex) => {
+                const towerEl = document.createElement('div');
+                towerEl.className = 'tower';
+                
+                // Base
+                const pole = document.createElement('div');
+                pole.className = 'tower-pole';
+                towerEl.appendChild(pole);
+                
+                // Disks container
+                const disksContainer = document.createElement('div');
+                disksContainer.className = 'disks-container';
+                
+                towerStack.forEach(diskSize => {
+                    const disk = document.createElement('div');
+                    disk.className = 'disk';
+                    // Size: smallest (1) is 40px, largest (5) is 120px
+                    const width = 30 + (diskSize * 20);
+                    disk.style.width = `${width}px`;
+                    disk.style.backgroundColor = `hsl(${diskSize * 40}, 70%, 50%)`;
+                    disk.textContent = diskSize;
+                    disksContainer.appendChild(disk);
+                });
+                
+                towerEl.appendChild(disksContainer);
+                wrapper.appendChild(towerEl);
+            });
+            
+            // Highlight move if applicable
+            if (state.move) {
+               // Could add visual arrow or highlight
+            }
         }
         
         this.updatePlaybackStatus();
@@ -1241,6 +1321,147 @@ class DSAGame {
             }, 500);
         } else {
             this.renderDijkstra();
+        }
+    }
+
+    // --- Level 6: Tower of Hanoi ---
+    initHanoi() {
+        this.elements.levelTitle.textContent = "Tower of Hanoi";
+        this.elements.instructions.textContent = "Move all disks to the rightmost tower. Smaller disks must always sit on larger ones.";
+        this.elements.levelExplanation.innerHTML = `
+            <strong>Tower of Hanoi</strong> is a recursive puzzle.
+            <br>
+            Efficiency: <span style="color:#ff5555">O(2^N)</span>
+            <br>
+            <strong>Goal:</strong> Move stack from left to right.
+        `;
+
+        let numDisks = 4; // Medium
+        if (this.currentDifficulty === 'easy') numDisks = 3;
+        if (this.currentDifficulty === 'hard') numDisks = 5;
+
+        // Towers array: index 0 (left), 1 (middle), 2 (right)
+        // Each tower is a stack (array), last element is top disk
+        // Disk values: 1 (smallest) to N (largest)
+        const towers = [[], [], []];
+        for (let i = numDisks; i >= 1; i--) {
+            towers[0].push(i);
+        }
+
+        const optimalMoves = Math.pow(2, numDisks) - 1;
+
+        this.gameState = {
+            towers: towers,
+            numDisks: numDisks,
+            moves: 0,
+            optimalMoves: optimalMoves,
+            selectedTower: null
+        };
+
+        this.renderHanoi();
+    }
+
+    renderHanoi() {
+        const wrapper = this.elements.canvasWrapper;
+        wrapper.innerHTML = '';
+        wrapper.style.display = 'flex';
+        wrapper.style.justifyContent = 'space-around';
+        wrapper.style.alignItems = 'flex-end';
+        wrapper.style.paddingBottom = '20px'; // Space for base label if any
+
+        this.updateStats(`Moves: ${this.gameState.moves} / Optimal: ${this.gameState.optimalMoves}`);
+
+        this.gameState.towers.forEach((towerStack, towerIndex) => {
+            const towerEl = document.createElement('div');
+            towerEl.className = 'tower';
+            
+            // Interaction
+            if (!this.playback.active) {
+                towerEl.onclick = () => this.handleHanoiClick(towerIndex);
+                towerEl.style.cursor = 'pointer';
+            }
+
+            if (this.gameState.selectedTower === towerIndex) {
+                towerEl.classList.add('selected');
+            }
+
+            const pole = document.createElement('div');
+            pole.className = 'tower-pole';
+            towerEl.appendChild(pole);
+
+            const disksContainer = document.createElement('div');
+            disksContainer.className = 'disks-container';
+
+            // Stack is bottom-up, render from bottom (0) to top (length-1)
+            // Flex column-reverse handles visual stacking if we append in order
+            // But usually standard flex column means first child is top. 
+            // Let's use flex-direction: column-reverse in CSS for .disks-container so index 0 is at bottom
+            
+            towerStack.forEach(diskSize => {
+                const disk = document.createElement('div');
+                disk.className = 'disk';
+                const width = 30 + (diskSize * 20);
+                disk.style.width = `${width}px`;
+                disk.style.backgroundColor = `hsl(${diskSize * 40}, 70%, 50%)`;
+                // disk.textContent = diskSize; // Optional number
+                disksContainer.appendChild(disk);
+            });
+
+            towerEl.appendChild(disksContainer);
+            wrapper.appendChild(towerEl);
+        });
+    }
+
+    handleHanoiClick(towerIndex) {
+        if (this.gameState.selectedTower === null) {
+            // Select source if it has disks
+            if (this.gameState.towers[towerIndex].length > 0) {
+                this.gameState.selectedTower = towerIndex;
+                this.renderHanoi();
+            }
+        } else {
+            // Move attempt
+            const fromIdx = this.gameState.selectedTower;
+            const toIdx = towerIndex;
+
+            if (fromIdx !== toIdx) {
+                const sourceStack = this.gameState.towers[fromIdx];
+                const destStack = this.gameState.towers[toIdx];
+                
+                const diskToMove = sourceStack[sourceStack.length - 1];
+                const topDestDisk = destStack.length > 0 ? destStack[destStack.length - 1] : Infinity;
+
+                if (diskToMove < topDestDisk) {
+                    // Valid move
+                    sourceStack.pop();
+                    destStack.push(diskToMove);
+                    this.gameState.moves++;
+                    this.gameState.selectedTower = null;
+                    this.checkHanoiWin();
+                } else {
+                    // Invalid move - deselect or provide feedback
+                    this.gameState.selectedTower = null; 
+                    // Optional: shake animation
+                }
+            } else {
+                // Deselect
+                this.gameState.selectedTower = null;
+            }
+            this.renderHanoi();
+        }
+    }
+
+    checkHanoiWin() {
+        // Win if all disks are on the last tower (index 2)
+        if (this.gameState.towers[2].length === this.gameState.numDisks) {
+            const accuracy = Math.max(0, Math.round((this.gameState.optimalMoves / Math.max(1, this.gameState.moves)) * 100));
+            
+            setTimeout(() => {
+                this.showVictory(
+                    `Tower Completed!`,
+                    `Moves: ${this.gameState.moves}<br>Optimal: ${this.gameState.optimalMoves}<br>Accuracy: <span style="color:${this.getScoreColor(accuracy)}">${accuracy}%</span>`
+                );
+            }, 500);
         }
     }
 
