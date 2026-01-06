@@ -16,7 +16,23 @@
             <a class="home" href="/game/">← Back</a>
         </header>
         <main class="game-container">
-            <div id="menu" class="screen active">
+            <!-- Main Menu -->
+            <div id="main-menu" class="screen active">
+                <h2>Select Mode</h2>
+                <div class="level-grid">
+                    <button class="level-btn" onclick="game.showChallenges()">
+                        <h3>Challenges</h3>
+                        <p>Interactive puzzles to test your knowledge.</p>
+                    </button>
+                    <button class="level-btn" onclick="game.showVisualizations()">
+                        <h3>Visualizations</h3>
+                        <p>Watch algorithms in action with sound.</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Challenges Menu -->
+            <div id="challenges-menu" class="screen">
                 <h2>Select Challenge</h2>
                 <div class="level-grid">
                     <button class="level-btn" onclick="game.selectLevel('bubble-sort')">
@@ -43,6 +59,31 @@
                         <h3>Tower of Hanoi</h3>
                         <p>Move the stack to the last peg obeying the rules.</p>
                     </button>
+                </div>
+                <div style="margin-top: 20px; text-align: center;">
+                    <button class="btn-small" onclick="game.showMainMenu()">← Back to Main Menu</button>
+                </div>
+            </div>
+
+            <!-- Visualizations Menu -->
+            <div id="visualizations-menu" class="screen">
+                <h2>Select Visualization</h2>
+                <div class="level-grid">
+                    <button class="level-btn" onclick="game.startVisualization('bubble')">
+                        <h3>Bubble Sort</h3>
+                        <p>Classic pairwise swapping.</p>
+                    </button>
+                    <button class="level-btn" onclick="game.startVisualization('insertion')">
+                        <h3>Insertion Sort</h3>
+                        <p>Building a sorted array one item at a time.</p>
+                    </button>
+                    <button class="level-btn" onclick="game.startVisualization('merge')">
+                        <h3>Merge Sort</h3>
+                        <p>Divide and conquer approach.</p>
+                    </button>
+                </div>
+                <div style="margin-top: 20px; text-align: center;">
+                    <button class="btn-small" onclick="game.showMainMenu()">← Back to Main Menu</button>
                 </div>
             </div>
              
@@ -77,7 +118,7 @@
                     <div class="stats-box">
                         <div id="stats">Moves: 0</div>
                         <div id="accuracy-display" style="display:none; color: #aaa; font-size: 0.9rem;">Accuracy: --%</div>
-                        <button class="btn-small" onclick="game.showMenu()">Exit</button>
+                        <button class="btn-small" onclick="game.showChallenges()">Exit</button>
                     </div>
                 </div>
                 
@@ -98,6 +139,32 @@
                     <p id="level-explanation">
                         Explanation of the algorithm...
                     </p>
+                </div>
+            </div>
+
+            <!-- Visualization Area -->
+            <div id="visualization-area" class="screen">
+                <div class="hud">
+                    <div>
+                        <h2 id="viz-title">Visualization Title</h2>
+                        <div style="color: #aaa; font-size: 0.9rem;">Turn up your volume! 🔊</div>
+                    </div>
+                    <div class="stats-box">
+                        <button class="btn-small" onclick="game.showVisualizations()">Exit</button>
+                    </div>
+                </div>
+                
+                <div id="viz-canvas" style="height: 400px; display: flex; align-items: flex-end; justify-content: center; background: #0d0d0d; border-radius: 12px; padding: 20px; overflow: hidden;">
+                    <!-- Bars injected here -->
+                </div>
+
+                <div class="controls-bar">
+                    <button class="btn-control" onclick="game.shuffleViz()">🔀 Shuffle</button>
+                    <button class="btn-control" onclick="game.runViz()" id="btn-viz-play">▶ Run</button>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-left: 15px;">
+                        <span style="color:#aaa; font-size: 0.9rem;">Speed</span>
+                        <input type="range" id="viz-speed" min="1" max="100" value="50">
+                    </div>
                 </div>
             </div>
              

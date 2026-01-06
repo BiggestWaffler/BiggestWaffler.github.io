@@ -536,3 +536,52 @@
     justify-content: center;
     align-items: center;
 }
+
+/* Visualization Styles */
+#viz-canvas {
+    transition: all 0.2s ease;
+    border: 1px solid #333;
+}
+
+#viz-speed {
+    -webkit-appearance: none;
+    width: 100px;
+    height: 6px;
+    background: #333;
+    border-radius: 3px;
+    outline: none;
+}
+
+#viz-speed::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #00ffff;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+#viz-speed::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #00ffff;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* Main Menu Tweaks */
+#main-menu .level-btn {
+    text-align: center;
+    padding: 40px;
+}
+
+#main-menu .level-btn h3 {
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+}
+
+#main-menu .level-btn:hover {
+    background: #222;
+    border-color: #00ff00;
+}

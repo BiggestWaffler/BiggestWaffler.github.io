@@ -13,8 +13,16 @@ class DSAGame {
             sequence: [] // stores state snapshots or action objects
         };
         this.elements = {
-            menu: document.getElementById('menu'),
+            mainMenu: document.getElementById('main-menu'),
+            challengesMenu: document.getElementById('challenges-menu'),
+            visualizationsMenu: document.getElementById('visualizations-menu'),
+            menu: document.getElementById('challenges-menu'), // Legacy support
             gameArea: document.getElementById('game-area'),
+            visualizationArea: document.getElementById('visualization-area'),
+            vizCanvas: document.getElementById('viz-canvas'),
+            vizTitle: document.getElementById('viz-title'),
+            vizSpeed: document.getElementById('viz-speed'),
+            btnVizPlay: document.getElementById('btn-viz-play'),
             canvasWrapper: document.getElementById('canvas-wrapper'),
             levelTitle: document.getElementById('level-title'),
             instructions: document.getElementById('instructions'),
@@ -30,6 +38,46 @@ class DSAGame {
             btnPlay: document.getElementById('btn-play'),
             difficultyModal: document.getElementById('difficulty-modal')
         };
+        
+        // Visualization State
+        this.vizState = {
+            array: [],
+            running: false,
+            paused: false,
+            speed: 50,
+            algorithm: null,
+            abortController: null
+        };
+        
+        this.audioCtx = null;
+    }
+
+    // --- Navigation ---
+
+    showMainMenu() {
+        this.resetAll();
+        this.elements.mainMenu.classList.add('active');
+    }
+
+    showChallenges() {
+        this.resetAll();
+        this.elements.challengesMenu.classList.add('active');
+    }
+
+    showVisualizations() {
+        this.resetAll();
+        this.elements.visualizationsMenu.classList.add('active');
+    }
+
+    resetAll() {
+        this.stopPlayback();
+        if (this.vizState.abortController) this.vizState.abortController.abort();
+        this.vizState.running = false;
+        
+        document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+        this.elements.difficultyModal.classList.remove('open');
+        this.elements.victoryModal.classList.remove('open');
+        this.currentLevel = null;
     }
 
     selectLevel(levelId) {
@@ -43,28 +91,26 @@ class DSAGame {
     }
 
     startLevel(difficulty) {
-        const levelId = this.selectedLevelId || this.currentLevel; // Use selected or retry current
+        const levelId = this.selectedLevelId || this.currentLevel; 
         if (!levelId) return;
 
         this.currentLevel = levelId;
         this.currentDifficulty = difficulty;
-        this.elements.menu.classList.remove('active');
-        this.elements.difficultyModal.classList.remove('open');
+        
+        this.resetAll();
         this.elements.gameArea.classList.add('active');
-        this.elements.victoryModal.classList.remove('open');
+        
         this.elements.canvasWrapper.innerHTML = '';
         this.elements.accuracyDisplay.style.display = 'none';
         this.elements.playbackControls.style.display = 'none';
         
-        // Reset styles that might persist on the wrapper from previous games
+        // Reset styles
         this.elements.canvasWrapper.style.flexWrap = '';
         this.elements.canvasWrapper.style.alignItems = '';
         this.elements.canvasWrapper.style.flexDirection = '';
         this.elements.canvasWrapper.style.alignContent = '';
 
         this.stopPlayback();
-        
-        // Reset showing optimal state
         this.playback.active = false;
         
         switch(levelId) {
@@ -78,12 +124,8 @@ class DSAGame {
     }
 
     showMenu() {
-        this.stopPlayback();
-        this.elements.gameArea.classList.remove('active');
-        this.elements.menu.classList.add('active');
-        this.elements.victoryModal.classList.remove('open');
-        this.elements.difficultyModal.classList.remove('open');
-        this.currentLevel = null;
+        // Fallback for buttons that call this
+        this.showChallenges();
     }
 
     retryLevel() {
@@ -596,6 +638,218 @@ class DSAGame {
 
     updateStats(text) {
         this.elements.stats.textContent = text;
+    }
+
+    // --- Visualization System ---
+
+    startVisualization(type) {
+        this.resetAll();
+        this.elements.visualizationArea.classList.add('active');
+        this.vizState.algorithm = type;
+        
+        let title = "Sorting Visualization";
+        if (type === 'bubble') title = "Bubble Sort Visualization";
+        if (type === 'insertion') title = "Insertion Sort Visualization";
+        if (type === 'merge') title = "Merge Sort Visualization";
+        
+        this.elements.vizTitle.textContent = title;
+        this.shuffleViz();
+    }
+
+    shuffleViz() {
+        if (this.vizState.abortController) this.vizState.abortController.abort();
+        this.vizState.running = false;
+        
+        // Generate array
+        const count = 50;
+        this.vizState.array = Array.from({length: count}, () => Math.floor(Math.random() * 90) + 10);
+        this.renderVizFrame();
+    }
+
+    renderVizFrame(highlightIndices = [], sortedIndices = []) {
+        const wrapper = this.elements.vizCanvas;
+        wrapper.innerHTML = '';
+        
+        const maxVal = Math.max(...this.vizState.array);
+        
+        this.vizState.array.forEach((val, idx) => {
+            const bar = document.createElement('div');
+            bar.style.width = '10px';
+            bar.style.height = `${(val / maxVal) * 100}%`;
+            bar.style.backgroundColor = '#444';
+            bar.style.margin = '0 1px';
+            bar.style.borderRadius = '2px 2px 0 0';
+            
+            if (highlightIndices.includes(idx)) {
+                bar.style.backgroundColor = '#00ffff';
+            }
+            if (sortedIndices.includes(idx)) {
+                bar.style.backgroundColor = '#00ff00';
+            }
+            
+            wrapper.appendChild(bar);
+        });
+    }
+
+    async runViz() {
+        if (this.vizState.running) return;
+        this.vizState.running = true;
+        this.vizState.abortController = new AbortController();
+        const signal = this.vizState.abortController.signal;
+        
+        // Init Audio
+        if (!this.audioCtx) {
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        try {
+            if (this.vizState.algorithm === 'bubble') await this.vizBubbleSort(signal);
+            if (this.vizState.algorithm === 'insertion') await this.vizInsertionSort(signal);
+            if (this.vizState.algorithm === 'merge') await this.vizMergeSort(signal);
+        } catch (e) {
+            if (e.name !== 'AbortError') console.error(e);
+        }
+        
+        this.vizState.running = false;
+    }
+
+    async vizDelay() {
+        const speed = 101 - this.elements.vizSpeed.value; // 1 to 100 -> 100ms to 1ms
+        return new Promise(resolve => setTimeout(resolve, speed * 2));
+    }
+
+    playSound(value) {
+        if (!this.audioCtx) return;
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+        
+        // Map value (10-100) to freq (200-800Hz)
+        const freq = 200 + (value * 6);
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
+        
+        gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.1);
+        
+        osc.connect(gain);
+        gain.connect(this.audioCtx.destination);
+        
+        osc.start();
+        osc.stop(this.audioCtx.currentTime + 0.1);
+    }
+
+    // Algos
+    async vizBubbleSort(signal) {
+        const arr = this.vizState.array;
+        const n = arr.length;
+        
+        for(let i=0; i<n; i++) {
+            for(let j=0; j<n-i-1; j++) {
+                if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+                
+                this.renderVizFrame([j, j+1]);
+                this.playSound(arr[j]);
+                await this.vizDelay();
+                
+                if (arr[j] > arr[j+1]) {
+                    [arr[j], arr[j+1]] = [arr[j+1], arr[j]];
+                    this.renderVizFrame([j, j+1]);
+                    this.playSound(arr[j+1]); // High pitch for swap
+                    await this.vizDelay();
+                }
+            }
+        }
+        this.renderVizFrame([], arr.map((_, i) => i));
+    }
+
+    async vizInsertionSort(signal) {
+        const arr = this.vizState.array;
+        const n = arr.length;
+        
+        for (let i = 1; i < n; i++) {
+            let key = arr[i];
+            let j = i - 1;
+            
+            while (j >= 0 && arr[j] > key) {
+                if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+                
+                arr[j + 1] = arr[j];
+                this.renderVizFrame([j, j+1]);
+                this.playSound(arr[j]);
+                await this.vizDelay();
+                j = j - 1;
+            }
+            arr[j + 1] = key;
+            this.renderVizFrame([j+1]);
+            this.playSound(key);
+            await this.vizDelay();
+        }
+        this.renderVizFrame([], arr.map((_, i) => i));
+    }
+
+    async vizMergeSort(signal) {
+        const arr = this.vizState.array;
+        await this.vizMergeSortHelper(arr, 0, arr.length - 1, signal);
+        this.renderVizFrame([], arr.map((_, i) => i));
+    }
+
+    async vizMergeSortHelper(arr, l, r, signal) {
+        if (l >= r) return;
+        
+        const m = l + Math.floor((r - l) / 2);
+        await this.vizMergeSortHelper(arr, l, m, signal);
+        await this.vizMergeSortHelper(arr, m + 1, r, signal);
+        await this.vizMerge(arr, l, m, r, signal);
+    }
+
+    async vizMerge(arr, l, m, r, signal) {
+        const n1 = m - l + 1;
+        const n2 = r - m;
+        const L = new Array(n1);
+        const R = new Array(n2);
+
+        for (let i = 0; i < n1; i++) L[i] = arr[l + i];
+        for (let j = 0; j < n2; j++) R[j] = arr[m + 1 + j];
+
+        let i = 0, j = 0, k = l;
+
+        while (i < n1 && j < n2) {
+            if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+            
+            this.renderVizFrame([k]); // Highlight current position
+            this.playSound(arr[k]);
+            await this.vizDelay();
+
+            if (L[i] <= R[j]) {
+                arr[k] = L[i];
+                i++;
+            } else {
+                arr[k] = R[j];
+                j++;
+            }
+            k++;
+            this.renderVizFrame([k-1]); 
+            await this.vizDelay();
+        }
+
+        while (i < n1) {
+            if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+            arr[k] = L[i];
+            i++;
+            k++;
+            this.renderVizFrame([k-1]);
+            await this.vizDelay();
+        }
+
+        while (j < n2) {
+            if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+            arr[k] = R[j];
+            j++;
+            k++;
+            this.renderVizFrame([k-1]);
+            await this.vizDelay();
+        }
     }
 
     // --- Level 1: Bubble Sort ---
