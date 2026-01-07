@@ -585,3 +585,30 @@
     background: #222;
     border-color: #00ff00;
 }
+
+#viz-size {
+    -webkit-appearance: none;
+    width: 100px;
+    height: 6px;
+    background: #333;
+    border-radius: 3px;
+    outline: none;
+}
+
+#viz-size::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #00ffff;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+#viz-size::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #00ffff;
+    border-radius: 50%;
+    cursor: pointer;
+}

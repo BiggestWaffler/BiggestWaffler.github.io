@@ -22,6 +22,7 @@ class DSAGame {
             vizCanvas: document.getElementById('viz-canvas'),
             vizTitle: document.getElementById('viz-title'),
             vizSpeed: document.getElementById('viz-speed'),
+            vizSize: document.getElementById('viz-size'),
             btnVizPlay: document.getElementById('btn-viz-play'),
             canvasWrapper: document.getElementById('canvas-wrapper'),
             levelTitle: document.getElementById('level-title'),
@@ -661,8 +662,16 @@ class DSAGame {
         this.vizState.running = false;
         
         // Generate array
-        const count = 50;
-        this.vizState.array = Array.from({length: count}, () => Math.floor(Math.random() * 90) + 10);
+        const count = parseInt(this.elements.vizSize.value);
+        // Linear array 1 to count
+        this.vizState.array = Array.from({length: count}, (_, i) => i + 1);
+        
+        // Fisher-Yates Shuffle
+        for (let i = this.vizState.array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.vizState.array[i], this.vizState.array[j]] = [this.vizState.array[j], this.vizState.array[i]];
+        }
+        
         this.renderVizFrame();
     }
 
@@ -670,14 +679,19 @@ class DSAGame {
         const wrapper = this.elements.vizCanvas;
         wrapper.innerHTML = '';
         
+        const count = this.vizState.array.length;
         const maxVal = Math.max(...this.vizState.array);
         
         this.vizState.array.forEach((val, idx) => {
             const bar = document.createElement('div');
-            bar.style.width = '10px';
+            // Calculate width to fill container minus gaps
+            // Gap is 1px on each side (2px total per bar) if possible, or adjust
+            // Let's use flex-grow or percentage width
+            bar.style.width = `${100/count}%`; 
             bar.style.height = `${(val / maxVal) * 100}%`;
             bar.style.backgroundColor = '#444';
-            bar.style.margin = '0 1px';
+            bar.style.margin = '0 1px'; // Keep small gap
+            if (count > 60) bar.style.margin = '0'; // Remove gap for large datasets
             bar.style.borderRadius = '2px 2px 0 0';
             
             if (highlightIndices.includes(idx)) {
@@ -723,10 +737,20 @@ class DSAGame {
         const osc = this.audioCtx.createOscillator();
         const gain = this.audioCtx.createGain();
         
-        // Map value (10-100) to freq (200-800Hz)
-        const freq = 200 + (value * 6);
+        // Chromatic Scale Mapping
+        // Map value (1 to max) to a range of semitones
+        // Base note: C3 (Midi 48) approx 130.81 Hz
+        // Range: 4 Octaves (48 semitones)
         
-        osc.type = 'sine';
+        const maxVal = this.vizState.array.length || 100;
+        const normalized = (value - 1) / (maxVal - 1 || 1); // 0 to 1
+        const semitones = Math.floor(normalized * 48); // Map to 0-48 semitones
+        
+        // Frequency formula: f = f0 * (2^(n/12))
+        const f0 = 130.81; 
+        const freq = f0 * Math.pow(2, semitones / 12);
+        
+        osc.type = 'sine'; // Sine is cleanest, 'triangle' is "gamey"
         osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
         
         gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime);
