@@ -95,10 +95,13 @@ class DSAGame {
         const levelId = this.selectedLevelId || this.currentLevel; 
         if (!levelId) return;
 
-        this.currentLevel = levelId;
         this.currentDifficulty = difficulty;
         
         this.resetAll();
+        
+        // Restore currentLevel after resetAll clears it
+        this.currentLevel = levelId;
+        
         this.elements.gameArea.classList.add('active');
         
         this.elements.canvasWrapper.innerHTML = '';
@@ -694,15 +697,32 @@ class DSAGame {
             if (count > 60) bar.style.margin = '0'; // Remove gap for large datasets
             bar.style.borderRadius = '2px 2px 0 0';
             
-            if (highlightIndices.includes(idx)) {
-                bar.style.backgroundColor = '#00ffff';
-            }
             if (sortedIndices.includes(idx)) {
                 bar.style.backgroundColor = '#00ff00';
+            }
+            // Highlight overrides sorted
+            if (highlightIndices.includes(idx)) {
+                bar.style.backgroundColor = '#00ffff';
             }
             
             wrapper.appendChild(bar);
         });
+    }
+
+    async vizSweep(signal) {
+        const arr = this.vizState.array;
+        const n = arr.length;
+        const delay = Math.max(10, 2000 / n); // 2s max total sweep time
+
+        for (let i = 0; i < n; i++) {
+             if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+             // All green, current one cyan
+             this.renderVizFrame([i], Array.from({length: n}, (_, k) => k)); 
+             this.playSound(arr[i]);
+             await new Promise(r => setTimeout(r, delay));
+        }
+        // Final state: all green
+        this.renderVizFrame([], Array.from({length: n}, (_, k) => k)); 
     }
 
     async runViz() {
@@ -737,20 +757,15 @@ class DSAGame {
         const osc = this.audioCtx.createOscillator();
         const gain = this.audioCtx.createGain();
         
-        // Chromatic Scale Mapping
-        // Map value (1 to max) to a range of semitones
-        // Base note: C3 (Midi 48) approx 130.81 Hz
-        // Range: 4 Octaves (48 semitones)
-        
+        // Linear frequency mapping from 120Hz to 1200Hz
+        // This ensures every value has a unique frequency regardless of size
         const maxVal = this.vizState.array.length || 100;
-        const normalized = (value - 1) / (maxVal - 1 || 1); // 0 to 1
-        const semitones = Math.floor(normalized * 48); // Map to 0-48 semitones
+        const minFreq = 120;
+        const maxFreq = 1200;
         
-        // Frequency formula: f = f0 * (2^(n/12))
-        const f0 = 130.81; 
-        const freq = f0 * Math.pow(2, semitones / 12);
+        const freq = minFreq + ((value - 1) / (maxVal - 1 || 1)) * (maxFreq - minFreq);
         
-        osc.type = 'sine'; // Sine is cleanest, 'triangle' is "gamey"
+        osc.type = 'sine'; // Sine is cleanest
         osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
         
         gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime);
@@ -784,7 +799,7 @@ class DSAGame {
                 }
             }
         }
-        this.renderVizFrame([], arr.map((_, i) => i));
+        await this.vizSweep(signal);
     }
 
     async vizInsertionSort(signal) {
@@ -809,13 +824,13 @@ class DSAGame {
             this.playSound(key);
             await this.vizDelay();
         }
-        this.renderVizFrame([], arr.map((_, i) => i));
+        await this.vizSweep(signal);
     }
 
     async vizMergeSort(signal) {
         const arr = this.vizState.array;
         await this.vizMergeSortHelper(arr, 0, arr.length - 1, signal);
-        this.renderVizFrame([], arr.map((_, i) => i));
+        await this.vizSweep(signal);
     }
 
     async vizMergeSortHelper(arr, l, r, signal) {
