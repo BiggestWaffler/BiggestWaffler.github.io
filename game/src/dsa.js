@@ -655,6 +655,9 @@ class DSAGame {
         if (type === 'bubble') title = "Bubble Sort Visualization";
         if (type === 'insertion') title = "Insertion Sort Visualization";
         if (type === 'merge') title = "Merge Sort Visualization";
+        if (type === 'selection') title = "Selection Sort Visualization";
+        if (type === 'quick') title = "Quick Sort Visualization";
+        if (type === 'heap') title = "Heap Sort Visualization";
         
         this.elements.vizTitle.textContent = title;
         this.shuffleViz();
@@ -740,6 +743,9 @@ class DSAGame {
             if (this.vizState.algorithm === 'bubble') await this.vizBubbleSort(signal);
             if (this.vizState.algorithm === 'insertion') await this.vizInsertionSort(signal);
             if (this.vizState.algorithm === 'merge') await this.vizMergeSort(signal);
+            if (this.vizState.algorithm === 'selection') await this.vizSelectionSort(signal);
+            if (this.vizState.algorithm === 'quick') await this.vizQuickSort(signal);
+            if (this.vizState.algorithm === 'heap') await this.vizHeapSort(signal);
         } catch (e) {
             if (e.name !== 'AbortError') console.error(e);
         }
@@ -888,6 +894,118 @@ class DSAGame {
             k++;
             this.renderVizFrame([k-1]);
             await this.vizDelay();
+        }
+    }
+
+    async vizSelectionSort(signal) {
+        const arr = this.vizState.array;
+        const n = arr.length;
+        
+        for (let i = 0; i < n; i++) {
+            let minIdx = i;
+            for (let j = i + 1; j < n; j++) {
+                if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+                
+                this.renderVizFrame([i, j, minIdx]);
+                this.playSound(arr[j]);
+                await this.vizDelay();
+                
+                if (arr[j] < arr[minIdx]) {
+                    minIdx = j;
+                }
+            }
+            if (minIdx !== i) {
+                [arr[i], arr[minIdx]] = [arr[minIdx], arr[i]];
+                this.renderVizFrame([i, minIdx]);
+                this.playSound(arr[i]);
+                await this.vizDelay();
+            }
+        }
+        await this.vizSweep(signal);
+    }
+
+    async vizQuickSort(signal) {
+        const arr = this.vizState.array;
+        await this.vizQuickSortHelper(arr, 0, arr.length - 1, signal);
+        await this.vizSweep(signal);
+    }
+
+    async vizQuickSortHelper(arr, low, high, signal) {
+        if (low < high) {
+            const pi = await this.vizPartition(arr, low, high, signal);
+            await this.vizQuickSortHelper(arr, low, pi - 1, signal);
+            await this.vizQuickSortHelper(arr, pi + 1, high, signal);
+        }
+    }
+
+    async vizPartition(arr, low, high, signal) {
+        const pivot = arr[high];
+        let i = (low - 1);
+        
+        for (let j = low; j <= high - 1; j++) {
+            if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+            
+            this.renderVizFrame([j, high, i + 1]);
+            this.playSound(arr[j]);
+            await this.vizDelay();
+            
+            if (arr[j] < pivot) {
+                i++;
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+                this.renderVizFrame([i, j]);
+                this.playSound(arr[i]);
+                await this.vizDelay();
+            }
+        }
+        [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+        this.renderVizFrame([i + 1, high]);
+        this.playSound(arr[i+1]);
+        await this.vizDelay();
+        return (i + 1);
+    }
+
+    async vizHeapSort(signal) {
+        const arr = this.vizState.array;
+        const n = arr.length;
+
+        for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
+            await this.vizHeapify(arr, n, i, signal);
+        }
+
+        for (let i = n - 1; i > 0; i--) {
+            if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+            
+            [arr[0], arr[i]] = [arr[i], arr[0]];
+            this.renderVizFrame([0, i]);
+            this.playSound(arr[i]);
+            await this.vizDelay();
+            
+            await this.vizHeapify(arr, i, 0, signal);
+        }
+        await this.vizSweep(signal);
+    }
+
+    async vizHeapify(arr, n, i, signal) {
+        if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+        
+        let largest = i;
+        let left = 2 * i + 1;
+        let right = 2 * i + 2;
+
+        if (left < n && arr[left] > arr[largest]) largest = left;
+        if (right < n && arr[right] > arr[largest]) largest = right;
+
+        this.renderVizFrame([i, left < n ? left : i, right < n ? right : i]);
+        this.playSound(arr[i]);
+        await this.vizDelay();
+
+        if (largest !== i) {
+            [arr[i], arr[largest]] = [arr[largest], arr[i]];
+            this.renderVizFrame([i, largest]);
+            this.playSound(arr[i]);
+            await this.vizDelay();
+            
+            await this.vizHeapify(arr, n, largest, signal);
         }
     }
 
