@@ -124,6 +124,9 @@ class DSAGame {
             case 'bfs-grid': this.initBFS(); break;
             case 'dijkstra': this.initDijkstra(); break;
             case 'hanoi': this.initHanoi(); break;
+            case 'selection-sort': this.initSelectionSort(); break;
+            case 'tree-dfs': this.initDFS(); break;
+            case 'knapsack': this.initKnapsack(); break;
         }
     }
 
@@ -252,6 +255,62 @@ class DSAGame {
             });
             
             this.playback.sequence = sequence;
+
+        } else if (this.currentLevel === 'selection-sort') {
+            let arr = [...this.gameState.initialArray];
+            this.playback.sequence.push({ type: 'init', arr: [...arr], i: 0, minIdx: null });
+            
+            for (let i = 0; i < arr.length - 1; i++) {
+                let minIdx = i;
+                this.playback.sequence.push({ type: 'scan', arr: [...arr], i, minIdx });
+                
+                for (let j = i + 1; j < arr.length; j++) {
+                    if (arr[j] < arr[minIdx]) {
+                        minIdx = j;
+                    }
+                }
+                
+                this.playback.sequence.push({ type: 'found-min', arr: [...arr], i, minIdx });
+                
+                if (minIdx !== i) {
+                    let temp = arr[i];
+                    arr[i] = arr[minIdx];
+                    arr[minIdx] = temp;
+                    this.playback.sequence.push({ type: 'swap', arr: [...arr], i, minIdx });
+                }
+            }
+            this.playback.sequence.push({ type: 'done', arr: [...arr], i: arr.length, minIdx: null });
+
+        } else if (this.currentLevel === 'tree-dfs') {
+            const path = this.gameState.optimalPath;
+            this.playback.sequence.push({ visited: [], current: null });
+            
+            for(let i=0; i<path.length; i++) {
+                const visited = path.slice(0, i+1);
+                const current = path[i];
+                this.playback.sequence.push({ visited, current });
+            }
+            
+        } else if (this.currentLevel === 'knapsack') {
+            const items = this.gameState.items;
+            const solution = this.gameState.solution; // indices
+            
+            this.playback.sequence.push({ selected: [], value: 0, weight: 0 });
+            
+            let currentSelected = [];
+            let currentVal = 0;
+            let currentWt = 0;
+            
+            solution.forEach(idx => {
+                currentSelected.push(idx);
+                currentVal += items[idx].val;
+                currentWt += items[idx].wt;
+                this.playback.sequence.push({ 
+                    selected: [...currentSelected], 
+                    value: currentVal, 
+                    weight: currentWt 
+                });
+            });
         }
         
         this.playback.maxSteps = this.playback.sequence.length - 1;
@@ -582,6 +641,113 @@ class DSAGame {
             if (state.move) {
                // Could add visual arrow or highlight
             }
+
+        } else if (this.currentLevel === 'selection-sort') {
+            const wrapper = this.elements.canvasWrapper;
+            wrapper.innerHTML = '';
+            wrapper.style.display = 'flex';
+            wrapper.style.flexDirection = 'row';
+            wrapper.style.flexWrap = 'nowrap';
+            wrapper.style.alignItems = 'flex-end';
+            
+            state.arr.forEach((value, index) => {
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                if (this.currentDifficulty === 'hard') bar.style.width = '20px';
+                bar.style.height = `${value * 3}px`;
+                
+                // Visualization logic for states
+                // sorted: index < state.i
+                if (index < state.i) bar.classList.add('sorted');
+                
+                if (index === state.minIdx) {
+                    bar.style.backgroundColor = '#ff00ff'; // Min element
+                } else if (index === state.i) {
+                    bar.style.borderColor = '#ffffff'; // Current slot
+                }
+                
+                const label = document.createElement('div');
+                label.className = 'bar-value';
+                if (this.currentDifficulty === 'hard') label.style.display = 'none';
+                label.textContent = value;
+                bar.appendChild(label);
+                wrapper.appendChild(bar);
+            });
+
+        } else if (this.currentLevel === 'tree-dfs') {
+            const wrapper = this.elements.canvasWrapper;
+            wrapper.innerHTML = '';
+            wrapper.style.display = 'block'; 
+            const container = document.createElement('div');
+            container.className = 'tree-container';
+            
+            const totalNodes = this.gameState.nodes.length;
+            
+            this.gameState.nodes.forEach((node, i) => {
+                if (!node) return;
+                const el = document.createElement('div');
+                el.className = 'tree-node';
+                if (totalNodes > 15) {
+                    el.style.width = '30px';
+                    el.style.height = '30px';
+                    el.style.fontSize = '10px';
+                }
+                el.textContent = node.val;
+                
+                // Position logic same as BST/Heap (simplified for complete binary tree structure)
+                const depth = Math.floor(Math.log2(i + 1));
+                const totalInLevel = Math.pow(2, depth);
+                const x = ((i - (totalInLevel - 1)) + 0.5) * (100 / totalInLevel);
+                const y = depth * 80 + 40;
+                
+                el.style.left = `calc(${x}% - 25px)`;
+                el.style.top = `${y}px`;
+
+                if (state.visited.includes(i)) {
+                    el.classList.add('visited');
+                    el.style.borderColor = '#ffff00';
+                }
+                if (i === state.current) {
+                    el.style.backgroundColor = '#333';
+                }
+                container.appendChild(el);
+            });
+            wrapper.appendChild(container);
+
+        } else if (this.currentLevel === 'knapsack') {
+            const wrapper = this.elements.canvasWrapper;
+            wrapper.innerHTML = '';
+            wrapper.style.display = 'block';
+            
+            const container = document.createElement('div');
+            container.className = 'knapsack-container';
+            
+            // Render items grid
+            const grid = document.createElement('div');
+            grid.className = 'item-grid';
+            
+            this.gameState.items.forEach((item, idx) => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'knapsack-item';
+                if (state.selected.includes(idx)) itemEl.classList.add('selected');
+                
+                itemEl.innerHTML = `
+                    <div class="item-val">$${item.val}</div>
+                    <div class="item-wt">${item.wt}kg</div>
+                `;
+                grid.appendChild(itemEl);
+            });
+            container.appendChild(grid);
+            
+            // Render bag info
+            const stats = document.createElement('div');
+            stats.className = 'knapsack-stats';
+            stats.innerHTML = `
+                <div>Value: $${state.value}</div>
+                <div>Weight: ${state.weight} / ${this.gameState.capacity}kg</div>
+            `;
+            container.appendChild(stats);
+            wrapper.appendChild(container);
         }
         
         this.updatePlaybackStatus();
@@ -1867,7 +2033,360 @@ class DSAGame {
         }
     }
 
-    // --- Level 6: Tower of Hanoi ---
+    // --- Level 7: Selection Sort ---
+    initSelectionSort() {
+        this.elements.levelTitle.textContent = "Selection Sort";
+        this.elements.instructions.textContent = "Click the SMALLEST bar in the unsorted section (right side).";
+        this.elements.levelExplanation.innerHTML = `
+            <strong>Selection Sort</strong> repeatedly finds the minimum element from the unsorted part and puts it at the beginning.
+            <br>
+            Efficiency: <span style="color:#ff5555">O(N²)</span>
+            <br>
+            <strong>Goal:</strong> Sort the array by picking minimums.
+        `;
+        
+        let size = 8;
+        if (this.currentDifficulty === 'easy') size = 5;
+        if (this.currentDifficulty === 'hard') size = 12;
+
+        const array = Array.from({length: size}, () => Math.floor(Math.random() * 80) + 10);
+        
+        // Calculate optimal moves (just N-1 swaps)
+        
+        this.gameState = {
+            initialArray: [...array],
+            array: array,
+            moves: 0,
+            currentIndex: 0, // Points to the first element of unsorted subarray
+            optimalMoves: size - 1
+        };
+
+        this.renderSelectionSort();
+    }
+
+    renderSelectionSort() {
+        const wrapper = this.elements.canvasWrapper;
+        wrapper.innerHTML = '';
+        wrapper.style.display = 'flex';
+        wrapper.style.flexDirection = 'row';
+        wrapper.style.flexWrap = 'nowrap';
+        wrapper.style.alignItems = 'flex-end';
+        
+        this.updateStats(`Sorted: ${this.gameState.currentIndex} / ${this.gameState.array.length}`);
+
+        this.gameState.array.forEach((value, index) => {
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            if (this.currentDifficulty === 'hard') bar.style.width = '20px';
+            bar.style.height = `${value * 3}px`;
+            
+            if (index < this.gameState.currentIndex) {
+                bar.classList.add('sorted');
+            } else {
+                // Interactive part
+                if (!this.playback.active) {
+                    bar.onclick = () => this.handleSelectionSortClick(index);
+                    bar.style.cursor = 'pointer';
+                }
+            }
+            
+            // Mark the current boundary
+            if (index === this.gameState.currentIndex) {
+                bar.style.borderLeft = '2px solid red';
+            }
+
+            const label = document.createElement('div');
+            label.className = 'bar-value';
+            if (this.currentDifficulty === 'hard') label.style.display = 'none';
+            label.textContent = value;
+            bar.appendChild(label);
+            wrapper.appendChild(bar);
+        });
+    }
+
+    handleSelectionSortClick(index) {
+        // Validation: Did user click the minimum in [currentIndex, end]?
+        const start = this.gameState.currentIndex;
+        const arr = this.gameState.array;
+        
+        let minVal = Infinity;
+        let minIdx = -1;
+        
+        for(let i=start; i<arr.length; i++) {
+            if (arr[i] < minVal) {
+                minVal = arr[i];
+                minIdx = i;
+            }
+        }
+        
+        if (index === minIdx) {
+            // Correct! Swap min with start
+            [arr[start], arr[minIdx]] = [arr[minIdx], arr[start]];
+            this.gameState.currentIndex++;
+            this.gameState.moves++; // Track progress
+            
+            if (this.gameState.currentIndex >= arr.length - 1) {
+                // Done
+                this.renderSelectionSort();
+                this.showVictory("Sorted!", `You found all minimums correctly.`);
+            } else {
+                this.renderSelectionSort();
+            }
+        } else {
+            // Wrong click
+            // Could add shake effect or penalty
+            const bar = this.elements.canvasWrapper.children[index];
+            bar.style.backgroundColor = 'red';
+            setTimeout(() => this.renderSelectionSort(), 500);
+        }
+    }
+
+    // --- Level 8: Tree DFS ---
+    initDFS() {
+        this.elements.levelTitle.textContent = "Tree DFS";
+        this.elements.instructions.textContent = "Perform Preorder Traversal: Click Root, then traverse Left subtree, then Right.";
+        this.elements.levelExplanation.innerHTML = `
+            <strong>Depth-First Search (DFS)</strong> explores as far as possible along each branch before backtracking.
+            <br>
+            <strong>Preorder:</strong> Root → Left → Right
+        `;
+
+        let numNodes = 10;
+        if (this.currentDifficulty === 'easy') numNodes = 7;
+        if (this.currentDifficulty === 'hard') numNodes = 15;
+
+        // Generate a random tree structure (implicit array representation for complete binary tree is easiest)
+        // Values 1 to numNodes
+        const nodes = Array.from({length: numNodes}, (_, i) => ({ val: i + 1, id: i }));
+        
+        // Calculate optimal path
+        const optimalPath = [];
+        const traverse = (idx) => {
+            if (idx >= numNodes) return;
+            optimalPath.push(idx); // Visit Root
+            traverse(2*idx + 1);   // Visit Left
+            traverse(2*idx + 2);   // Visit Right
+        };
+        traverse(0);
+
+        this.gameState = {
+            nodes: nodes,
+            optimalPath: optimalPath,
+            currentStep: 0,
+            visited: []
+        };
+
+        this.renderDFS();
+    }
+
+    renderDFS() {
+        const wrapper = this.elements.canvasWrapper;
+        wrapper.innerHTML = '';
+        wrapper.style.display = 'block'; 
+        wrapper.style.position = 'relative';
+
+        const container = document.createElement('div');
+        container.className = 'tree-container';
+        
+        const totalNodes = this.gameState.nodes.length;
+
+        this.gameState.nodes.forEach((node, i) => {
+            const el = document.createElement('div');
+            el.className = 'tree-node';
+            if (totalNodes > 15) {
+                el.style.width = '30px';
+                el.style.height = '30px';
+                el.style.fontSize = '10px';
+            }
+            el.textContent = node.val;
+            
+            const depth = Math.floor(Math.log2(i + 1));
+            const totalInLevel = Math.pow(2, depth);
+            const x = ((i - (totalInLevel - 1)) + 0.5) * (100 / totalInLevel);
+            const y = depth * 80 + 40;
+            
+            el.style.left = `calc(${x}% - 25px)`;
+            el.style.top = `${y}px`;
+
+            if (this.gameState.visited.includes(i)) {
+                el.classList.add('visited');
+            }
+
+            // Interaction
+            if (!this.playback.active && !this.gameState.visited.includes(i)) {
+                el.onclick = () => this.handleDFSClick(i);
+                el.style.cursor = 'pointer';
+            }
+
+            container.appendChild(el);
+        });
+        
+        wrapper.appendChild(container);
+        this.updateStats(`Visited: ${this.gameState.visited.length} / ${totalNodes}`);
+    }
+
+    handleDFSClick(index) {
+        const expected = this.gameState.optimalPath[this.gameState.currentStep];
+        
+        if (index === expected) {
+            this.gameState.visited.push(index);
+            this.gameState.currentStep++;
+            
+            if (this.gameState.currentStep === this.gameState.nodes.length) {
+                this.renderDFS();
+                this.showVictory("Traversal Complete!", "You followed the Preorder path correctly.");
+            } else {
+                this.renderDFS();
+            }
+        } else {
+            // Wrong node
+             const bar = document.querySelectorAll('.tree-node')[index];
+             bar.style.backgroundColor = 'red';
+             setTimeout(() => this.renderDFS(), 500);
+        }
+    }
+
+    // --- Level 9: Knapsack ---
+    initKnapsack() {
+        this.elements.levelTitle.textContent = "0/1 Knapsack";
+        this.elements.instructions.textContent = "Select items to maximize total Value without exceeding Capacity.";
+        this.elements.levelExplanation.innerHTML = `
+            <strong>The Knapsack Problem</strong> is a classic optimization problem.
+            <br>
+            Goal: Maximize Value such that Total Weight ≤ Capacity.
+        `;
+
+        let count = 5;
+        let capacity = 15;
+        if (this.currentDifficulty === 'easy') { count = 4; capacity = 10; }
+        if (this.currentDifficulty === 'hard') { count = 8; capacity = 20; }
+
+        const items = [];
+        for(let i=0; i<count; i++) {
+            items.push({
+                id: i,
+                wt: Math.floor(Math.random() * 8) + 1,
+                val: Math.floor(Math.random() * 20) + 5
+            });
+        }
+
+        // DP Solution for Optimal
+        const dp = Array(capacity + 1).fill(0);
+        const selected = Array(capacity + 1).fill(null).map(() => []); 
+        // Note: Tracking items in DP for optimal path is slightly more complex, 
+        // simpler is to just get max value for score comparison.
+        // Or full recursion to find path.
+        
+        const solveKnapsack = (idx, remainingWt) => {
+            if (idx === items.length || remainingWt === 0) return { val: 0, items: [] };
+            
+            // Skip if too heavy
+            if (items[idx].wt > remainingWt) return solveKnapsack(idx + 1, remainingWt);
+            
+            // Option 1: Include
+            const include = solveKnapsack(idx + 1, remainingWt - items[idx].wt);
+            include.val += items[idx].val;
+            include.items = [idx, ...include.items];
+            
+            // Option 2: Exclude
+            const exclude = solveKnapsack(idx + 1, remainingWt);
+            
+            if (include.val > exclude.val) return include;
+            return exclude;
+        };
+        
+        const solution = solveKnapsack(0, capacity);
+
+        this.gameState = {
+            items: items,
+            capacity: capacity,
+            solution: solution.items, // indices
+            optimalValue: solution.val,
+            currentSelected: []
+        };
+
+        this.renderKnapsack();
+    }
+
+    renderKnapsack() {
+        const wrapper = this.elements.canvasWrapper;
+        wrapper.innerHTML = '';
+        wrapper.style.display = 'block';
+        
+        const container = document.createElement('div');
+        container.className = 'knapsack-container';
+        
+        // Stats
+        let currentWt = 0;
+        let currentVal = 0;
+        this.gameState.currentSelected.forEach(idx => {
+            currentWt += this.gameState.items[idx].wt;
+            currentVal += this.gameState.items[idx].val;
+        });
+        
+        this.updateStats(`Value: $${currentVal} | Weight: ${currentWt} / ${this.gameState.capacity}kg`);
+
+        // Grid
+        const grid = document.createElement('div');
+        grid.className = 'item-grid';
+        
+        this.gameState.items.forEach((item, idx) => {
+            const el = document.createElement('div');
+            el.className = 'knapsack-item';
+            if (this.gameState.currentSelected.includes(idx)) el.classList.add('selected');
+            
+            el.innerHTML = `
+                <div style="font-size:1.2rem;">📦</div>
+                <div style="color:#00ff00; font-weight:bold;">$${item.val}</div>
+                <div style="color:#aaa;">${item.wt}kg</div>
+            `;
+            
+            if (!this.playback.active) {
+                el.onclick = () => this.handleKnapsackClick(idx);
+            }
+            grid.appendChild(el);
+        });
+        container.appendChild(grid);
+        
+        // Submit Button
+        const btnBox = document.createElement('div');
+        btnBox.style.marginTop = '20px';
+        btnBox.style.textAlign = 'center';
+        const submitBtn = document.createElement('button');
+        submitBtn.className = 'btn-primary';
+        submitBtn.textContent = 'Submit';
+        if (!this.playback.active) {
+            submitBtn.onclick = () => this.checkKnapsackWin(currentVal, currentWt);
+        }
+        btnBox.appendChild(submitBtn);
+        container.appendChild(btnBox);
+
+        wrapper.appendChild(container);
+    }
+
+    handleKnapsackClick(index) {
+        if (this.gameState.currentSelected.includes(index)) {
+            this.gameState.currentSelected = this.gameState.currentSelected.filter(i => i !== index);
+        } else {
+            this.gameState.currentSelected.push(index);
+        }
+        this.renderKnapsack();
+    }
+
+    checkKnapsackWin(val, wt) {
+        if (wt > this.gameState.capacity) {
+            alert("Too heavy! Reduce weight.");
+            return;
+        }
+        
+        const accuracy = Math.max(0, Math.round((val / this.gameState.optimalValue) * 100));
+        
+        if (val === this.gameState.optimalValue) {
+            this.showVictory("Optimal Solution!", `Value: $${val}<br>Weight: ${wt}kg`);
+        } else {
+            this.showVictory("Finished", `Value: $${val}<br>Optimal Possible: $${this.gameState.optimalValue}<br>Accuracy: ${accuracy}%`);
+        }
+    }
     initHanoi() {
         this.elements.levelTitle.textContent = "Tower of Hanoi";
         this.elements.instructions.textContent = "Move all disks to the rightmost tower. Smaller disks must always sit on larger ones.";
