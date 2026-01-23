@@ -1,0 +1,389 @@
+/* Bird Clicker Game Styles */
+
+.game-container {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 24px;
+    margin-top: 20px;
+}
+
+.main-game-area {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* Stats Panel */
+.stats-panel {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.9);
+    border: 3px solid #00ffff;
+    box-shadow: 0 0 25px rgba(0, 255, 255, 0.4);
+}
+
+.stat-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #bcdcff;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stat-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: #00ffff;
+    text-shadow: 0 0 10px #00ffff;
+}
+
+/* Click Area */
+.click-area {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    background: rgba(0, 0, 0, 0.9);
+    border: 3px solid #00ffff;
+    box-shadow: 0 0 25px rgba(0, 255, 255, 0.4);
+    min-height: 400px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.bird {
+    font-size: 120px;
+    transition: transform 0.1s ease;
+    filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.6));
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+.click-hint {
+    margin-top: 20px;
+    color: #bcdcff;
+    font-size: 18px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.click-effect {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.click-popup {
+    position: absolute;
+    font-size: 24px;
+    font-weight: 800;
+    color: #00ffff;
+    text-shadow: 0 0 10px #00ffff;
+    pointer-events: none;
+    animation: popup 1s ease-out forwards;
+    transform: translate(-50%, -50%);
+}
+
+@keyframes popup {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(0.5);
+    }
+    50% {
+        opacity: 1;
+        transform: translate(-50%, -70%) scale(1.2);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -100%) scale(1);
+    }
+}
+
+/* Upgrades Panel */
+.upgrades-panel {
+    background: rgba(0, 0, 0, 0.9);
+    border: 3px solid #00ffff;
+    box-shadow: 0 0 25px rgba(0, 255, 255, 0.4);
+    padding: 24px;
+}
+
+.panel-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: #00ffff;
+    text-shadow: 0 0 10px #00ffff;
+    margin: 0 0 20px 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.upgrades-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.upgrade-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: rgba(0, 255, 255, 0.05);
+    border: 2px solid rgba(0, 255, 255, 0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.upgrade-item:hover:not(.disabled) {
+    background: rgba(0, 255, 255, 0.15);
+    border-color: #00ffff;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+    transform: translateX(5px);
+}
+
+.upgrade-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.upgrade-emoji {
+    font-size: 36px;
+    width: 50px;
+    text-align: center;
+}
+
+.upgrade-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.upgrade-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #00ffff;
+}
+
+.upgrade-desc {
+    font-size: 14px;
+    color: #bcdcff;
+}
+
+.upgrade-owned {
+    font-size: 12px;
+    color: #888;
+}
+
+.upgrade-cost {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ff00ff;
+    text-shadow: 0 0 10px #ff00ff;
+    min-width: 120px;
+    text-align: right;
+}
+
+/* Sidebar */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.auto-clickers-panel {
+    background: rgba(0, 0, 0, 0.9);
+    border: 3px solid #ff00ff;
+    box-shadow: 0 0 25px rgba(255, 0, 255, 0.4);
+    padding: 24px;
+}
+
+.auto-clickers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.auto-clicker-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: rgba(255, 0, 255, 0.05);
+    border: 2px solid rgba(255, 0, 255, 0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.auto-clicker-item:hover:not(.disabled) {
+    background: rgba(255, 0, 255, 0.15);
+    border-color: #ff00ff;
+    box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+    transform: translateX(5px);
+}
+
+.auto-clicker-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.clicker-emoji {
+    font-size: 36px;
+    width: 50px;
+    text-align: center;
+}
+
+.clicker-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.clicker-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ff00ff;
+}
+
+.clicker-desc {
+    font-size: 14px;
+    color: #bcdcff;
+}
+
+.clicker-owned {
+    font-size: 12px;
+    color: #888;
+}
+
+.clicker-cost {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ff00ff;
+    text-shadow: 0 0 10px #ff00ff;
+    min-width: 120px;
+    text-align: right;
+}
+
+/* Save Panel */
+.save-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.save-btn, .reset-btn {
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    border: 2px solid #00ffff;
+    background: rgba(0, 0, 0, 0.9);
+    color: #00ffff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+}
+
+.save-btn:hover {
+    background: rgba(0, 255, 255, 0.2);
+    box-shadow: 0 0 25px rgba(0, 255, 255, 0.6);
+    transform: translateY(-2px);
+}
+
+.reset-btn {
+    border-color: #ff0000;
+    color: #ff0000;
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+}
+
+.reset-btn:hover {
+    background: rgba(255, 0, 0, 0.2);
+    box-shadow: 0 0 25px rgba(255, 0, 0, 0.6);
+    transform: translateY(-2px);
+}
+
+/* Scrollbar Styling */
+.upgrades-list::-webkit-scrollbar,
+.auto-clickers-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.upgrades-list::-webkit-scrollbar-track,
+.auto-clickers-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.upgrades-list::-webkit-scrollbar-thumb,
+.auto-clickers-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 255, 0.5);
+    border-radius: 4px;
+}
+
+.upgrades-list::-webkit-scrollbar-thumb:hover,
+.auto-clickers-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 255, 255, 0.8);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .game-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .sidebar {
+        order: -1;
+    }
+}
+
+@media (max-width: 768px) {
+    .stats-panel {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .bird {
+        font-size: 80px;
+    }
+    
+    .click-area {
+        min-height: 300px;
+        padding: 40px;
+    }
+    
+    .upgrade-item,
+    .auto-clicker-item {
+        flex-wrap: wrap;
+    }
+    
+    .upgrade-cost,
+    .clicker-cost {
+        width: 100%;
+        text-align: left;
+        margin-top: 8px;
+    }
+}

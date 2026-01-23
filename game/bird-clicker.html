@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bird Clicker - Ethan Liu</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/game/styles/games.css">
+    <link rel="stylesheet" href="/game/styles/bird-clicker.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="wrap">
+        <header class="topbar">
+            <h1>🐦 Bird Clicker</h1>
+            <a class="home" href="/game/">← Back</a>
+        </header>
+
+        <div class="game-container">
+            <div class="main-game-area">
+                <div class="stats-panel">
+                    <div class="stat-item">
+                        <span class="stat-label">Eggs</span>
+                        <span id="eggs" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Eggs per Click</span>
+                        <span id="eggs-per-click" class="stat-value">1</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Eggs per Second</span>
+                        <span id="eggs-per-second" class="stat-value">0</span>
+                    </div>
+                </div>
+
+                <div class="click-area">
+                    <div id="bird" class="bird">🐦</div>
+                    <div class="click-hint">Click the bird!</div>
+                    <div id="click-effect" class="click-effect"></div>
+                </div>
+
+                <div class="upgrades-panel">
+                    <h2 class="panel-title">Upgrades</h2>
+                    <div id="upgrades-list" class="upgrades-list"></div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="auto-clickers-panel">
+                    <h2 class="panel-title">Auto-Clickers</h2>
+                    <div id="auto-clickers-list" class="auto-clickers-list"></div>
+                </div>
+
+                <div class="save-panel">
+                    <button id="save-btn" class="save-btn">Save Game</button>
+                    <button id="reset-btn" class="reset-btn">Reset Game</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/game/src/bird-clicker.js"></script>
+</body>
+</html>
