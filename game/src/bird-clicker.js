@@ -4,7 +4,12 @@ let gameState = {
     eggsPerClick: 1,
     eggsPerSecond: 0,
     upgrades: [],
-    autoClickers: []
+    autoClickers: [],
+    // Rebirth system
+    feathers: 0,
+    totalEggsEarned: 0,
+    rebirthCount: 0,
+    ancients: {}
 };
 
 // Upgrade definitions
@@ -31,6 +36,46 @@ const autoClickers = [
     { id: 'legendary_flock', name: 'Legendary Flock', description: '100 eggs/sec', cost: 1000000, eggsPerSecond: 100, emoji: '✨' }
 ];
 
+// Ancient definitions (permanent upgrades)
+const ancients = [
+    { 
+        id: 'click_power', 
+        name: 'Click Power', 
+        description: '+10% eggs per click per level', 
+        baseCost: 1, 
+        costMultiplier: 1.5,
+        effect: (level) => 1 + (level * 0.1),
+        emoji: '👆'
+    },
+    { 
+        id: 'auto_click_power', 
+        name: 'Auto Click Power', 
+        description: '+10% eggs per second per level', 
+        baseCost: 1, 
+        costMultiplier: 1.5,
+        effect: (level) => 1 + (level * 0.1),
+        emoji: '⚡'
+    },
+    { 
+        id: 'egg_value', 
+        name: 'Egg Value', 
+        description: '+5% egg production per level', 
+        baseCost: 2, 
+        costMultiplier: 1.5,
+        effect: (level) => 1 + (level * 0.05),
+        emoji: '💎'
+    },
+    { 
+        id: 'rebirth_bonus', 
+        name: 'Rebirth Bonus', 
+        description: '+2% feathers per rebirth per level', 
+        baseCost: 3, 
+        costMultiplier: 1.5,
+        effect: (level) => 1 + (level * 0.02),
+        emoji: '🔄'
+    }
+];
+
 // DOM Elements
 const eggsElement = document.getElementById('eggs');
 const eggsPerClickElement = document.getElementById('eggs-per-click');
@@ -41,11 +86,18 @@ const upgradesListElement = document.getElementById('upgrades-list');
 const autoClickersListElement = document.getElementById('auto-clickers-list');
 const saveBtn = document.getElementById('save-btn');
 const resetBtn = document.getElementById('reset-btn');
+const rebirthBtn = document.getElementById('rebirth-btn');
+const feathersElement = document.getElementById('feathers');
+const feathersDisplayElement = document.getElementById('feathers-display');
+const rebirthFeathersElement = document.getElementById('rebirth-feathers');
+const rebirthCountElement = document.getElementById('rebirth-count');
+const ancientsListElement = document.getElementById('ancients-list');
 
 // Initialize
 loadGame();
 renderUpgrades();
 renderAutoClickers();
+renderAncients();
 updateUI();
 startAutoClicker();
 
@@ -53,16 +105,22 @@ startAutoClicker();
 birdElement.addEventListener('click', handleClick);
 saveBtn.addEventListener('click', saveGame);
 resetBtn.addEventListener('click', resetGame);
+if (rebirthBtn) rebirthBtn.addEventListener('click', performRebirth);
 
 // Click handler
 function handleClick(e) {
-    gameState.eggs += gameState.eggsPerClick;
+    const baseEggsPerClick = gameState.eggsPerClick;
+    const ancientBonus = getAncientBonus('click_power');
+    const actualEggsPerClick = Math.floor(baseEggsPerClick * ancientBonus);
+    
+    gameState.eggs += actualEggsPerClick;
+    gameState.totalEggsEarned += actualEggsPerClick;
     updateUI();
     renderUpgrades();
     renderAutoClickers();
     
     // Visual feedback
-    showClickEffect(e);
+    showClickEffect(e, actualEggsPerClick);
     animateBird();
     
     // Save progress
@@ -70,14 +128,14 @@ function handleClick(e) {
 }
 
 // Show click effect
-function showClickEffect(e) {
+function showClickEffect(e, amount) {
     const rect = birdElement.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
     const effect = document.createElement('div');
     effect.className = 'click-popup';
-    effect.textContent = `+${formatNumber(gameState.eggsPerClick)}`;
+    effect.textContent = `+${formatNumber(amount)}`;
     effect.style.left = x + 'px';
     effect.style.top = y + 'px';
     clickEffectElement.appendChild(effect);
@@ -180,17 +238,40 @@ function buyAutoClicker(clicker) {
 
 // Calculate eggs per second from all auto-clickers
 function calculateEggsPerSecond() {
-    return gameState.autoClickers.reduce((total, clicker) => {
+    const baseEps = gameState.autoClickers.reduce((total, clicker) => {
         return total + (clicker.eggsPerSecond || 0);
     }, 0);
+    const ancientBonus = getAncientBonus('auto_click_power') * getAncientBonus('egg_value');
+    return Math.floor(baseEps * ancientBonus);
 }
 
 // Update UI
 function updateUI() {
     gameState.eggsPerSecond = calculateEggsPerSecond();
     eggsElement.textContent = formatNumber(gameState.eggs);
-    eggsPerClickElement.textContent = formatNumber(gameState.eggsPerClick);
+    
+    const baseEpc = gameState.eggsPerClick;
+    const clickPowerBonus = getAncientBonus('click_power');
+    const eggValueBonus = getAncientBonus('egg_value');
+    const actualEpc = Math.floor(baseEpc * clickPowerBonus * eggValueBonus);
+    eggsPerClickElement.textContent = formatNumber(actualEpc);
+    
     eggsPerSecondElement.textContent = formatNumber(gameState.eggsPerSecond);
+    
+    // Update rebirth UI
+    if (feathersElement) {
+        feathersElement.textContent = formatNumber(gameState.feathers);
+    }
+    if (feathersDisplayElement) {
+        feathersDisplayElement.textContent = formatNumber(gameState.feathers);
+    }
+    if (rebirthFeathersElement) {
+        const feathersGained = calculateRebirthFeathers();
+        rebirthFeathersElement.textContent = formatNumber(feathersGained);
+    }
+    if (rebirthCountElement) {
+        rebirthCountElement.textContent = formatNumber(gameState.rebirthCount);
+    }
 }
 
 // Start auto-clicker
@@ -198,6 +279,7 @@ function startAutoClicker() {
     setInterval(() => {
         if (gameState.eggsPerSecond > 0) {
             gameState.eggs += gameState.eggsPerSecond;
+            gameState.totalEggsEarned += gameState.eggsPerSecond;
             updateUI();
             renderUpgrades();
             renderAutoClickers();
@@ -227,6 +309,11 @@ function loadGame() {
         try {
             const loaded = JSON.parse(save);
             gameState = { ...gameState, ...loaded };
+            // Ensure rebirth fields exist
+            if (gameState.feathers === undefined) gameState.feathers = 0;
+            if (gameState.totalEggsEarned === undefined) gameState.totalEggsEarned = 0;
+            if (gameState.rebirthCount === undefined) gameState.rebirthCount = 0;
+            if (!gameState.ancients) gameState.ancients = {};
         } catch (e) {
             console.error('Failed to load save:', e);
         }
@@ -235,18 +322,121 @@ function loadGame() {
 
 // Reset game
 function resetGame() {
-    if (confirm('Are you sure you want to reset your progress? This cannot be undone!')) {
+    if (confirm('Are you sure you want to reset ALL progress including rebirths? This cannot be undone!')) {
         gameState = {
             eggs: 0,
             eggsPerClick: 1,
             eggsPerSecond: 0,
             upgrades: [],
-            autoClickers: []
+            autoClickers: [],
+            feathers: 0,
+            totalEggsEarned: 0,
+            rebirthCount: 0,
+            ancients: {}
         };
         localStorage.removeItem('birdClickerSave');
         updateUI();
         renderUpgrades();
         renderAutoClickers();
+        renderAncients();
+    }
+}
+
+// Get ancient bonus
+function getAncientBonus(ancientId) {
+    const level = gameState.ancients[ancientId] || 0;
+    if (level === 0) return 1;
+    const ancient = ancients.find(a => a.id === ancientId);
+    return ancient ? ancient.effect(level) : 1;
+}
+
+// Calculate rebirth feathers (similar to Clicker Heroes Hero Souls)
+function calculateRebirthFeathers() {
+    // Base calculation: sqrt(totalEggsEarned / 1e6) * (1 + rebirth bonus)
+    const baseFeathers = Math.floor(Math.sqrt(gameState.totalEggsEarned / 1000000));
+    const rebirthBonus = getAncientBonus('rebirth_bonus');
+    return Math.floor(baseFeathers * rebirthBonus);
+}
+
+// Perform rebirth
+function performRebirth() {
+    const feathersGained = calculateRebirthFeathers();
+    
+    if (feathersGained < 1) {
+        alert('You need to earn at least 1,000,000 total eggs to rebirth!');
+        return;
+    }
+    
+    if (!confirm(`Rebirth and gain ${formatNumber(feathersGained)} feathers?\n\nThis will reset your eggs, upgrades, and auto-clickers, but keep your feathers and ancients.`)) {
+        return;
+    }
+    
+    // Gain feathers
+    gameState.feathers += feathersGained;
+    gameState.rebirthCount += 1;
+    
+    // Reset current run
+    gameState.eggs = 0;
+    gameState.eggsPerClick = 1;
+    gameState.eggsPerSecond = 0;
+    gameState.upgrades = [];
+    gameState.autoClickers = [];
+    gameState.totalEggsEarned = 0;
+    
+    // Update UI
+    updateUI();
+    renderUpgrades();
+    renderAutoClickers();
+    renderAncients();
+    saveGame();
+    
+    alert(`Rebirth complete! You gained ${formatNumber(feathersGained)} feathers!\n\nTotal Rebirths: ${gameState.rebirthCount}`);
+}
+
+// Render ancients
+function renderAncients() {
+    if (!ancientsListElement) return;
+    
+    ancientsListElement.innerHTML = '';
+    ancients.forEach(ancient => {
+        const level = gameState.ancients[ancient.id] || 0;
+        const cost = Math.floor(ancient.baseCost * Math.pow(ancient.costMultiplier, level));
+        const canAfford = gameState.feathers >= cost;
+        
+        const ancientElement = document.createElement('div');
+        ancientElement.className = `ancient-item ${canAfford ? '' : 'disabled'}`;
+        ancientElement.innerHTML = `
+            <div class="ancient-emoji">${ancient.emoji}</div>
+            <div class="ancient-info">
+                <div class="ancient-name">${ancient.name} <span class="ancient-level">Lv. ${level}</span></div>
+                <div class="ancient-desc">${ancient.description}</div>
+            </div>
+            <div class="ancient-cost">${formatNumber(cost)} 🪶</div>
+        `;
+        
+        ancientElement.addEventListener('click', () => {
+            if (canAfford) {
+                buyAncient(ancient);
+            }
+        });
+        
+        ancientsListElement.appendChild(ancientElement);
+    });
+}
+
+// Buy ancient
+function buyAncient(ancient) {
+    const level = gameState.ancients[ancient.id] || 0;
+    const cost = Math.floor(ancient.baseCost * Math.pow(ancient.costMultiplier, level));
+    
+    if (gameState.feathers >= cost) {
+        gameState.feathers -= cost;
+        gameState.ancients[ancient.id] = (gameState.ancients[ancient.id] || 0) + 1;
+        updateUI();
+        renderAncients();
+        renderUpgrades();
+        renderAutoClickers();
+        saveGame();
     }
 }
 

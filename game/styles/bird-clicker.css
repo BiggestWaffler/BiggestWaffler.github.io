@@ -288,6 +288,147 @@
     text-align: right;
 }
 
+/* Rebirth Panel */
+.rebirth-panel {
+    background: rgba(0, 0, 0, 0.9);
+    border: 3px solid #ffd700;
+    box-shadow: 0 0 25px rgba(255, 215, 0, 0.4);
+    padding: 24px;
+}
+
+.rebirth-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.rebirth-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    background: rgba(255, 215, 0, 0.05);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+.rebirth-label {
+    font-size: 14px;
+    color: #bcdcff;
+    font-weight: 600;
+}
+
+.rebirth-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffd700;
+    text-shadow: 0 0 10px #ffd700;
+}
+
+.rebirth-btn {
+    width: 100%;
+    padding: 16px;
+    font-size: 18px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    border: 3px solid #ffd700;
+    background: rgba(255, 215, 0, 0.1);
+    color: #ffd700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+.rebirth-btn:hover {
+    background: rgba(255, 215, 0, 0.2);
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.7);
+    transform: translateY(-2px);
+}
+
+.rebirth-btn:active {
+    transform: translateY(0px);
+}
+
+/* Ancients Panel */
+.ancients-panel {
+    background: rgba(0, 0, 0, 0.9);
+    border: 3px solid #ffd700;
+    box-shadow: 0 0 25px rgba(255, 215, 0, 0.4);
+    padding: 24px;
+}
+
+.ancients-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.ancient-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: rgba(255, 215, 0, 0.05);
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.ancient-item:hover:not(.disabled) {
+    background: rgba(255, 215, 0, 0.15);
+    border-color: #ffd700;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    transform: translateX(5px);
+}
+
+.ancient-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ancient-emoji {
+    font-size: 36px;
+    width: 50px;
+    text-align: center;
+}
+
+.ancient-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ancient-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffd700;
+    text-shadow: 0 0 10px #ffd700;
+}
+
+.ancient-level {
+    font-size: 14px;
+    color: #bcdcff;
+    font-weight: 600;
+}
+
+.ancient-desc {
+    font-size: 14px;
+    color: #bcdcff;
+}
+
+.ancient-cost {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffd700;
+    text-shadow: 0 0 10px #ffd700;
+    min-width: 120px;
+    text-align: right;
+}
+
 /* Save Panel */
 .save-panel {
     display: flex;
@@ -329,23 +470,27 @@
 
 /* Scrollbar Styling */
 .upgrades-list::-webkit-scrollbar,
-.auto-clickers-list::-webkit-scrollbar {
+.auto-clickers-list::-webkit-scrollbar,
+.ancients-list::-webkit-scrollbar {
     width: 8px;
 }
 
 .upgrades-list::-webkit-scrollbar-track,
-.auto-clickers-list::-webkit-scrollbar-track {
+.auto-clickers-list::-webkit-scrollbar-track,
+.ancients-list::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.5);
 }
 
 .upgrades-list::-webkit-scrollbar-thumb,
-.auto-clickers-list::-webkit-scrollbar-thumb {
+.auto-clickers-list::-webkit-scrollbar-thumb,
+.ancients-list::-webkit-scrollbar-thumb {
     background: rgba(0, 255, 255, 0.5);
     border-radius: 4px;
 }
 
 .upgrades-list::-webkit-scrollbar-thumb:hover,
-.auto-clickers-list::-webkit-scrollbar-thumb:hover {
+.auto-clickers-list::-webkit-scrollbar-thumb:hover,
+.ancients-list::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 255, 255, 0.8);
 }
 
@@ -376,12 +521,14 @@
     }
     
     .upgrade-item,
-    .auto-clicker-item {
+    .auto-clicker-item,
+    .ancient-item {
         flex-wrap: wrap;
     }
     
     .upgrade-cost,
-    .clicker-cost {
+    .clicker-cost,
+    .ancient-cost {
         width: 100%;
         text-align: left;
         margin-top: 8px;
