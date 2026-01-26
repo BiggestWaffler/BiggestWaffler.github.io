@@ -46,6 +46,11 @@
     text-shadow: 0 0 10px #00ffff;
 }
 
+.golden-stat-value {
+    color: #ffd700;
+    text-shadow: 0 0 10px #ffd700;
+}
+
 /* Click Area */
 .click-area {
     position: relative;
@@ -115,6 +120,48 @@
     100% {
         opacity: 0;
         transform: translate(-50%, -100%) scale(1);
+    }
+}
+
+.golden-click-popup {
+    color: #ffd700 !important;
+    text-shadow: 
+        0 0 10px #ffd700,
+        0 0 20px #ffd700,
+        2px 2px 0px #000 !important;
+}
+
+.golden-egg-popup {
+    position: absolute;
+    font-size: 20px;
+    font-weight: 800;
+    color: #ffd700;
+    text-shadow: 
+        0 0 10px #ffd700,
+        0 0 20px #ffd700,
+        2px 2px 0px #000;
+    pointer-events: none;
+    animation: goldenEggPopup 2s ease-out forwards;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+}
+
+@keyframes goldenEggPopup {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(0.8) rotate(-5deg);
+    }
+    25% {
+        opacity: 1;
+        transform: translate(-50%, -80%) scale(1.3) rotate(5deg);
+    }
+    50% {
+        opacity: 1;
+        transform: translate(-50%, -100%) scale(1.2) rotate(-3deg);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -150%) scale(1) rotate(0deg);
     }
 }
 
@@ -350,6 +397,84 @@
     transform: translateY(0px);
 }
 
+/* Golden Egg Panel */
+.golden-egg-panel {
+    background: rgba(0, 0, 0, 0.9);
+    border: 3px solid #ffd700;
+    box-shadow: 0 0 25px rgba(255, 215, 0, 0.4);
+    padding: 24px;
+}
+
+.golden-egg-shop-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.golden-buff-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: rgba(255, 215, 0, 0.05);
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.golden-buff-item:hover:not(.disabled) {
+    background: rgba(255, 215, 0, 0.15);
+    border-color: #ffd700;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    transform: translateX(5px);
+}
+
+.golden-buff-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.golden-buff-emoji {
+    font-size: 36px;
+    width: 50px;
+    text-align: center;
+}
+
+.golden-buff-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.golden-buff-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffd700;
+    text-shadow: 0 0 10px #ffd700;
+}
+
+.golden-buff-desc {
+    font-size: 14px;
+    color: #bcdcff;
+}
+
+.golden-buff-level {
+    font-size: 12px;
+    color: #888;
+}
+
+.golden-buff-cost {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffd700;
+    text-shadow: 0 0 10px #ffd700;
+    min-width: 100px;
+    text-align: right;
+}
+
 /* Ancients Panel */
 .ancients-panel {
     background: rgba(0, 0, 0, 0.9);
@@ -471,26 +596,30 @@
 /* Scrollbar Styling */
 .upgrades-list::-webkit-scrollbar,
 .auto-clickers-list::-webkit-scrollbar,
-.ancients-list::-webkit-scrollbar {
+.ancients-list::-webkit-scrollbar,
+.golden-egg-shop-list::-webkit-scrollbar {
     width: 8px;
 }
 
 .upgrades-list::-webkit-scrollbar-track,
 .auto-clickers-list::-webkit-scrollbar-track,
-.ancients-list::-webkit-scrollbar-track {
+.ancients-list::-webkit-scrollbar-track,
+.golden-egg-shop-list::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.5);
 }
 
 .upgrades-list::-webkit-scrollbar-thumb,
 .auto-clickers-list::-webkit-scrollbar-thumb,
-.ancients-list::-webkit-scrollbar-thumb {
+.ancients-list::-webkit-scrollbar-thumb,
+.golden-egg-shop-list::-webkit-scrollbar-thumb {
     background: rgba(0, 255, 255, 0.5);
     border-radius: 4px;
 }
 
 .upgrades-list::-webkit-scrollbar-thumb:hover,
 .auto-clickers-list::-webkit-scrollbar-thumb:hover,
-.ancients-list::-webkit-scrollbar-thumb:hover {
+.ancients-list::-webkit-scrollbar-thumb:hover,
+.golden-egg-shop-list::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 255, 255, 0.8);
 }
 
@@ -522,13 +651,15 @@
     
     .upgrade-item,
     .auto-clicker-item,
-    .ancient-item {
+    .ancient-item,
+    .golden-buff-item {
         flex-wrap: wrap;
     }
     
     .upgrade-cost,
     .clicker-cost,
-    .ancient-cost {
+    .ancient-cost,
+    .golden-buff-cost {
         width: 100%;
         text-align: left;
         margin-top: 8px;

@@ -9,7 +9,13 @@ let gameState = {
     feathers: 0,
     totalEggsEarned: 0,
     rebirthCount: 0,
-    ancients: {}
+    ancients: {},
+    // Golden egg system
+    goldenEggs: 0,
+    goldenEggBuffs: {
+        autoClicker: 0,  // Number of auto-clicker buffs active
+        goldenLuck: 0    // Level of golden luck buff
+    }
 };
 
 // Upgrade definitions
@@ -34,6 +40,26 @@ const autoClickers = [
     { id: 'phoenix', name: 'Phoenix', description: '25 eggs/sec', cost: 50000, eggsPerSecond: 25, emoji: '🔥' },
     { id: 'dragon_bird', name: 'Dragon Bird', description: '50 eggs/sec', cost: 250000, eggsPerSecond: 50, emoji: '🐉' },
     { id: 'legendary_flock', name: 'Legendary Flock', description: '100 eggs/sec', cost: 1000000, eggsPerSecond: 100, emoji: '✨' }
+];
+
+// Golden egg buff definitions
+const goldenEggBuffs = [
+    {
+        id: 'autoClicker',
+        name: 'Golden Auto-Clicker',
+        description: 'Clicks 1 time per second',
+        cost: 1,
+        emoji: '🤖',
+        type: 'stackable' // Can buy multiple
+    },
+    {
+        id: 'goldenLuck',
+        name: 'Golden Luck',
+        description: '+0.1% golden egg drop chance per level',
+        cost: 1,
+        emoji: '🍀',
+        type: 'upgradeable' // Levels up
+    }
 ];
 
 // Ancient definitions (permanent upgrades)
@@ -92,14 +118,18 @@ const feathersDisplayElement = document.getElementById('feathers-display');
 const rebirthFeathersElement = document.getElementById('rebirth-feathers');
 const rebirthCountElement = document.getElementById('rebirth-count');
 const ancientsListElement = document.getElementById('ancients-list');
+const goldenEggsElement = document.getElementById('golden-eggs');
+const goldenEggShopListElement = document.getElementById('golden-egg-shop-list');
 
 // Initialize
 loadGame();
 renderUpgrades();
 renderAutoClickers();
 renderAncients();
+renderGoldenEggShop();
 updateUI();
 startAutoClicker();
+startGoldenAutoClicker();
 
 // Event Listeners
 birdElement.addEventListener('click', handleClick);
@@ -115,6 +145,10 @@ function handleClick(e) {
     
     gameState.eggs += actualEggsPerClick;
     gameState.totalEggsEarned += actualEggsPerClick;
+    
+    // Check for golden egg drop (1/1000 base chance, modified by golden luck)
+    checkGoldenEggDrop(e);
+    
     updateUI();
     renderUpgrades();
     renderAutoClickers();
@@ -125,6 +159,52 @@ function handleClick(e) {
     
     // Save progress
     saveGame();
+}
+
+// Check for golden egg drop
+function checkGoldenEggDrop(e) {
+    const totalChance = calculateGoldenEggChance();
+    
+    if (Math.random() < totalChance) {
+        gameState.goldenEggs += 1;
+        showGoldenEggEffect(e);
+        updateUI();
+        renderGoldenEggShop();
+    }
+}
+
+// Calculate total golden egg drop chance
+function calculateGoldenEggChance() {
+    const baseChance = 0.001; // 1/1000 chance of golden egg drop
+    const goldenLuckBonus = gameState.goldenEggBuffs.goldenLuck * 0.001; // +0.1% per level
+    return baseChance + goldenLuckBonus;
+}
+
+// Show golden egg drop effect
+function showGoldenEggEffect(e) {
+    const rect = birdElement.getBoundingClientRect();
+    let x, y;
+    
+    if (e.clientX && e.clientY) {
+        // From mouse event
+        x = e.clientX - rect.left;
+        y = e.clientY - rect.top;
+    } else {
+        // From auto-clicker (center of bird)
+        x = rect.width / 2;
+        y = rect.height / 2;
+    }
+    
+    const effect = document.createElement('div');
+    effect.className = 'golden-egg-popup';
+    effect.textContent = '🥚 GOLDEN EGG!';
+    effect.style.left = x + 'px';
+    effect.style.top = y + 'px';
+    clickEffectElement.appendChild(effect);
+    
+    setTimeout(() => {
+        effect.remove();
+    }, 2000);
 }
 
 // Show click effect
@@ -272,6 +352,9 @@ function updateUI() {
     if (rebirthCountElement) {
         rebirthCountElement.textContent = formatNumber(gameState.rebirthCount);
     }
+    if (goldenEggsElement) {
+        goldenEggsElement.textContent = formatNumber(gameState.goldenEggs);
+    }
 }
 
 // Start auto-clicker
@@ -285,6 +368,57 @@ function startAutoClicker() {
             renderAutoClickers();
             saveGame();
         }
+    }, 1000);
+}
+
+// Start golden auto-clicker (clicks 1 time per second)
+function startGoldenAutoClicker() {
+    setInterval(() => {
+        if (gameState.goldenEggBuffs.autoClicker > 0) {
+            // Calculate actual eggs per click with all bonuses
+            const baseEpc = gameState.eggsPerClick;
+            const clickPowerBonus = getAncientBonus('click_power');
+            const eggValueBonus = getAncientBonus('egg_value');
+            const actualEggsPerClick = Math.floor(baseEpc * clickPowerBonus * eggValueBonus);
+            
+            // Total eggs = eggs per click * number of golden auto-clickers
+            const totalEggs = actualEggsPerClick * gameState.goldenEggBuffs.autoClicker;
+            
+            gameState.eggs += totalEggs;
+            gameState.totalEggsEarned += totalEggs;
+            
+            // Show golden click animation
+            showGoldenClickEffect(totalEggs);
+            
+            // Animate bird
+            animateBird();
+            
+            updateUI();
+            renderUpgrades();
+            renderAutoClickers();
+            saveGame();
+        }
+    }, 1000);
+}
+
+// Show golden click effect
+function showGoldenClickEffect(amount) {
+    const clickAreaRect = clickEffectElement.getBoundingClientRect();
+    const birdRect = birdElement.getBoundingClientRect();
+    
+    // Calculate position relative to click area
+    const x = (birdRect.left + birdRect.width / 2) - clickAreaRect.left;
+    const y = (birdRect.top + birdRect.height / 2) - clickAreaRect.top;
+    
+    const effect = document.createElement('div');
+    effect.className = 'click-popup golden-click-popup';
+    effect.textContent = `+${formatNumber(amount)}`;
+    effect.style.left = x + 'px';
+    effect.style.top = y + 'px';
+    clickEffectElement.appendChild(effect);
+    
+    setTimeout(() => {
+        effect.remove();
     }, 1000);
 }
 
@@ -314,6 +448,23 @@ function loadGame() {
             if (gameState.totalEggsEarned === undefined) gameState.totalEggsEarned = 0;
             if (gameState.rebirthCount === undefined) gameState.rebirthCount = 0;
             if (!gameState.ancients) gameState.ancients = {};
+            // Ensure golden egg fields exist
+            if (gameState.goldenEggs === undefined) gameState.goldenEggs = 0;
+            if (!gameState.goldenEggBuffs) {
+                gameState.goldenEggBuffs = {
+                    autoClicker: 0,
+                    goldenLuck: 0
+                };
+            }
+            // Migration: Convert old snake_case IDs to camelCase
+            if (gameState.goldenEggBuffs.auto_clicker !== undefined) {
+                gameState.goldenEggBuffs.autoClicker = gameState.goldenEggBuffs.auto_clicker;
+                delete gameState.goldenEggBuffs.auto_clicker;
+            }
+            if (gameState.goldenEggBuffs.golden_luck !== undefined) {
+                gameState.goldenEggBuffs.goldenLuck = gameState.goldenEggBuffs.golden_luck;
+                delete gameState.goldenEggBuffs.golden_luck;
+            }
         } catch (e) {
             console.error('Failed to load save:', e);
         }
@@ -322,7 +473,7 @@ function loadGame() {
 
 // Reset game
 function resetGame() {
-    if (confirm('Are you sure you want to reset ALL progress including rebirths? This cannot be undone!')) {
+    if (confirm('Are you sure you want to reset ALL progress including rebirths and golden eggs? This cannot be undone!')) {
         gameState = {
             eggs: 0,
             eggsPerClick: 1,
@@ -332,13 +483,19 @@ function resetGame() {
             feathers: 0,
             totalEggsEarned: 0,
             rebirthCount: 0,
-            ancients: {}
+            ancients: {},
+            goldenEggs: 0,
+            goldenEggBuffs: {
+                autoClicker: 0,
+                goldenLuck: 0
+            }
         };
         localStorage.removeItem('birdClickerSave');
         updateUI();
         renderUpgrades();
         renderAutoClickers();
         renderAncients();
+        renderGoldenEggShop();
     }
 }
 
@@ -375,19 +532,21 @@ function performRebirth() {
     gameState.feathers += feathersGained;
     gameState.rebirthCount += 1;
     
-    // Reset current run
+    // Reset current run (keep golden eggs and buffs)
     gameState.eggs = 0;
     gameState.eggsPerClick = 1;
     gameState.eggsPerSecond = 0;
     gameState.upgrades = [];
     gameState.autoClickers = [];
     gameState.totalEggsEarned = 0;
+    // Note: goldenEggs and goldenEggBuffs persist through rebirth
     
     // Update UI
     updateUI();
     renderUpgrades();
     renderAutoClickers();
     renderAncients();
+    renderGoldenEggShop();
     saveGame();
     
     alert(`Rebirth complete! You gained ${formatNumber(feathersGained)} feathers!\n\nTotal Rebirths: ${gameState.rebirthCount}`);
@@ -436,6 +595,68 @@ function buyAncient(ancient) {
         renderAncients();
         renderUpgrades();
         renderAutoClickers();
+        saveGame();
+    }
+}
+
+// Render golden egg shop
+function renderGoldenEggShop() {
+    if (!goldenEggShopListElement) return;
+    
+    goldenEggShopListElement.innerHTML = '';
+    goldenEggBuffs.forEach(buff => {
+        let currentLevel = 0;
+        let displayText = '';
+        
+        if (buff.type === 'stackable') {
+            currentLevel = gameState.goldenEggBuffs[buff.id] || 0;
+            displayText = `Owned: ${currentLevel}`;
+        } else if (buff.type === 'upgradeable') {
+            currentLevel = gameState.goldenEggBuffs[buff.id] || 0;
+            displayText = `Level: ${currentLevel}`;
+            if (currentLevel > 0) {
+                const dropChance = calculateGoldenEggChance();
+                displayText += ` (${(dropChance * 100).toFixed(2)}% drop chance)`;
+            }
+        }
+        
+        const canAfford = gameState.goldenEggs >= buff.cost;
+        
+        const buffElement = document.createElement('div');
+        buffElement.className = `golden-buff-item ${canAfford ? '' : 'disabled'}`;
+        buffElement.innerHTML = `
+            <div class="golden-buff-emoji">${buff.emoji}</div>
+            <div class="golden-buff-info">
+                <div class="golden-buff-name">${buff.name}</div>
+                <div class="golden-buff-desc">${buff.description}</div>
+                <div class="golden-buff-level">${displayText}</div>
+            </div>
+            <div class="golden-buff-cost">${formatNumber(buff.cost)} 🥚</div>
+        `;
+        
+        buffElement.addEventListener('click', () => {
+            if (canAfford) {
+                buyGoldenEggBuff(buff);
+            }
+        });
+        
+        goldenEggShopListElement.appendChild(buffElement);
+    });
+}
+
+// Buy golden egg buff
+function buyGoldenEggBuff(buff) {
+    if (gameState.goldenEggs >= buff.cost) {
+        gameState.goldenEggs -= buff.cost;
+        
+        if (buff.type === 'stackable') {
+            gameState.goldenEggBuffs[buff.id] = (gameState.goldenEggBuffs[buff.id] || 0) + 1;
+        } else if (buff.type === 'upgradeable') {
+            gameState.goldenEggBuffs[buff.id] = (gameState.goldenEggBuffs[buff.id] || 0) + 1;
+        }
+        
+        updateUI();
+        renderGoldenEggShop();
         saveGame();
     }
 }
