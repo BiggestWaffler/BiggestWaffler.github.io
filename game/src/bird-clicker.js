@@ -113,7 +113,6 @@ const autoClickersListElement = document.getElementById('auto-clickers-list');
 const saveBtn = document.getElementById('save-btn');
 const resetBtn = document.getElementById('reset-btn');
 const rebirthBtn = document.getElementById('rebirth-btn');
-const feathersElement = document.getElementById('feathers');
 const feathersDisplayElement = document.getElementById('feathers-display');
 const rebirthFeathersElement = document.getElementById('rebirth-feathers');
 const rebirthCountElement = document.getElementById('rebirth-count');
@@ -339,9 +338,6 @@ function updateUI() {
     eggsPerSecondElement.textContent = formatNumber(gameState.eggsPerSecond);
     
     // Update rebirth UI
-    if (feathersElement) {
-        feathersElement.textContent = formatNumber(gameState.feathers);
-    }
     if (feathersDisplayElement) {
         feathersDisplayElement.textContent = formatNumber(gameState.feathers);
     }
@@ -352,6 +348,7 @@ function updateUI() {
     if (rebirthCountElement) {
         rebirthCountElement.textContent = formatNumber(gameState.rebirthCount);
     }
+    // Update golden eggs display in shop
     if (goldenEggsElement) {
         goldenEggsElement.textContent = formatNumber(gameState.goldenEggs);
     }
