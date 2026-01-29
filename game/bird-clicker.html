@@ -46,42 +46,59 @@
             </div>
 
             <div class="sidebar">
-                <div class="rebirth-panel">
-                    <h2 class="panel-title">Rebirth</h2>
-                    <div class="rebirth-info">
-                        <div class="rebirth-stat">
-                            <span class="rebirth-label">Feathers:</span>
-                            <span id="feathers-display" class="rebirth-value">0</span>
-                        </div>
-                        <div class="rebirth-stat">
-                            <span class="rebirth-label">Feathers on Rebirth:</span>
-                            <span id="rebirth-feathers" class="rebirth-value">0</span>
-                        </div>
-                        <div class="rebirth-stat">
-                            <span class="rebirth-label">Rebirths:</span>
-                            <span id="rebirth-count" class="rebirth-value">0</span>
+                <div class="sidebar-tabs">
+                    <button class="sidebar-tab-button active" data-tab-target="rebirth">Rebirth</button>
+                    <button class="sidebar-tab-button" data-tab-target="golden-egg-shop">Golden Egg Shop</button>
+                    <button class="sidebar-tab-button" data-tab-target="ancients">Ancients</button>
+                    <button class="sidebar-tab-button" data-tab-target="auto-clickers">Auto-Clickers</button>
+                </div>
+
+                <div class="sidebar-tab-panels">
+                    <div class="tab-panel active" data-tab="rebirth">
+                        <div class="rebirth-panel">
+                            <h2 class="panel-title">Rebirth</h2>
+                            <div class="rebirth-info">
+                                <div class="rebirth-stat">
+                                    <span class="rebirth-label">Feathers:</span>
+                                    <span id="feathers-display" class="rebirth-value">0</span>
+                                </div>
+                                <div class="rebirth-stat">
+                                    <span class="rebirth-label">Feathers on Rebirth:</span>
+                                    <span id="rebirth-feathers" class="rebirth-value">0</span>
+                                </div>
+                                <div class="rebirth-stat">
+                                    <span class="rebirth-label">Rebirths:</span>
+                                    <span id="rebirth-count" class="rebirth-value">0</span>
+                                </div>
+                            </div>
+                            <button id="rebirth-btn" class="rebirth-btn">Rebirth</button>
                         </div>
                     </div>
-                    <button id="rebirth-btn" class="rebirth-btn">Rebirth</button>
-                </div>
 
-                <div class="golden-egg-panel">
-                    <h2 class="panel-title">Golden Egg Shop</h2>
-                    <div class="golden-eggs-display">
-                        <span class="golden-eggs-label">Golden Eggs:</span>
-                        <span id="golden-eggs" class="golden-eggs-value">0</span>
+                    <div class="tab-panel" data-tab="golden-egg-shop">
+                        <div class="golden-egg-panel">
+                            <h2 class="panel-title">Golden Egg Shop</h2>
+                            <div class="golden-eggs-display">
+                                <span class="golden-eggs-label">Golden Eggs:</span>
+                                <span id="golden-eggs" class="golden-eggs-value">0</span>
+                            </div>
+                            <div id="golden-egg-shop-list" class="golden-egg-shop-list"></div>
+                        </div>
                     </div>
-                    <div id="golden-egg-shop-list" class="golden-egg-shop-list"></div>
-                </div>
 
-                <div class="ancients-panel">
-                    <h2 class="panel-title">Ancients</h2>
-                    <div id="ancients-list" class="ancients-list"></div>
-                </div>
+                    <div class="tab-panel" data-tab="ancients">
+                        <div class="ancients-panel">
+                            <h2 class="panel-title">Ancients</h2>
+                            <div id="ancients-list" class="ancients-list"></div>
+                        </div>
+                    </div>
 
-                <div class="auto-clickers-panel">
-                    <h2 class="panel-title">Auto-Clickers</h2>
-                    <div id="auto-clickers-list" class="auto-clickers-list"></div>
+                    <div class="tab-panel" data-tab="auto-clickers">
+                        <div class="auto-clickers-panel">
+                            <h2 class="panel-title">Auto-Clickers</h2>
+                            <div id="auto-clickers-list" class="auto-clickers-list"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="save-panel">

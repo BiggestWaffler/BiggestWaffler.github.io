@@ -120,6 +120,10 @@ const ancientsListElement = document.getElementById('ancients-list');
 const goldenEggsElement = document.getElementById('golden-eggs');
 const goldenEggShopListElement = document.getElementById('golden-egg-shop-list');
 
+// Sidebar tab elements
+const sidebarTabButtons = document.querySelectorAll('.sidebar-tab-button');
+const sidebarTabPanels = document.querySelectorAll('.tab-panel');
+
 // Initialize
 loadGame();
 renderUpgrades();
@@ -135,6 +139,27 @@ birdElement.addEventListener('click', handleClick);
 saveBtn.addEventListener('click', saveGame);
 resetBtn.addEventListener('click', resetGame);
 if (rebirthBtn) rebirthBtn.addEventListener('click', performRebirth);
+
+// Sidebar tab switching
+sidebarTabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        const target = button.getAttribute('data-tab-target');
+        if (!target) return;
+
+        // Update button active states
+        sidebarTabButtons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+
+        // Update panel visibility
+        sidebarTabPanels.forEach(panel => {
+            if (panel.getAttribute('data-tab') === target) {
+                panel.classList.add('active');
+            } else {
+                panel.classList.remove('active');
+            }
+        });
+    });
+});
 
 // Click handler
 function handleClick(e) {

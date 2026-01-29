@@ -256,7 +256,57 @@
 .sidebar {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 16px;
+}
+
+.sidebar-tabs {
+    display: flex;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.9);
+    border: 3px solid #ffd700;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+    padding: 6px;
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+.sidebar-tab-button {
+    flex: 0 0 auto;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: 2px solid transparent;
+    background: transparent;
+    color: #bcdcff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.sidebar-tab-button:hover {
+    color: #ffd700;
+}
+
+.sidebar-tab-button.active {
+    border-color: #ffd700;
+    background: rgba(255, 215, 0, 0.15);
+    color: #ffd700;
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+}
+
+.sidebar-tab-panels {
+    display: block;
+}
+
+.tab-panel {
+    display: none;
+}
+
+.tab-panel.active {
+    display: block;
 }
 
 .auto-clickers-panel {
