@@ -666,6 +666,124 @@
     transform: translateY(-2px);
 }
 
+/* Custom confirmation / alert modal */
+.confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+    animation: confirmFadeIn 0.2s ease-out;
+}
+
+.confirm-overlay[hidden] {
+    display: none !important;
+}
+
+@keyframes confirmFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.confirm-box {
+    background: rgba(0, 0, 0, 0.95);
+    border: 3px solid #00ffff;
+    box-shadow: 0 0 40px rgba(0, 255, 255, 0.5), inset 0 0 30px rgba(0, 255, 255, 0.05);
+    padding: 28px;
+    max-width: 420px;
+    width: 100%;
+    animation: confirmSlideIn 0.25s ease-out;
+}
+
+@keyframes confirmSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.confirm-title {
+    margin: 0 0 16px 0;
+    font-size: 22px;
+    font-weight: 800;
+    color: #00ffff;
+    text-shadow: 0 0 12px #00ffff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.confirm-message {
+    margin: 0 0 24px 0;
+    font-size: 15px;
+    line-height: 1.5;
+    color: #bcdcff;
+    white-space: pre-line;
+}
+
+.confirm-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.confirm-btn {
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: 2px solid;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: transparent;
+}
+
+.confirm-cancel {
+    border-color: #666;
+    color: #bcdcff;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.confirm-cancel:hover {
+    border-color: #00ffff;
+    color: #00ffff;
+    background: rgba(0, 255, 255, 0.1);
+}
+
+.confirm-ok {
+    border-color: #ffd700;
+    color: #ffd700;
+    background: rgba(255, 215, 0, 0.1);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+}
+
+.confirm-ok:hover {
+    background: rgba(255, 215, 0, 0.2);
+    box-shadow: 0 0 25px rgba(255, 215, 0, 0.5);
+    transform: translateY(-1px);
+}
+
+/* Alert-only mode: single OK button (gold) */
+.confirm-box.confirm-alert .confirm-ok {
+    border-color: #00ffff;
+    color: #00ffff;
+    background: rgba(0, 255, 255, 0.1);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+}
+
+.confirm-box.confirm-alert .confirm-ok:hover {
+    background: rgba(0, 255, 255, 0.2);
+    box-shadow: 0 0 25px rgba(0, 255, 255, 0.5);
+}
+
 /* Scrollbar Styling */
 .upgrades-list::-webkit-scrollbar,
 .auto-clickers-list::-webkit-scrollbar,

@@ -120,6 +120,14 @@ const ancientsListElement = document.getElementById('ancients-list');
 const goldenEggsElement = document.getElementById('golden-eggs');
 const goldenEggShopListElement = document.getElementById('golden-egg-shop-list');
 
+// Custom modal elements
+const confirmOverlay = document.getElementById('confirm-overlay');
+const confirmTitleEl = document.getElementById('confirm-title');
+const confirmMessageEl = document.getElementById('confirm-message');
+const confirmCancelBtn = document.getElementById('confirm-cancel');
+const confirmOkBtn = document.getElementById('confirm-ok');
+const confirmBoxEl = confirmOverlay ? confirmOverlay.querySelector('.confirm-box') : null;
+
 // Sidebar tab elements
 const sidebarTabButtons = document.querySelectorAll('.sidebar-tab-button');
 const sidebarTabPanels = document.querySelectorAll('.tab-panel');
@@ -493,9 +501,63 @@ function loadGame() {
     }
 }
 
+// --- Custom confirmation / alert modals ---
+let confirmResolve = null;
+
+function showConfirm({ title, message, confirmText = 'OK', cancelText = 'Cancel' }) {
+    if (!confirmOverlay || !confirmBoxEl) return Promise.resolve(false);
+    confirmTitleEl.textContent = title;
+    confirmMessageEl.textContent = message;
+    confirmOkBtn.textContent = confirmText;
+    confirmCancelBtn.textContent = cancelText;
+    confirmCancelBtn.style.display = '';
+    confirmBoxEl.classList.remove('confirm-alert');
+    confirmOverlay.hidden = false;
+
+    return new Promise((resolve) => {
+        confirmResolve = resolve;
+    });
+}
+
+function showAlert({ title, message }) {
+    if (!confirmOverlay || !confirmBoxEl) return Promise.resolve();
+    confirmTitleEl.textContent = title;
+    confirmMessageEl.textContent = message;
+    confirmOkBtn.textContent = 'OK';
+    confirmCancelBtn.style.display = 'none';
+    confirmBoxEl.classList.add('confirm-alert');
+    confirmOverlay.hidden = false;
+
+    return new Promise((resolve) => {
+        confirmResolve = () => { resolve(); };
+    });
+}
+
+function closeConfirm(result) {
+    if (typeof confirmResolve === 'function') {
+        confirmResolve(result);
+    }
+    confirmResolve = null;
+    if (confirmOverlay) confirmOverlay.hidden = true;
+}
+
+if (confirmOverlay) {
+    if (confirmOkBtn) confirmOkBtn.addEventListener('click', () => closeConfirm(true));
+    if (confirmCancelBtn) confirmCancelBtn.addEventListener('click', () => closeConfirm(false));
+    confirmOverlay.addEventListener('click', (e) => {
+        if (e.target === confirmOverlay) closeConfirm(false);
+    });
+}
+
 // Reset game
 function resetGame() {
-    if (confirm('Are you sure you want to reset ALL progress including rebirths and golden eggs? This cannot be undone!')) {
+    showConfirm({
+        title: 'Reset Game',
+        message: 'Are you sure you want to reset ALL progress including rebirths and golden eggs? This cannot be undone!',
+        confirmText: 'Reset',
+        cancelText: 'Cancel'
+    }).then((confirmed) => {
+        if (!confirmed) return;
         gameState = {
             eggs: 0,
             eggsPerClick: 1,
@@ -518,7 +580,7 @@ function resetGame() {
         renderAutoClickers();
         renderAncients();
         renderGoldenEggShop();
-    }
+    });
 }
 
 // Get ancient bonus
@@ -542,36 +604,47 @@ function performRebirth() {
     const feathersGained = calculateRebirthFeathers();
     
     if (feathersGained < 1) {
-        alert('You need to earn at least 1,000,000 total eggs to rebirth!');
+        showAlert({
+            title: 'Not Enough Eggs',
+            message: 'You need to earn at least 1,000,000 total eggs to rebirth!'
+        });
         return;
     }
     
-    if (!confirm(`Rebirth and gain ${formatNumber(feathersGained)} feathers?\n\nThis will reset your eggs, upgrades, and auto-clickers, but keep your feathers and ancients.`)) {
-        return;
-    }
-    
-    // Gain feathers
-    gameState.feathers += feathersGained;
-    gameState.rebirthCount += 1;
-    
-    // Reset current run (keep golden eggs and buffs)
-    gameState.eggs = 0;
-    gameState.eggsPerClick = 1;
-    gameState.eggsPerSecond = 0;
-    gameState.upgrades = [];
-    gameState.autoClickers = [];
-    gameState.totalEggsEarned = 0;
-    // Note: goldenEggs and goldenEggBuffs persist through rebirth
-    
-    // Update UI
-    updateUI();
-    renderUpgrades();
-    renderAutoClickers();
-    renderAncients();
-    renderGoldenEggShop();
-    saveGame();
-    
-    alert(`Rebirth complete! You gained ${formatNumber(feathersGained)} feathers!\n\nTotal Rebirths: ${gameState.rebirthCount}`);
+    showConfirm({
+        title: 'Rebirth',
+        message: `Rebirth and gain ${formatNumber(feathersGained)} feathers?\n\nThis will reset your eggs, upgrades, and auto-clickers, but keep your feathers and ancients.`,
+        confirmText: 'Rebirth',
+        cancelText: 'Cancel'
+    }).then((confirmed) => {
+        if (!confirmed) return;
+
+        // Gain feathers
+        gameState.feathers += feathersGained;
+        gameState.rebirthCount += 1;
+
+        // Reset current run (keep golden eggs and buffs)
+        gameState.eggs = 0;
+        gameState.eggsPerClick = 1;
+        gameState.eggsPerSecond = 0;
+        gameState.upgrades = [];
+        gameState.autoClickers = [];
+        gameState.totalEggsEarned = 0;
+        // Note: goldenEggs and goldenEggBuffs persist through rebirth
+
+        // Update UI
+        updateUI();
+        renderUpgrades();
+        renderAutoClickers();
+        renderAncients();
+        renderGoldenEggShop();
+        saveGame();
+
+        showAlert({
+            title: 'Rebirth Complete',
+            message: `You gained ${formatNumber(feathersGained)} feathers!\n\nTotal Rebirths: ${gameState.rebirthCount}`
+        });
+    });
 }
 
 // Render ancients
