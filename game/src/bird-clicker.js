@@ -18,6 +18,17 @@ let gameState = {
     }
 };
 
+// Cost scaling: each extra purchase of the same item costs more (incentivizes rebirth)
+const UPGRADE_COST_MULTIPLIER = 1.15;      // 15% more per owned
+const AUTO_CLICKER_COST_MULTIPLIER = 1.12; // 12% more per owned (auto-clickers scale slightly gentler)
+
+function getUpgradeCost(upgrade, ownedCount) {
+    return Math.floor(upgrade.cost * Math.pow(UPGRADE_COST_MULTIPLIER, ownedCount));
+}
+function getAutoClickerCost(clicker, ownedCount) {
+    return Math.floor(clicker.cost * Math.pow(AUTO_CLICKER_COST_MULTIPLIER, ownedCount));
+}
+
 // Upgrade definitions
 const upgrades = [
     { id: 'better_food', name: 'Better Bird Food', description: '+1 egg per click', cost: 10, eggsPerClick: 1, emoji: '🌾' },
@@ -270,7 +281,8 @@ function renderUpgrades() {
     upgradesListElement.innerHTML = '';
     upgrades.forEach(upgrade => {
         const owned = gameState.upgrades.filter(u => u.id === upgrade.id).length;
-        const canAfford = gameState.eggs >= upgrade.cost;
+        const cost = getUpgradeCost(upgrade, owned);
+        const canAfford = gameState.eggs >= cost;
         
         const upgradeElement = document.createElement('div');
         upgradeElement.className = `upgrade-item ${canAfford ? '' : 'disabled'}`;
@@ -281,12 +293,13 @@ function renderUpgrades() {
                 <div class="upgrade-desc">${upgrade.description}</div>
                 <div class="upgrade-owned">Owned: ${owned}</div>
             </div>
-            <div class="upgrade-cost">${formatNumber(upgrade.cost)} eggs</div>
+            <div class="upgrade-cost">${formatNumber(cost)} eggs</div>
         `;
         
         // Always add click listener, but check affordability in the handler
         upgradeElement.addEventListener('click', () => {
-            if (canAfford) {
+            const currentCost = getUpgradeCost(upgrade, gameState.upgrades.filter(u => u.id === upgrade.id).length);
+            if (gameState.eggs >= currentCost) {
                 buyUpgrade(upgrade);
             }
         });
@@ -300,7 +313,8 @@ function renderAutoClickers() {
     autoClickersListElement.innerHTML = '';
     autoClickers.forEach(clicker => {
         const owned = gameState.autoClickers.filter(c => c.id === clicker.id).length;
-        const canAfford = gameState.eggs >= clicker.cost;
+        const cost = getAutoClickerCost(clicker, owned);
+        const canAfford = gameState.eggs >= cost;
         
         const clickerElement = document.createElement('div');
         clickerElement.className = `auto-clicker-item ${canAfford ? '' : 'disabled'}`;
@@ -311,12 +325,13 @@ function renderAutoClickers() {
                 <div class="clicker-desc">${clicker.description}</div>
                 <div class="clicker-owned">Owned: ${owned}</div>
             </div>
-            <div class="clicker-cost">${formatNumber(clicker.cost)} eggs</div>
+            <div class="clicker-cost">${formatNumber(cost)} eggs</div>
         `;
         
         // Always add click listener, but check affordability in the handler
         clickerElement.addEventListener('click', () => {
-            if (canAfford) {
+            const currentCost = getAutoClickerCost(clicker, gameState.autoClickers.filter(c => c.id === clicker.id).length);
+            if (gameState.eggs >= currentCost) {
                 buyAutoClicker(clicker);
             }
         });
@@ -327,8 +342,10 @@ function renderAutoClickers() {
 
 // Buy upgrade
 function buyUpgrade(upgrade) {
-    if (gameState.eggs >= upgrade.cost) {
-        gameState.eggs -= upgrade.cost;
+    const owned = gameState.upgrades.filter(u => u.id === upgrade.id).length;
+    const cost = getUpgradeCost(upgrade, owned);
+    if (gameState.eggs >= cost) {
+        gameState.eggs -= cost;
         gameState.eggsPerClick += upgrade.eggsPerClick;
         gameState.upgrades.push({ ...upgrade });
         updateUI();
@@ -339,8 +356,10 @@ function buyUpgrade(upgrade) {
 
 // Buy auto-clicker
 function buyAutoClicker(clicker) {
-    if (gameState.eggs >= clicker.cost) {
-        gameState.eggs -= clicker.cost;
+    const owned = gameState.autoClickers.filter(c => c.id === clicker.id).length;
+    const cost = getAutoClickerCost(clicker, owned);
+    if (gameState.eggs >= cost) {
+        gameState.eggs -= cost;
         gameState.autoClickers.push({ ...clicker });
         updateUI();
         renderAutoClickers();
