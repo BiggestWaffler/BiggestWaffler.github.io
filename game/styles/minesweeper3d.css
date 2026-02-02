@@ -1,0 +1,163 @@
+/* 3D Minesweeper - Arcade Theme */
+
+.game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+}
+
+.hud {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px;
+    color: #00ffff;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    background: rgba(0, 0, 0, 0.8);
+    padding: 12px 24px;
+    border: 2px solid #00ffff;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+}
+
+.hud-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.hud-label {
+    font-size: 12px;
+    color: #bcdcff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.new-game-btn {
+    background: transparent;
+    color: #00ffff;
+    border: 2px solid #00ffff;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+    margin-left: 12px;
+}
+
+.new-game-btn:hover {
+    background: rgba(0, 255, 255, 0.2);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+    transform: translateY(-2px);
+}
+
+.canvas-container {
+    width: min(90vw, 700px);
+    height: min(70vh, 500px);
+    background: rgba(0, 0, 0, 0.9);
+    border: 4px solid #00ffff;
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+    overflow: hidden;
+    position: relative;
+}
+
+.canvas-container canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+}
+
+.canvas-container canvas:active {
+    cursor: grabbing;
+}
+
+.controls-info {
+    color: #bcdcff;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+/* Game Over / Win Modal */
+.game-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(5px);
+}
+
+.game-modal.show {
+    display: flex;
+}
+
+.game-modal-content {
+    background: #0a0a0a;
+    border: 3px solid #ff00ff;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 0 50px rgba(255, 0, 255, 0.4);
+    max-width: 400px;
+    width: 90%;
+}
+
+.game-modal-title {
+    font-size: 36px;
+    color: #ff00ff;
+    margin: 0 0 16px 0;
+    text-transform: uppercase;
+    text-shadow: 0 0 20px rgba(255, 0, 255, 0.6);
+    font-weight: 900;
+}
+
+.game-modal-content.win .game-modal-title {
+    color: #00ff88;
+    text-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+}
+
+.game-modal-content.win {
+    border-color: #00ff88;
+    box-shadow: 0 0 50px rgba(0, 255, 136, 0.4);
+}
+
+.game-modal-message {
+    font-size: 18px;
+    color: #bcdcff;
+    margin: 0 0 24px 0;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.modal-btn {
+    background: transparent;
+    color: #00ffff;
+    border: 2px solid #00ffff;
+    padding: 12px 30px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.modal-btn:hover {
+    background: rgba(0, 255, 255, 0.2);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+    transform: translateY(-2px);
+}

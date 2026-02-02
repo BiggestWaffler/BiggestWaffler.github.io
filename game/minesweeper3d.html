@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Minesweeper - Ethan Liu</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/game/styles/games.css">
+    <link rel="stylesheet" href="/game/styles/minesweeper3d.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="wrap">
+        <header class="topbar">
+            <h1>3D Minesweeper</h1>
+            <a class="home" href="/game/">← Back</a>
+        </header>
+
+        <div class="game-container">
+            <div class="hud">
+                <div class="hud-item">
+                    <span class="hud-label">Mines</span>
+                    <span id="minesCount">0</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">Flags</span>
+                    <span id="flagsCount">0</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">Time</span>
+                    <span id="timer">0</span>
+                </div>
+                <button id="newGameBtn" class="new-game-btn">New Game</button>
+            </div>
+
+            <div id="canvasContainer" class="canvas-container"></div>
+
+            <div class="controls-info">
+                Left-click: Reveal &nbsp;|&nbsp; Right-click: Flag &nbsp;|&nbsp; Drag: Rotate view
+            </div>
+        </div>
+    </div>
+
+    <div id="gameOverModal" class="game-modal">
+        <div class="game-modal-content">
+            <h2 id="gameOverTitle" class="game-modal-title">Game Over</h2>
+            <p id="gameOverMessage" class="game-modal-message"></p>
+            <button id="playAgainBtn" class="modal-btn">Play Again</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="/game/src/minesweeper3d.js"></script>
+</body>
+</html>
