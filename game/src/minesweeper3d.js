@@ -166,7 +166,8 @@
         for (let x = 0; x < SIZE; x++)
             for (let y = 0; y < SIZE; y++)
                 for (let z = 0; z < SIZE; z++)
-                    all.push(cellMeshes[x][y][z]);
+                    if (!grid[x][y][z].revealed)
+                        all.push(cellMeshes[x][y][z]);
         const hits = raycaster.intersectObjects(all);
         if (hits.length > 0) return hits[0].object.userData;
         return null;
@@ -190,9 +191,9 @@
         }
 
         c.revealed = true;
-        setCellMaterial(x, y, z, COLORS.revealed);
 
         if (c.adjacent === 0) {
+            cellMeshes[x][y][z].visible = false;
             for (let dx = -1; dx <= 1; dx++)
                 for (let dy = -1; dy <= 1; dy++)
                     for (let dz = -1; dz <= 1; dz++) {
@@ -202,6 +203,7 @@
                             revealCell(nx, ny, nz);
                     }
         } else {
+            cellMeshes[x][y][z].visible = false;
             addNumberLabel(x, y, z, c.adjacent);
         }
 
@@ -236,7 +238,7 @@
         mesh.position.set(
             x - (SIZE - 1) / 2,
             y - (SIZE - 1) / 2,
-            z - (SIZE - 1) / 2 + 0.5
+            z - (SIZE - 1) / 2
         );
         scene.add(mesh);
         numberMeshes.push({ mesh: mesh, type: 'number' });
