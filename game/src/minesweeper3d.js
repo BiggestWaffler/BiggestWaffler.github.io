@@ -13,10 +13,13 @@
         hidden: 0x1a3a4a,
         revealed: 0x0d1f2d,
         flag: 0xff4444,
-        mine: 0x333333,
-        mineHit: 0xaa0000,
+        mine: 0xcc3300,
+        mineHit: 0xff0000,
         num: [null, 0x00bfff, 0x00cc66, 0xff6600, 0xcc00cc, 0xcc0000, 0x00cccc]
     };
+
+    const ZOOM_MIN = 6;
+    const ZOOM_MAX = 25;
 
     let scene, camera, renderer, raycaster, mouse;
     let grid = [];             // 3D array of cell state
@@ -267,8 +270,10 @@
         for (let x = 0; x < SIZE; x++)
             for (let y = 0; y < SIZE; y++)
                 for (let z = 0; z < SIZE; z++)
-                    if (grid[x][y][z].hasMine && !grid[x][y][z].flagged)
+                    if (grid[x][y][z].hasMine) {
+                        cellMeshes[x][y][z].visible = true;
                         setCellMaterial(x, y, z, COLORS.mine);
+                    }
     }
 
     function checkWin() {
@@ -378,7 +383,17 @@
             e.preventDefault();
         });
 
+        renderer.domElement.addEventListener('wheel', function (e) {
+            e.preventDefault();
+            cameraDistance += e.deltaY * 0.03;
+            cameraDistance = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, cameraDistance));
+            updateCameraPosition();
+        }, { passive: false });
+
         document.getElementById('newGameBtn').addEventListener('click', resetGame);
+        document.getElementById('viewBoardBtn').addEventListener('click', function () {
+            document.getElementById('gameOverModal').classList.remove('show');
+        });
         document.getElementById('playAgainBtn').addEventListener('click', function () {
             document.getElementById('gameOverModal').classList.remove('show');
             resetGame();
