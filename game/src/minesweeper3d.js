@@ -129,12 +129,21 @@
         }
     }
 
-    function placeMines(excludeX, excludeY, excludeZ) {
+    function placeMines(firstClickX, firstClickY, firstClickZ) {
+        const exclude = {};
+        for (let dx = -1; dx <= 1; dx++)
+            for (let dy = -1; dy <= 1; dy++)
+                for (let dz = -1; dz <= 1; dz++) {
+                    const x = firstClickX + dx, y = firstClickY + dy, z = firstClickZ + dz;
+                    if (x >= 0 && x < SIZE && y >= 0 && y < SIZE && z >= 0 && z < SIZE)
+                        exclude[x + ',' + y + ',' + z] = true;
+                }
+
         const list = [];
         for (let x = 0; x < SIZE; x++)
             for (let y = 0; y < SIZE; y++)
                 for (let z = 0; z < SIZE; z++)
-                    if (x !== excludeX || y !== excludeY || z !== excludeZ)
+                    if (!exclude[x + ',' + y + ',' + z])
                         list.push({ x, y, z });
 
         for (let i = 0; i < MINE_COUNT && list.length > 0; i++) {
