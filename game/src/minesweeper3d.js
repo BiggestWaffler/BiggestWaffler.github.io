@@ -33,8 +33,10 @@
     let seconds = 0;
     let isDragging = false;
     let prevMouseX = 0, prevMouseY = 0;
+    let downX = 0, downY = 0;
     let cameraAngleX = 0.6, cameraAngleY = 0.8;
     let cameraDistance = 12;
+    let dragInvertX = false;
     let container;
 
     function init() {
@@ -354,7 +356,8 @@
             mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
             mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
             if (isDragging) {
-                cameraAngleY += (e.clientX - prevMouseX) * 0.01;
+                const h = (dragInvertX ? 1 : -1) * (e.clientX - prevMouseX) * 0.01;
+                cameraAngleY += h;
                 cameraAngleX += (e.clientY - prevMouseY) * 0.01;
                 cameraAngleX = Math.max(-1.2, Math.min(1.2, cameraAngleX));
                 prevMouseX = e.clientX;
@@ -368,14 +371,16 @@
                 isDragging = true;
                 prevMouseX = e.clientX;
                 prevMouseY = e.clientY;
+                downX = e.clientX;
+                downY = e.clientY;
             }
         });
 
         renderer.domElement.addEventListener('pointerup', function (e) {
             if (e.button === 0) {
                 if (isDragging) {
-                    const dx = e.clientX - prevMouseX;
-                    const dy = e.clientY - prevMouseY;
+                    const dx = e.clientX - downX;
+                    const dy = e.clientY - downY;
                     if (Math.abs(dx) < 5 && Math.abs(dy) < 5) {
                         const cell = getCellUnderMouse();
                         if (cell) revealCell(cell.x, cell.y, cell.z);
@@ -406,6 +411,17 @@
         document.getElementById('playAgainBtn').addEventListener('click', function () {
             document.getElementById('gameOverModal').classList.remove('show');
             resetGame();
+        });
+
+        window.addEventListener('keydown', function (e) {
+            if ((e.key === 'i' || e.key === 'I') && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                if (e.target === document.body || !e.target.closest('input, textarea')) {
+                    e.preventDefault();
+                    dragInvertX = !dragInvertX;
+                    var el = document.getElementById('controlsInfo');
+                    if (el) el.innerHTML = 'Left-click: Reveal &nbsp;|&nbsp; Right-click: Flag &nbsp;|&nbsp; Drag: Rotate &nbsp;|&nbsp; Scroll: Zoom' + (dragInvertX ? ' &nbsp;|&nbsp; <span style="color:#ffcc00">Drag: Inverted (I to toggle)</span>' : ' &nbsp;|&nbsp; I: Invert drag');
+                }
+            }
         });
     }
 
