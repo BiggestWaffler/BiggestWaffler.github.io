@@ -1,14 +1,13 @@
 /**
  * 3D Minesweeper - Three.js
- * Grid: 5x5x5, face-adjacent neighbors (6), mines placed after first click.
+ * Configurable grid size (4-10), difficulty (mine %), mines placed after first click.
  */
 
 (function () {
     'use strict';
 
-    const SIZE = 5;           // 5x5x5 grid
-    const MINE_COUNT = 10;    // number of mines
     const CELL_SCALE = 0.92;  // gap between cubes
+    const DIFFICULTY_PCT = { easy: 0.10, medium: 0.15, hard: 0.22 };
     const COLORS = {
         hidden: 0x1a3a4a,
         revealed: 0x0d1f2d,
@@ -19,7 +18,10 @@
     };
 
     const ZOOM_MIN = 6;
-    const ZOOM_MAX = 25;
+    const ZOOM_MAX = 35;
+
+    let gridSize = 5;
+    let mineCount = 10;
 
     let scene, camera, renderer, raycaster, mouse;
     let grid = [];             // 3D array of cell state
@@ -70,6 +72,7 @@
         back.position.set(-5, 3, -5);
         scene.add(back);
 
+        getSettingsFromUI();
         buildGrid();
         bindEvents();
         updateHUD();
@@ -99,13 +102,13 @@
         cellMeshes = [];
         const geometry = new THREE.BoxGeometry(CELL_SCALE, CELL_SCALE, CELL_SCALE);
 
-        for (let x = 0; x < SIZE; x++) {
+        for (let x = 0; x < gridSize; x++) {
             grid[x] = [];
             cellMeshes[x] = [];
-            for (let y = 0; y < SIZE; y++) {
+            for (let y = 0; y < gridSize; y++) {
                 grid[x][y] = [];
                 cellMeshes[x][y] = [];
-                for (let z = 0; z < SIZE; z++) {
+                for (let z = 0; z < gridSize; z++) {
                     grid[x][y][z] = {
                         hasMine: false,
                         revealed: false,
@@ -119,9 +122,9 @@
                     });
                     const mesh = new THREE.Mesh(geometry.clone(), mat);
                     mesh.position.set(
-                        x - (SIZE - 1) / 2,
-                        y - (SIZE - 1) / 2,
-                        z - (SIZE - 1) / 2
+                        x - (gridSize - 1) / 2,
+                        y - (gridSize - 1) / 2,
+                        z - (gridSize - 1) / 2
                     );
                     mesh.userData = { x, y, z };
                     scene.add(mesh);
@@ -137,27 +140,27 @@
             for (let dy = -1; dy <= 1; dy++)
                 for (let dz = -1; dz <= 1; dz++) {
                     const x = firstClickX + dx, y = firstClickY + dy, z = firstClickZ + dz;
-                    if (x >= 0 && x < SIZE && y >= 0 && y < SIZE && z >= 0 && z < SIZE)
+                    if (x >= 0 && x < gridSize && y >= 0 && y < gridSize && z >= 0 && z < gridSize)
                         exclude[x + ',' + y + ',' + z] = true;
                 }
 
         const list = [];
-        for (let x = 0; x < SIZE; x++)
-            for (let y = 0; y < SIZE; y++)
-                for (let z = 0; z < SIZE; z++)
+        for (let x = 0; x < gridSize; x++)
+            for (let y = 0; y < gridSize; y++)
+                for (let z = 0; z < gridSize; z++)
                     if (!exclude[x + ',' + y + ',' + z])
                         list.push({ x, y, z });
 
-        for (let i = 0; i < MINE_COUNT && list.length > 0; i++) {
+        for (let i = 0; i < mineCount && list.length > 0; i++) {
             const idx = Math.floor(Math.random() * list.length);
             const c = list[idx];
             list.splice(idx, 1);
             grid[c.x][c.y][c.z].hasMine = true;
         }
 
-        for (let x = 0; x < SIZE; x++)
-            for (let y = 0; y < SIZE; y++)
-                for (let z = 0; z < SIZE; z++)
+        for (let x = 0; x < gridSize; x++)
+            for (let y = 0; y < gridSize; y++)
+                for (let z = 0; z < gridSize; z++)
                     grid[x][y][z].adjacent = countAdjacentMines(x, y, z);
     }
 
@@ -168,7 +171,7 @@
                 for (let dz = -1; dz <= 1; dz++) {
                     if (dx === 0 && dy === 0 && dz === 0) continue;
                     const nx = x + dx, ny = y + dy, nz = z + dz;
-                    if (nx >= 0 && nx < SIZE && ny >= 0 && ny < SIZE && nz >= 0 && nz < SIZE)
+                    if (nx >= 0 && nx < gridSize && ny >= 0 && ny < gridSize && nz >= 0 && nz < gridSize)
                         if (grid[nx][ny][nz].hasMine) n++;
                 }
         return n;
@@ -177,9 +180,9 @@
     function getCellUnderMouse() {
         raycaster.setFromCamera(mouse, camera);
         const all = [];
-        for (let x = 0; x < SIZE; x++)
-            for (let y = 0; y < SIZE; y++)
-                for (let z = 0; z < SIZE; z++)
+        for (let x = 0; x < gridSize; x++)
+            for (let y = 0; y < gridSize; y++)
+                for (let z = 0; z < gridSize; z++)
                     if (!grid[x][y][z].revealed)
                         all.push(cellMeshes[x][y][z]);
         const hits = raycaster.intersectObjects(all);
@@ -213,7 +216,7 @@
                     for (let dz = -1; dz <= 1; dz++) {
                         if (dx === 0 && dy === 0 && dz === 0) continue;
                         const nx = x + dx, ny = y + dy, nz = z + dz;
-                        if (nx >= 0 && nx < SIZE && ny >= 0 && ny < SIZE && nz >= 0 && nz < SIZE)
+                        if (nx >= 0 && nx < gridSize && ny >= 0 && ny < gridSize && nz >= 0 && nz < gridSize)
                             revealCell(nx, ny, nz);
                     }
         } else {
@@ -250,9 +253,9 @@
         const geo = new THREE.PlaneGeometry(0.6, 0.6);
         const mesh = new THREE.Mesh(geo, mat);
         mesh.position.set(
-            x - (SIZE - 1) / 2,
-            y - (SIZE - 1) / 2,
-            z - (SIZE - 1) / 2
+            x - (gridSize - 1) / 2,
+            y - (gridSize - 1) / 2,
+            z - (gridSize - 1) / 2
         );
         scene.add(mesh);
         numberMeshes.push({ mesh: mesh, type: 'number' });
@@ -278,9 +281,9 @@
     }
 
     function revealAllMines() {
-        for (let x = 0; x < SIZE; x++)
-            for (let y = 0; y < SIZE; y++)
-                for (let z = 0; z < SIZE; z++)
+        for (let x = 0; x < gridSize; x++)
+            for (let y = 0; y < gridSize; y++)
+                for (let z = 0; z < gridSize; z++)
                     if (grid[x][y][z].hasMine) {
                         cellMeshes[x][y][z].visible = true;
                         setCellMaterial(x, y, z, COLORS.mine);
@@ -289,12 +292,12 @@
 
     function checkWin() {
         let revealed = 0;
-        for (let x = 0; x < SIZE; x++)
-            for (let y = 0; y < SIZE; y++)
-                for (let z = 0; z < SIZE; z++)
+        for (let x = 0; x < gridSize; x++)
+            for (let y = 0; y < gridSize; y++)
+                for (let z = 0; z < gridSize; z++)
                     if (grid[x][y][z].revealed) revealed++;
-        const total = SIZE * SIZE * SIZE;
-        return revealed === total - MINE_COUNT;
+        const total = gridSize * gridSize * gridSize;
+        return revealed === total - mineCount;
     }
 
     function startTimer() {
@@ -341,10 +344,22 @@
         camera.updateMatrixWorld(true);
     }
 
+    function getSettingsFromUI() {
+        var sizeEl = document.getElementById('boardSize');
+        var diffEl = document.getElementById('difficulty');
+        gridSize = sizeEl ? Math.min(10, Math.max(4, parseInt(sizeEl.value, 10) || 5)) : 5;
+        var diff = (diffEl && diffEl.value) ? diffEl.value : 'medium';
+        var pct = DIFFICULTY_PCT[diff] != null ? DIFFICULTY_PCT[diff] : 0.15;
+        var total = gridSize * gridSize * gridSize;
+        var maxMines = Math.max(0, total - 27);
+        mineCount = Math.min(maxMines, Math.floor(total * pct));
+        if (mineCount < 1) mineCount = 1;
+    }
+
     function updateHUD() {
         const minesEl = document.getElementById('minesCount');
         const flagsEl = document.getElementById('flagsCount');
-        if (minesEl) minesEl.textContent = MINE_COUNT;
+        if (minesEl) minesEl.textContent = mineCount;
         if (flagsEl) flagsEl.textContent = flagsPlaced;
     }
 
@@ -404,7 +419,9 @@
             updateCameraPosition();
         }, { passive: false });
 
-        document.getElementById('newGameBtn').addEventListener('click', resetGame);
+        document.getElementById('newGameBtn').addEventListener('click', function () {
+            resetGame();
+        });
         document.getElementById('viewBoardBtn').addEventListener('click', function () {
             document.getElementById('gameOverModal').classList.remove('show');
         });
@@ -440,6 +457,9 @@
         gameOver = false;
         firstClick = true;
         flagsPlaced = 0;
+        getSettingsFromUI();
+        cameraDistance = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, 8 + gridSize * 1.2));
+        updateCameraPosition();
         document.getElementById('timer').textContent = '0';
         buildGrid();
         updateHUD();

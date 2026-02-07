@@ -24,6 +24,42 @@
     box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
 }
 
+.hud-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.hud-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.hud-option-label {
+    font-size: 12px;
+    color: #bcdcff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.hud-select {
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #00ffff;
+    color: #00ffff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+.hud-select:focus {
+    outline: none;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+}
+
 .hud-item {
     display: flex;
     flex-direction: column;
