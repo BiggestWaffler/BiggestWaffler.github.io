@@ -7,7 +7,7 @@
     'use strict';
 
     const CELL_SCALE = 0.92;  // gap between cubes
-    const DIFFICULTY_PCT = { easy: 0.10, medium: 0.15, hard: 0.22 };
+    const DIFFICULTY_PCT = { easy: 0.05, medium: 0.10, hard: 0.15 };
     const COLORS = {
         hidden: 0x1a3a4a,
         revealed: 0x0d1f2d,
