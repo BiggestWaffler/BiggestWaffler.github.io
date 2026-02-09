@@ -344,16 +344,24 @@
         camera.updateMatrixWorld(true);
     }
 
+    const GRID_SIZE_MIN = 4;
+    const GRID_SIZE_MAX = 15;
+
     function getSettingsFromUI() {
         var sizeEl = document.getElementById('boardSize');
         var diffEl = document.getElementById('difficulty');
-        gridSize = sizeEl ? Math.min(10, Math.max(4, parseInt(sizeEl.value, 10) || 5)) : 5;
+        gridSize = sizeEl ? Math.min(GRID_SIZE_MAX, Math.max(GRID_SIZE_MIN, parseInt(sizeEl.value, 10) || 5)) : 5;
         var diff = (diffEl && diffEl.value) ? diffEl.value : 'medium';
-        var pct = DIFFICULTY_PCT[diff] != null ? DIFFICULTY_PCT[diff] : 0.15;
         var total = gridSize * gridSize * gridSize;
         var maxMines = Math.max(0, total - 27);
-        mineCount = Math.min(maxMines, Math.floor(total * pct));
-        if (mineCount < 1) mineCount = 1;
+        if (diff === 'custom') {
+            var customEl = document.getElementById('customMines');
+            var raw = customEl ? parseInt(customEl.value, 10) : 20;
+            mineCount = Math.min(maxMines, Math.max(1, isNaN(raw) ? 20 : raw));
+        } else {
+            var pct = DIFFICULTY_PCT[diff] != null ? DIFFICULTY_PCT[diff] : 0.10;
+            mineCount = Math.min(maxMines, Math.max(1, Math.floor(total * pct)));
+        }
     }
 
     function updateHUD() {
@@ -422,6 +430,31 @@
         document.getElementById('newGameBtn').addEventListener('click', function () {
             resetGame();
         });
+
+        function toggleCustomMines() {
+            var diffEl = document.getElementById('difficulty');
+            var wrap = document.getElementById('customMinesWrap');
+            var sizeEl = document.getElementById('boardSize');
+            if (wrap && diffEl) {
+                wrap.style.display = (diffEl.value === 'custom') ? '' : 'none';
+                if (diffEl.value === 'custom' && sizeEl) {
+                    var s = Math.min(GRID_SIZE_MAX, Math.max(GRID_SIZE_MIN, parseInt(sizeEl.value, 10) || 5));
+                    var total = s * s * s;
+                    var maxM = Math.max(1, total - 27);
+                    var customEl = document.getElementById('customMines');
+                    if (customEl) {
+                        customEl.max = maxM;
+                        var v = parseInt(customEl.value, 10);
+                        if (isNaN(v) || v > maxM) customEl.value = Math.min(100, maxM);
+                    }
+                }
+            }
+        }
+        document.getElementById('difficulty').addEventListener('change', toggleCustomMines);
+        document.getElementById('boardSize').addEventListener('change', function () {
+            if (document.getElementById('difficulty').value === 'custom') toggleCustomMines();
+        });
+        toggleCustomMines();
         document.getElementById('viewBoardBtn').addEventListener('click', function () {
             document.getElementById('gameOverModal').classList.remove('show');
         });

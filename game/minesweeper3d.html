@@ -29,6 +29,11 @@
                             <option value="8">8</option>
                             <option value="9">9</option>
                             <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
                         </select>
                     </label>
                     <label class="hud-option">
@@ -37,7 +42,12 @@
                             <option value="easy">Easy</option>
                             <option value="medium" selected>Medium</option>
                             <option value="hard">Hard</option>
+                            <option value="custom">Custom</option>
                         </select>
+                    </label>
+                    <label id="customMinesWrap" class="hud-option" style="display: none;">
+                        <span class="hud-option-label">Mine count</span>
+                        <input type="number" id="customMines" class="hud-input" min="1" value="20" aria-label="Custom mine count">
                     </label>
                 </div>
                 <div class="hud-item">

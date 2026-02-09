@@ -60,6 +60,21 @@
     box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
 }
 
+.hud-input {
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #00ffff;
+    color: #00ffff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    padding: 6px 10px;
+    width: 4em;
+}
+
+.hud-input:focus {
+    outline: none;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+}
+
 .hud-item {
     display: flex;
     flex-direction: column;
