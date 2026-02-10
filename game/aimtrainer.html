@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aim Trainer - Ethan Liu</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/game/styles/games.css">
+    <link rel="stylesheet" href="/game/styles/aimtrainer.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="wrap">
+        <header class="topbar">
+            <h1>Aim Trainer</h1>
+            <a class="home" href="/game/">← Back</a>
+        </header>
+
+        <div class="game-container aimtrainer-container">
+            <div class="hud aimtrainer-hud">
+                <div class="hud-row">
+                    <label class="hud-option">
+                        <span class="hud-option-label">Target size</span>
+                        <select id="targetSize" class="hud-select" aria-label="Target size">
+                            <option value="small">Small</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="large">Large</option>
+                        </select>
+                    </label>
+                    <label class="hud-option">
+                        <span class="hud-option-label">Round</span>
+                        <select id="roundLength" class="hud-select" aria-label="Targets per round">
+                            <option value="10">10 targets</option>
+                            <option value="25" selected>25 targets</option>
+                            <option value="50">50 targets</option>
+                            <option value="100">100 targets</option>
+                            <option value="0">Endless</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">Hits</span>
+                    <span id="hitsCount">0</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">Misses</span>
+                    <span id="missesCount">0</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">Accuracy</span>
+                    <span id="accuracyDisplay">—%</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">Avg reaction</span>
+                    <span id="reactionDisplay">— ms</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">Time</span>
+                    <span id="timerDisplay">0.0s</span>
+                </div>
+                <button id="startBtn" class="aimtrainer-btn aimtrainer-btn-primary">Start</button>
+            </div>
+
+            <div id="arena" class="aimtrainer-arena" tabindex="0">
+                <div id="target" class="aimtrainer-target" aria-hidden="true"></div>
+                <div id="startOverlay" class="aimtrainer-overlay">
+                    <p class="aimtrainer-overlay-text">Click <strong>Start</strong> to begin.<br>Click each target as fast as you can!</p>
+                </div>
+                <div id="roundOverlay" class="aimtrainer-overlay aimtrainer-overlay--hidden">
+                    <p class="aimtrainer-overlay-title">Round complete</p>
+                    <p class="aimtrainer-overlay-stats" id="roundStats"></p>
+                    <button id="playAgainBtn" class="aimtrainer-btn">Play again</button>
+                </div>
+            </div>
+
+            <div class="aimtrainer-controls">
+                Click the cyan targets as quickly and accurately as possible. Misses count when you click outside a target.
+            </div>
+        </div>
+    </div>
+
+    <script src="/game/src/aimtrainer.js"></script>
+</body>
+</html>
