@@ -10,8 +10,8 @@
     const roundStatsEl = document.getElementById('roundStats');
     const playAgainBtn = document.getElementById('playAgainBtn');
     const startBtn = document.getElementById('startBtn');
-    const targetSizeSelect = document.getElementById('targetSize');
-    const roundLengthSelect = document.getElementById('roundLength');
+    const targetSizeDropdown = document.getElementById('targetSizeDropdown');
+    const roundLengthDropdown = document.getElementById('roundLengthDropdown');
     const hitsCountEl = document.getElementById('hitsCount');
     const missesCountEl = document.getElementById('missesCount');
     const accuracyDisplay = document.getElementById('accuracyDisplay');
@@ -134,12 +134,16 @@
         }
     }
 
+    function getCustomSelectValue(dropdownEl) {
+        return dropdownEl ? dropdownEl.getAttribute('data-value') : null;
+    }
+
     function startGame() {
         state.hits = 0;
         state.misses = 0;
         state.reactionTimes = [];
-        state.roundLength = parseInt(roundLengthSelect.value, 10) || 0;
-        state.targetSize = targetSizeSelect.value || 'medium';
+        state.roundLength = parseInt(getCustomSelectValue(roundLengthDropdown), 10) || 0;
+        state.targetSize = getCustomSelectValue(targetSizeDropdown) || 'medium';
         state.active = true;
         state.roundStartTime = performance.now();
         state.timerId = setInterval(updateTimer, 100);
@@ -184,6 +188,57 @@
             stopGame();
         }
     });
+
+    /* Custom dropdown behavior */
+    function initCustomSelect(wrapper) {
+        const trigger = wrapper.querySelector('.custom-select-trigger');
+        const valueEl = wrapper.querySelector('.custom-select-value');
+        const panel = wrapper.querySelector('.custom-select-panel');
+        const options = wrapper.querySelectorAll('.custom-select-option');
+
+        function close() {
+            wrapper.classList.remove('open');
+            wrapper.setAttribute('aria-expanded', 'false');
+        }
+
+        function open() {
+            document.querySelectorAll('.custom-select.open').forEach(function (other) {
+                if (other !== wrapper) other.classList.remove('open');
+            });
+            wrapper.classList.add('open');
+            wrapper.setAttribute('aria-expanded', 'true');
+        }
+
+        function select(optionEl) {
+            const value = optionEl.getAttribute('data-value');
+            const label = optionEl.textContent.trim();
+            wrapper.setAttribute('data-value', value);
+            valueEl.textContent = label;
+            options.forEach(function (opt) { opt.classList.remove('custom-select-option--selected'); });
+            optionEl.classList.add('custom-select-option--selected');
+            close();
+        }
+
+        trigger.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (wrapper.classList.contains('open')) close();
+            else open();
+        });
+
+        options.forEach(function (opt) {
+            opt.addEventListener('click', function (e) {
+                e.stopPropagation();
+                select(opt);
+            });
+        });
+
+        document.addEventListener('click', function () {
+            if (wrapper.classList.contains('open')) close();
+        });
+    }
+
+    if (targetSizeDropdown) initCustomSelect(targetSizeDropdown);
+    if (roundLengthDropdown) initCustomSelect(roundLengthDropdown);
 
     updateHUD();
 })();

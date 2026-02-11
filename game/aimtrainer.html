@@ -19,24 +19,36 @@
         <div class="game-container aimtrainer-container">
             <div class="hud aimtrainer-hud">
                 <div class="hud-row">
-                    <label class="hud-option">
+                    <div class="custom-select-wrap">
                         <span class="hud-option-label">Target size</span>
-                        <select id="targetSize" class="hud-select" aria-label="Target size">
-                            <option value="small">Small</option>
-                            <option value="medium" selected>Medium</option>
-                            <option value="large">Large</option>
-                        </select>
-                    </label>
-                    <label class="hud-option">
+                        <div id="targetSizeDropdown" class="custom-select" data-value="medium" role="combobox" aria-expanded="false" aria-haspopup="listbox" aria-label="Target size">
+                            <button type="button" class="custom-select-trigger" aria-label="Target size">
+                                <span class="custom-select-value">Medium</span>
+                                <span class="custom-select-arrow" aria-hidden="true"></span>
+                            </button>
+                            <div class="custom-select-panel" role="listbox">
+                                <div class="custom-select-option" role="option" data-value="small" tabindex="-1">Small</div>
+                                <div class="custom-select-option custom-select-option--selected" role="option" data-value="medium" tabindex="-1">Medium</div>
+                                <div class="custom-select-option" role="option" data-value="large" tabindex="-1">Large</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="custom-select-wrap">
                         <span class="hud-option-label">Round</span>
-                        <select id="roundLength" class="hud-select" aria-label="Targets per round">
-                            <option value="10">10 targets</option>
-                            <option value="25" selected>25 targets</option>
-                            <option value="50">50 targets</option>
-                            <option value="100">100 targets</option>
-                            <option value="0">Endless</option>
-                        </select>
-                    </label>
+                        <div id="roundLengthDropdown" class="custom-select" data-value="25" role="combobox" aria-expanded="false" aria-haspopup="listbox" aria-label="Targets per round">
+                            <button type="button" class="custom-select-trigger" aria-label="Targets per round">
+                                <span class="custom-select-value">25 targets</span>
+                                <span class="custom-select-arrow" aria-hidden="true"></span>
+                            </button>
+                            <div class="custom-select-panel" role="listbox">
+                                <div class="custom-select-option" role="option" data-value="10" tabindex="-1">10 targets</div>
+                                <div class="custom-select-option custom-select-option--selected" role="option" data-value="25" tabindex="-1">25 targets</div>
+                                <div class="custom-select-option" role="option" data-value="50" tabindex="-1">50 targets</div>
+                                <div class="custom-select-option" role="option" data-value="100" tabindex="-1">100 targets</div>
+                                <div class="custom-select-option" role="option" data-value="0" tabindex="-1">Endless</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="hud-item">
                     <span class="hud-label">Hits</span>
