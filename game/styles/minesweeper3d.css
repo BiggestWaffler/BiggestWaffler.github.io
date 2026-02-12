@@ -75,6 +75,122 @@
     box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
 }
 
+/* Custom dropdowns */
+.custom-select-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.custom-select-wrap .hud-option-label {
+    font-size: 12px;
+    color: #bcdcff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.custom-select {
+    position: relative;
+    min-width: 100px;
+}
+
+.custom-select-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.9);
+    border: 2px solid #00ffff;
+    color: #00ffff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
+}
+
+.custom-select-trigger:hover {
+    background: rgba(0, 255, 255, 0.12);
+    box-shadow: 0 0 14px rgba(0, 255, 255, 0.4);
+}
+
+.custom-select.open .custom-select-trigger {
+    box-shadow: 0 0 14px rgba(0, 255, 255, 0.5);
+    border-color: #00ffff;
+}
+
+.custom-select-value {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.custom-select-arrow {
+    flex-shrink: 0;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid #00ffff;
+    transition: transform 0.2s ease;
+}
+
+.custom-select.open .custom-select-arrow {
+    transform: rotate(180deg);
+}
+
+.custom-select-panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    padding: 4px 0;
+    background: rgba(0, 0, 0, 0.95);
+    border: 2px solid #00ffff;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+    z-index: 100;
+    display: none;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.custom-select.open .custom-select-panel {
+    display: block;
+}
+
+.custom-select-option {
+    padding: 10px 14px;
+    color: #bcdcff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.custom-select-option:hover {
+    background: rgba(0, 255, 255, 0.15);
+    color: #00ffff;
+}
+
+.custom-select-option--selected,
+.custom-select-option.custom-select-option--selected {
+    color: #00ffff;
+    background: rgba(0, 255, 255, 0.1);
+}
+
+.custom-select-option:focus {
+    outline: none;
+    background: rgba(0, 255, 255, 0.2);
+}
+
 .hud-item {
     display: flex;
     flex-direction: column;

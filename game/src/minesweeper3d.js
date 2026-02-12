@@ -347,11 +347,17 @@
     const GRID_SIZE_MIN = 4;
     const GRID_SIZE_MAX = 15;
 
+    function getCustomSelectValue(dropdownEl) {
+        return dropdownEl ? dropdownEl.getAttribute('data-value') : null;
+    }
+
     function getSettingsFromUI() {
-        var sizeEl = document.getElementById('boardSize');
-        var diffEl = document.getElementById('difficulty');
-        gridSize = sizeEl ? Math.min(GRID_SIZE_MAX, Math.max(GRID_SIZE_MIN, parseInt(sizeEl.value, 10) || 5)) : 5;
-        var diff = (diffEl && diffEl.value) ? diffEl.value : 'medium';
+        var sizeDropdown = document.getElementById('boardSizeDropdown');
+        var diffDropdown = document.getElementById('difficultyDropdown');
+        var sizeVal = getCustomSelectValue(sizeDropdown);
+        var diffVal = getCustomSelectValue(diffDropdown);
+        gridSize = sizeVal ? Math.min(GRID_SIZE_MAX, Math.max(GRID_SIZE_MIN, parseInt(sizeVal, 10) || 5)) : 5;
+        var diff = diffVal || 'medium';
         var total = gridSize * gridSize * gridSize;
         var maxMines = Math.max(0, total - 27);
         if (diff === 'custom') {
@@ -432,13 +438,15 @@
         });
 
         function toggleCustomMines() {
-            var diffEl = document.getElementById('difficulty');
+            var diffDropdown = document.getElementById('difficultyDropdown');
             var wrap = document.getElementById('customMinesWrap');
-            var sizeEl = document.getElementById('boardSize');
-            if (wrap && diffEl) {
-                wrap.style.display = (diffEl.value === 'custom') ? '' : 'none';
-                if (diffEl.value === 'custom' && sizeEl) {
-                    var s = Math.min(GRID_SIZE_MAX, Math.max(GRID_SIZE_MIN, parseInt(sizeEl.value, 10) || 5));
+            var sizeDropdown = document.getElementById('boardSizeDropdown');
+            var diffVal = getCustomSelectValue(diffDropdown);
+            if (wrap && diffDropdown) {
+                wrap.style.display = (diffVal === 'custom') ? '' : 'none';
+                if (diffVal === 'custom' && sizeDropdown) {
+                    var sizeVal = getCustomSelectValue(sizeDropdown);
+                    var s = sizeVal ? Math.min(GRID_SIZE_MAX, Math.max(GRID_SIZE_MIN, parseInt(sizeVal, 10) || 5)) : 5;
                     var total = s * s * s;
                     var maxM = Math.max(1, total - 27);
                     var customEl = document.getElementById('customMines');
@@ -450,10 +458,66 @@
                 }
             }
         }
-        document.getElementById('difficulty').addEventListener('change', toggleCustomMines);
-        document.getElementById('boardSize').addEventListener('change', function () {
-            if (document.getElementById('difficulty').value === 'custom') toggleCustomMines();
-        });
+
+        function initCustomSelect(wrapper, onSelect) {
+            var trigger = wrapper.querySelector('.custom-select-trigger');
+            var valueEl = wrapper.querySelector('.custom-select-value');
+            var panel = wrapper.querySelector('.custom-select-panel');
+            var options = wrapper.querySelectorAll('.custom-select-option');
+
+            function close() {
+                wrapper.classList.remove('open');
+                wrapper.setAttribute('aria-expanded', 'false');
+            }
+
+            function open() {
+                document.querySelectorAll('.custom-select.open').forEach(function (other) {
+                    if (other !== wrapper) other.classList.remove('open');
+                });
+                wrapper.classList.add('open');
+                wrapper.setAttribute('aria-expanded', 'true');
+            }
+
+            function select(optionEl) {
+                var value = optionEl.getAttribute('data-value');
+                var label = optionEl.textContent.trim();
+                wrapper.setAttribute('data-value', value);
+                valueEl.textContent = label;
+                options.forEach(function (opt) { opt.classList.remove('custom-select-option--selected'); });
+                optionEl.classList.add('custom-select-option--selected');
+                close();
+                if (onSelect) onSelect();
+            }
+
+            trigger.addEventListener('click', function (e) {
+                e.stopPropagation();
+                if (wrapper.classList.contains('open')) close();
+                else open();
+            });
+
+            options.forEach(function (opt) {
+                opt.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    select(opt);
+                });
+            });
+
+            document.addEventListener('click', function () {
+                if (wrapper.classList.contains('open')) close();
+            });
+        }
+
+        var boardSizeDropdown = document.getElementById('boardSizeDropdown');
+        var difficultyDropdown = document.getElementById('difficultyDropdown');
+        if (boardSizeDropdown) {
+            initCustomSelect(boardSizeDropdown, function () {
+                if (getCustomSelectValue(difficultyDropdown) === 'custom') toggleCustomMines();
+            });
+        }
+        if (difficultyDropdown) {
+            initCustomSelect(difficultyDropdown, toggleCustomMines);
+        }
+
         toggleCustomMines();
         document.getElementById('viewBoardBtn').addEventListener('click', function () {
             document.getElementById('gameOverModal').classList.remove('show');

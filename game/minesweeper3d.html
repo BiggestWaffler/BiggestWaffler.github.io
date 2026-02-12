@@ -19,32 +19,44 @@
         <div class="game-container">
             <div class="hud">
                 <div class="hud-row">
-                    <label class="hud-option">
+                    <div class="custom-select-wrap">
                         <span class="hud-option-label">Size</span>
-                        <select id="boardSize" class="hud-select" aria-label="Board size">
-                            <option value="4">4</option>
-                            <option value="5" selected>5</option>
-                            <option value="6">6</option>
-                            <option value="7">7</option>
-                            <option value="8">8</option>
-                            <option value="9">9</option>
-                            <option value="10">10</option>
-                            <option value="11">11</option>
-                            <option value="12">12</option>
-                            <option value="13">13</option>
-                            <option value="14">14</option>
-                            <option value="15">15</option>
-                        </select>
-                    </label>
-                    <label class="hud-option">
+                        <div id="boardSizeDropdown" class="custom-select" data-value="5" role="combobox" aria-expanded="false" aria-haspopup="listbox" aria-label="Board size">
+                            <button type="button" class="custom-select-trigger" aria-label="Board size">
+                                <span class="custom-select-value">5</span>
+                                <span class="custom-select-arrow" aria-hidden="true"></span>
+                            </button>
+                            <div class="custom-select-panel" role="listbox">
+                                <div class="custom-select-option" role="option" data-value="4" tabindex="-1">4</div>
+                                <div class="custom-select-option custom-select-option--selected" role="option" data-value="5" tabindex="-1">5</div>
+                                <div class="custom-select-option" role="option" data-value="6" tabindex="-1">6</div>
+                                <div class="custom-select-option" role="option" data-value="7" tabindex="-1">7</div>
+                                <div class="custom-select-option" role="option" data-value="8" tabindex="-1">8</div>
+                                <div class="custom-select-option" role="option" data-value="9" tabindex="-1">9</div>
+                                <div class="custom-select-option" role="option" data-value="10" tabindex="-1">10</div>
+                                <div class="custom-select-option" role="option" data-value="11" tabindex="-1">11</div>
+                                <div class="custom-select-option" role="option" data-value="12" tabindex="-1">12</div>
+                                <div class="custom-select-option" role="option" data-value="13" tabindex="-1">13</div>
+                                <div class="custom-select-option" role="option" data-value="14" tabindex="-1">14</div>
+                                <div class="custom-select-option" role="option" data-value="15" tabindex="-1">15</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="custom-select-wrap">
                         <span class="hud-option-label">Difficulty</span>
-                        <select id="difficulty" class="hud-select" aria-label="Difficulty">
-                            <option value="easy">Easy</option>
-                            <option value="medium" selected>Medium</option>
-                            <option value="hard">Hard</option>
-                            <option value="custom">Custom</option>
-                        </select>
-                    </label>
+                        <div id="difficultyDropdown" class="custom-select" data-value="medium" role="combobox" aria-expanded="false" aria-haspopup="listbox" aria-label="Difficulty">
+                            <button type="button" class="custom-select-trigger" aria-label="Difficulty">
+                                <span class="custom-select-value">Medium</span>
+                                <span class="custom-select-arrow" aria-hidden="true"></span>
+                            </button>
+                            <div class="custom-select-panel" role="listbox">
+                                <div class="custom-select-option" role="option" data-value="easy" tabindex="-1">Easy</div>
+                                <div class="custom-select-option custom-select-option--selected" role="option" data-value="medium" tabindex="-1">Medium</div>
+                                <div class="custom-select-option" role="option" data-value="hard" tabindex="-1">Hard</div>
+                                <div class="custom-select-option" role="option" data-value="custom" tabindex="-1">Custom</div>
+                            </div>
+                        </div>
+                    </div>
                     <label id="customMinesWrap" class="hud-option" style="display: none;">
                         <span class="hud-option-label">Mine count</span>
                         <input type="number" id="customMines" class="hud-input" min="1" value="20" aria-label="Custom mine count">
