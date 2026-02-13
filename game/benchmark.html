@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human Benchmark - Ethan Liu</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/game/styles/games.css">
+    <link rel="stylesheet" href="/game/styles/benchmark.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="wrap">
+        <header class="topbar">
+            <h1>Human Benchmark</h1>
+            <a class="home" href="/game/">← Back</a>
+        </header>
+        <main class="game-container">
+            <!-- Main Menu -->
+            <div id="main-menu" class="screen active">
+                <h2>Select Test</h2>
+                <div class="level-grid">
+                    <button class="level-btn" onclick="benchmark.showTest('reaction')">
+                        <h3>Reaction Time</h3>
+                        <p>Click as soon as the screen turns green. Measure your reflexes in ms.</p>
+                    </button>
+                    <button class="level-btn" onclick="benchmark.showTest('aim')">
+                        <h3>Aim Trainer</h3>
+                        <p>Click targets as fast and accurately as you can. Tracks accuracy and reaction.</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Reaction Time Test -->
+            <div id="reaction-screen" class="screen">
+                <div class="benchmark-test-hud">
+                    <h2>Reaction Time</h2>
+                    <div class="reaction-stats">
+                        <span id="reaction-last">— ms</span>
+                        <span class="reaction-label">Last</span>
+                    </div>
+                    <div class="reaction-stats">
+                        <span id="reaction-avg">— ms</span>
+                        <span class="reaction-label">Average</span>
+                    </div>
+                    <div class="reaction-stats">
+                        <span id="reaction-count">0</span>
+                        <span class="reaction-label">Attempts</span>
+                    </div>
+                    <button class="btn-small" onclick="benchmark.showMainMenu()">← Back</button>
+                </div>
+                <div id="reaction-zone" class="reaction-zone reaction-wait">
+                    <div id="reaction-message" class="reaction-message">Click anywhere to start</div>
+                </div>
+            </div>
+
+            <!-- Aim Trainer -->
+            <div id="aim-screen" class="screen">
+                <div class="game-container aimtrainer-container">
+                    <div class="hud aimtrainer-hud">
+                        <div class="hud-row">
+                            <div class="custom-select-wrap">
+                                <span class="hud-option-label">Target size</span>
+                                <div id="targetSizeDropdown" class="custom-select" data-value="medium" role="combobox" aria-expanded="false" aria-haspopup="listbox" aria-label="Target size">
+                                    <button type="button" class="custom-select-trigger" aria-label="Target size">
+                                        <span class="custom-select-value">Medium</span>
+                                        <span class="custom-select-arrow" aria-hidden="true"></span>
+                                    </button>
+                                    <div class="custom-select-panel" role="listbox">
+                                        <div class="custom-select-option" role="option" data-value="small" tabindex="-1">Small</div>
+                                        <div class="custom-select-option custom-select-option--selected" role="option" data-value="medium" tabindex="-1">Medium</div>
+                                        <div class="custom-select-option" role="option" data-value="large" tabindex="-1">Large</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="custom-select-wrap">
+                                <span class="hud-option-label">Round</span>
+                                <div id="roundLengthDropdown" class="custom-select" data-value="25" role="combobox" aria-expanded="false" aria-haspopup="listbox" aria-label="Targets per round">
+                                    <button type="button" class="custom-select-trigger" aria-label="Targets per round">
+                                        <span class="custom-select-value">25 targets</span>
+                                        <span class="custom-select-arrow" aria-hidden="true"></span>
+                                    </button>
+                                    <div class="custom-select-panel" role="listbox">
+                                        <div class="custom-select-option" role="option" data-value="10" tabindex="-1">10 targets</div>
+                                        <div class="custom-select-option custom-select-option--selected" role="option" data-value="25" tabindex="-1">25 targets</div>
+                                        <div class="custom-select-option" role="option" data-value="50" tabindex="-1">50 targets</div>
+                                        <div class="custom-select-option" role="option" data-value="100" tabindex="-1">100 targets</div>
+                                        <div class="custom-select-option" role="option" data-value="0" tabindex="-1">Endless</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hud-item">
+                            <span class="hud-label">Hits</span>
+                            <span id="hitsCount">0</span>
+                        </div>
+                        <div class="hud-item">
+                            <span class="hud-label">Misses</span>
+                            <span id="missesCount">0</span>
+                        </div>
+                        <div class="hud-item">
+                            <span class="hud-label">Accuracy</span>
+                            <span id="accuracyDisplay">—%</span>
+                        </div>
+                        <div class="hud-item">
+                            <span class="hud-label">Avg reaction</span>
+                            <span id="reactionDisplay">— ms</span>
+                        </div>
+                        <div class="hud-item">
+                            <span class="hud-label">Time</span>
+                            <span id="timerDisplay">0.0s</span>
+                        </div>
+                        <button id="startBtn" class="aimtrainer-btn aimtrainer-btn-primary">Start</button>
+                        <button class="aimtrainer-btn" onclick="benchmark.showMainMenu()">← Back</button>
+                    </div>
+
+                    <div id="arena" class="aimtrainer-arena" tabindex="0">
+                        <div id="target" class="aimtrainer-target" aria-hidden="true"></div>
+                        <div id="startOverlay" class="aimtrainer-overlay">
+                            <p class="aimtrainer-overlay-text">Click <strong>Start</strong> to begin.<br>Click each target as fast as you can!</p>
+                        </div>
+                        <div id="roundOverlay" class="aimtrainer-overlay aimtrainer-overlay--hidden">
+                            <p class="aimtrainer-overlay-title">Round complete</p>
+                            <p class="aimtrainer-overlay-stats" id="roundStats"></p>
+                            <button id="playAgainBtn" class="aimtrainer-btn">Play again</button>
+                        </div>
+                    </div>
+
+                    <div class="aimtrainer-controls">
+                        Click the cyan targets as quickly and accurately as possible. Misses count when you click outside a target.
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/game/src/benchmark.js"></script>
+</body>
+</html>
