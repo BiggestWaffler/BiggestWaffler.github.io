@@ -5,12 +5,24 @@
 
     const mainMenu = document.getElementById('main-menu');
     const reactionScreen = document.getElementById('reaction-screen');
+    const numberScreen = document.getElementById('number-screen');
     const aimScreen = document.getElementById('aim-screen');
     const reactionZone = document.getElementById('reaction-zone');
     const reactionMessage = document.getElementById('reaction-message');
     const reactionLastEl = document.getElementById('reaction-last');
     const reactionAvgEl = document.getElementById('reaction-avg');
     const reactionCountEl = document.getElementById('reaction-count');
+
+    const numberLevelEl = document.getElementById('number-level');
+    const numberContent = document.getElementById('number-content');
+    const numberMessage = document.getElementById('number-message');
+    const numberStartBtn = document.getElementById('number-start-btn');
+    const numberInputWrap = document.getElementById('number-input-wrap');
+    const numberInput = document.getElementById('number-input');
+    const numberSubmitBtn = document.getElementById('number-submit-btn');
+    const numberGameover = document.getElementById('number-gameover');
+    const numberGameoverMessage = document.getElementById('number-gameover-message');
+    const numberAgainBtn = document.getElementById('number-again-btn');
 
     const arena = document.getElementById('arena');
     const targetEl = document.getElementById('target');
@@ -30,7 +42,7 @@
     // --- Navigation (Human Benchmark hub) ---
 
     function hideAllScreens() {
-        [mainMenu, reactionScreen, aimScreen].forEach(function (el) {
+        [mainMenu, reactionScreen, numberScreen, aimScreen].forEach(function (el) {
             if (el) el.classList.remove('active');
         });
     }
@@ -38,6 +50,7 @@
     window.benchmark = {
         showMainMenu: function () {
             stopReaction();
+            stopNumberMemory();
             stopAimTrainer();
             hideAllScreens();
             if (mainMenu) mainMenu.classList.add('active');
@@ -49,6 +62,10 @@
                 if (reactionScreen) reactionScreen.classList.add('active');
                 initReactionState();
                 renderReactionUI();
+            } else if (id === 'number') {
+                if (numberScreen) numberScreen.classList.add('active');
+                initNumberMemory();
+                renderNumberMemoryUI();
             } else if (id === 'aim') {
                 if (aimScreen) aimScreen.classList.add('active');
                 updateAimHUD();
@@ -166,6 +183,139 @@
 
     if (reactionZone) {
         reactionZone.addEventListener('click', onReactionZoneClick);
+    }
+
+    // --- Number Memory Test ---
+
+    let numberState = {
+        phase: 'idle',
+        level: 1,
+        number: '',
+        timeoutId: null
+    };
+
+    function initNumberMemory() {
+        numberState.phase = 'idle';
+        numberState.level = 1;
+        numberState.number = '';
+        if (numberState.timeoutId) {
+            clearTimeout(numberState.timeoutId);
+            numberState.timeoutId = null;
+        }
+    }
+
+    function stopNumberMemory() {
+        if (numberState.timeoutId) {
+            clearTimeout(numberState.timeoutId);
+            numberState.timeoutId = null;
+        }
+        numberState.phase = 'idle';
+    }
+
+    function generateNumber(digits) {
+        let s = '';
+        for (let i = 0; i < digits; i++) {
+            s += Math.floor(Math.random() * 10);
+        }
+        return s;
+    }
+
+    function renderNumberMemoryUI() {
+        if (!numberContent || !numberMessage) return;
+
+        numberContent.classList.remove('number-content--hidden');
+        if (numberInputWrap) numberInputWrap.classList.add('number-input-wrap--hidden');
+        if (numberGameover) numberGameover.classList.add('number-gameover--hidden');
+
+        if (numberState.phase === 'idle') {
+            numberMessage.textContent = 'Click Start to begin';
+            if (numberStartBtn) {
+                numberStartBtn.style.display = '';
+                numberStartBtn.textContent = 'Start';
+            }
+        } else if (numberState.phase === 'showing') {
+            numberMessage.textContent = numberState.number;
+            numberMessage.classList.add('number-display');
+            if (numberStartBtn) numberStartBtn.style.display = 'none';
+        } else if (numberState.phase === 'input') {
+            numberContent.classList.add('number-content--hidden');
+            if (numberInputWrap) numberInputWrap.classList.remove('number-input-wrap--hidden');
+            if (numberInput) {
+                numberInput.value = '';
+                numberInput.focus();
+            }
+        } else if (numberState.phase === 'gameover') {
+            numberContent.classList.add('number-content--hidden');
+            if (numberInputWrap) numberInputWrap.classList.add('number-input-wrap--hidden');
+            if (numberGameover) numberGameover.classList.remove('number-gameover--hidden');
+            if (numberGameoverMessage) {
+                numberGameoverMessage.innerHTML = 'Wrong. The number was <strong>' + numberState.number + '</strong>.<br>You reached level <strong>' + numberState.level + '</strong>.';
+            }
+        }
+
+        if (numberLevelEl) {
+            numberLevelEl.textContent = numberState.phase === 'idle' ? '—' : numberState.level;
+        }
+    }
+
+    function startNumberRound() {
+        numberState.number = generateNumber(numberState.level);
+        numberState.phase = 'showing';
+        numberMessage.classList.remove('number-display');
+        renderNumberMemoryUI();
+
+        const displayMs = Math.max(1500, 2000 + numberState.level * 400);
+        numberState.timeoutId = setTimeout(function () {
+            numberState.timeoutId = null;
+            numberState.phase = 'input';
+            numberMessage.classList.remove('number-display');
+            renderNumberMemoryUI();
+        }, displayMs);
+    }
+
+    function onNumberSubmit() {
+        if (!numberInput) return;
+        const answer = numberInput.value.trim();
+        if (answer === '') return;
+
+        if (answer === numberState.number) {
+            numberState.level++;
+            startNumberRound();
+        } else {
+            if (numberState.timeoutId) {
+                clearTimeout(numberState.timeoutId);
+                numberState.timeoutId = null;
+            }
+            numberState.phase = 'gameover';
+            renderNumberMemoryUI();
+        }
+    }
+
+    if (numberStartBtn) {
+        numberStartBtn.addEventListener('click', function () {
+            if (numberState.phase !== 'idle') return;
+            startNumberRound();
+        });
+    }
+
+    if (numberSubmitBtn) {
+        numberSubmitBtn.addEventListener('click', onNumberSubmit);
+    }
+
+    if (numberInput) {
+        numberInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') onNumberSubmit();
+        });
+        numberInput.addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '');
+        });
+    }
+
+    if (numberAgainBtn) {
+        numberAgainBtn.addEventListener('click', function () {
+            initNumberMemory();
+            renderNumberMemoryUI();
+        });
     }
 
     // --- Aim Trainer (embedded) ---

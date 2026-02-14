@@ -28,6 +28,10 @@
                         <h3>Aim Trainer</h3>
                         <p>Click targets as fast and accurately as you can. Tracks accuracy and reaction.</p>
                     </button>
+                    <button class="level-btn" onclick="benchmark.showTest('number')">
+                        <h3>Number Memory</h3>
+                        <p>Memorize the number, then type it back. Each level adds one more digit.</p>
+                    </button>
                 </div>
             </div>
 
@@ -51,6 +55,33 @@
                 </div>
                 <div id="reaction-zone" class="reaction-zone reaction-wait">
                     <div id="reaction-message" class="reaction-message">Click anywhere to start</div>
+                </div>
+            </div>
+
+            <!-- Number Memory Test -->
+            <div id="number-screen" class="screen">
+                <div class="benchmark-test-hud">
+                    <h2>Number Memory</h2>
+                    <div class="reaction-stats">
+                        <span id="number-level">—</span>
+                        <span class="reaction-label">Level</span>
+                    </div>
+                    <button class="btn-small" onclick="benchmark.showMainMenu()">← Back</button>
+                </div>
+                <div id="number-zone" class="number-zone">
+                    <div id="number-content" class="number-content">
+                        <p id="number-message" class="number-message">Click Start to begin</p>
+                        <button id="number-start-btn" class="aimtrainer-btn aimtrainer-btn-primary" type="button">Start</button>
+                    </div>
+                    <div id="number-input-wrap" class="number-input-wrap number-input-wrap--hidden">
+                        <label for="number-input" class="number-input-label">What was the number?</label>
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="number-input" class="number-input" placeholder="Enter number" autocomplete="off" />
+                        <button id="number-submit-btn" class="aimtrainer-btn" type="button">Submit</button>
+                    </div>
+                    <div id="number-gameover" class="number-gameover number-gameover--hidden">
+                        <p id="number-gameover-message" class="number-gameover-message"></p>
+                        <button id="number-again-btn" class="aimtrainer-btn" type="button">Play again</button>
+                    </div>
                 </div>
             </div>
 
