@@ -206,6 +206,47 @@
     letter-spacing: 0.05em;
 }
 
+.number-mode-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: 16px 0 8px 0;
+}
+
+.number-mode-label {
+    font-size: 14px;
+    color: #bcdcff;
+}
+
+.number-mode-btn {
+    padding: 8px 18px;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    background: rgba(0, 0, 0, 0.6);
+    color: #bcdcff;
+    border: 2px solid #00ffff;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.number-mode-btn:hover {
+    background: rgba(0, 255, 255, 0.1);
+    color: #00ffff;
+}
+
+.number-mode-btn--active {
+    background: rgba(0, 255, 255, 0.2);
+    color: #00ffff;
+}
+
+.number-mode-hint {
+    font-size: 13px;
+    color: #888;
+    margin: 0 0 16px 0;
+}
+
 .number-input-wrap {
     display: flex;
     flex-direction: column;

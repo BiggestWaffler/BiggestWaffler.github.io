@@ -23,6 +23,9 @@
     const numberGameover = document.getElementById('number-gameover');
     const numberGameoverMessage = document.getElementById('number-gameover-message');
     const numberAgainBtn = document.getElementById('number-again-btn');
+    const numberModeRandom = document.getElementById('number-mode-random');
+    const numberModeSequence = document.getElementById('number-mode-sequence');
+    const numberModeHintText = document.getElementById('number-mode-hint-text');
 
     const arena = document.getElementById('arena');
     const targetEl = document.getElementById('target');
@@ -191,6 +194,7 @@
         phase: 'idle',
         level: 1,
         number: '',
+        mode: 'random',
         timeoutId: null
     };
 
@@ -233,6 +237,7 @@
                 numberStartBtn.style.display = '';
                 numberStartBtn.textContent = 'Start';
             }
+            updateNumberModeHint();
         } else if (numberState.phase === 'showing') {
             numberMessage.textContent = numberState.number;
             numberMessage.classList.add('number-display');
@@ -259,7 +264,15 @@
     }
 
     function startNumberRound() {
-        numberState.number = generateNumber(numberState.level);
+        if (numberState.mode === 'random') {
+            numberState.number = generateNumber(numberState.level);
+        } else {
+            if (numberState.level === 1) {
+                numberState.number = generateNumber(1);
+            } else {
+                numberState.number = numberState.number + generateNumber(1);
+            }
+        }
         numberState.phase = 'showing';
         numberMessage.classList.remove('number-display');
         renderNumberMemoryUI();
@@ -316,6 +329,28 @@
             initNumberMemory();
             renderNumberMemoryUI();
         });
+    }
+
+    function setNumberMode(mode) {
+        numberState.mode = mode;
+        if (numberModeRandom) numberModeRandom.classList.toggle('number-mode-btn--active', mode === 'random');
+        if (numberModeSequence) numberModeSequence.classList.toggle('number-mode-btn--active', mode === 'sequence');
+        updateNumberModeHint();
+    }
+
+    function updateNumberModeHint() {
+        if (numberModeHintText) {
+            numberModeHintText.textContent = numberState.mode === 'random'
+                ? 'New number each level.'
+                : 'Each level adds one digit to the previous number.';
+        }
+    }
+
+    if (numberModeRandom) {
+        numberModeRandom.addEventListener('click', function () { setNumberMode('random'); });
+    }
+    if (numberModeSequence) {
+        numberModeSequence.addEventListener('click', function () { setNumberMode('sequence'); });
     }
 
     // --- Aim Trainer (embedded) ---
