@@ -36,6 +36,7 @@
     const startBtn = document.getElementById('startBtn');
     const targetSizeDropdown = document.getElementById('targetSizeDropdown');
     const roundLengthDropdown = document.getElementById('roundLengthDropdown');
+    const aimModeDropdown = document.getElementById('aimModeDropdown');
     const hitsCountEl = document.getElementById('hitsCount');
     const missesCountEl = document.getElementById('missesCount');
     const accuracyDisplay = document.getElementById('accuracyDisplay');
@@ -362,20 +363,97 @@
         reactionTimes: [],
         roundLength: 25,
         targetSize: 'medium',
+        trackingMode: false,
         spawnTime: 0,
         roundStartTime: 0,
-        timerId: null
+        timerId: null,
+        trackX: 0,
+        trackY: 0,
+        trackVx: 0,
+        trackVy: 0,
+        trackChangeAt: 0,
+        trackRAF: null,
+        trackLastTime: 0
     };
+
+    function getArenaBounds() {
+        if (!arena) return null;
+        const size = SIZES[aimState.targetSize] || SIZES.medium;
+        const margin = size / 2 + 8;
+        const r = arena.getBoundingClientRect();
+        return {
+            width: r.width,
+            height: r.height,
+            margin: margin,
+            minX: margin,
+            maxX: r.width - margin,
+            minY: margin,
+            maxY: r.height - margin,
+            size: size
+        };
+    }
+
+    function pickRandomVelocity() {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.08 + Math.random() * 0.12;
+        return {
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed
+        };
+    }
+
+    function tickTracking(timestamp) {
+        if (!aimState.active || !aimState.trackingMode || !targetEl || targetEl.style.display === 'none') {
+            aimState.trackRAF = null;
+            return;
+        }
+        aimState.trackRAF = requestAnimationFrame(tickTracking);
+
+        const bounds = getArenaBounds();
+        if (!bounds) return;
+
+        const dt = aimState.trackLastTime ? Math.min(timestamp - aimState.trackLastTime, 50) : 16;
+        aimState.trackLastTime = timestamp;
+
+        aimState.trackX += aimState.trackVx * dt;
+        aimState.trackY += aimState.trackVy * dt;
+
+        if (aimState.trackX <= bounds.minX) {
+            aimState.trackX = bounds.minX;
+            aimState.trackVx = Math.abs(aimState.trackVx);
+        }
+        if (aimState.trackX >= bounds.maxX) {
+            aimState.trackX = bounds.maxX;
+            aimState.trackVx = -Math.abs(aimState.trackVx);
+        }
+        if (aimState.trackY <= bounds.minY) {
+            aimState.trackY = bounds.minY;
+            aimState.trackVy = Math.abs(aimState.trackVy);
+        }
+        if (aimState.trackY >= bounds.maxY) {
+            aimState.trackY = bounds.maxY;
+            aimState.trackVy = -Math.abs(aimState.trackVy);
+        }
+
+        if (timestamp >= aimState.trackChangeAt) {
+            const v = pickRandomVelocity();
+            aimState.trackVx = v.vx;
+            aimState.trackVy = v.vy;
+            aimState.trackChangeAt = timestamp + 1500 + Math.random() * 2000;
+        }
+
+        targetEl.style.left = aimState.trackX + 'px';
+        targetEl.style.top = aimState.trackY + 'px';
+    }
 
     function spawnTarget() {
         if (!arena || !targetEl) return;
         const size = SIZES[aimState.targetSize] || SIZES.medium;
-        const margin = size / 2 + 8;
-        const r = arena.getBoundingClientRect();
-        const maxX = r.width - margin * 2;
-        const maxY = r.height - margin * 2;
-        const left = margin + Math.random() * Math.max(0, maxX);
-        const top = margin + Math.random() * Math.max(0, maxY);
+        const bounds = getArenaBounds();
+        if (!bounds) return;
+
+        const left = bounds.minX + Math.random() * (bounds.maxX - bounds.minX);
+        const top = bounds.minY + Math.random() * (bounds.maxY - bounds.minY);
 
         targetEl.style.width = size + 'px';
         targetEl.style.height = size + 'px';
@@ -385,9 +463,25 @@
         targetEl.removeAttribute('aria-hidden');
         targetEl.style.display = '';
         aimState.spawnTime = performance.now();
+
+        if (aimState.trackingMode) {
+            aimState.trackX = left;
+            aimState.trackY = top;
+            const v = pickRandomVelocity();
+            aimState.trackVx = v.vx;
+            aimState.trackVy = v.vy;
+            aimState.trackChangeAt = performance.now() + 1500 + Math.random() * 2000;
+            aimState.trackLastTime = 0;
+            if (aimState.trackRAF) cancelAnimationFrame(aimState.trackRAF);
+            aimState.trackRAF = requestAnimationFrame(tickTracking);
+        }
     }
 
     function hideTarget() {
+        if (aimState.trackRAF) {
+            cancelAnimationFrame(aimState.trackRAF);
+            aimState.trackRAF = null;
+        }
         if (targetEl) {
             targetEl.style.display = 'none';
             targetEl.setAttribute('aria-hidden', 'true');
@@ -464,6 +558,10 @@
         if (!aimState.active || !targetEl || targetEl.style.display === 'none') return;
 
         if (isClickOnTarget(e.clientX, e.clientY)) {
+            if (aimState.trackRAF) {
+                cancelAnimationFrame(aimState.trackRAF);
+                aimState.trackRAF = null;
+            }
             aimState.hits++;
             aimState.reactionTimes.push(performance.now() - aimState.spawnTime);
             targetEl.classList.add('hit');
@@ -492,6 +590,7 @@
         aimState.reactionTimes = [];
         aimState.roundLength = parseInt(getCustomSelectValue(roundLengthDropdown), 10) || 0;
         aimState.targetSize = getCustomSelectValue(targetSizeDropdown) || 'medium';
+        aimState.trackingMode = getCustomSelectValue(aimModeDropdown) === 'tracking';
         aimState.active = true;
         aimState.roundStartTime = performance.now();
         aimState.timerId = setInterval(updateAimTimer, 100);
@@ -568,6 +667,7 @@
 
         if (targetSizeDropdown) initCustomSelect(targetSizeDropdown);
         if (roundLengthDropdown) initCustomSelect(roundLengthDropdown);
+        if (aimModeDropdown) initCustomSelect(aimModeDropdown);
     }
 
     if (startBtn) {
