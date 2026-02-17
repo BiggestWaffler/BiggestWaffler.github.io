@@ -136,10 +136,12 @@
                                     <div class="custom-select-panel" role="listbox">
                                         <div class="custom-select-option custom-select-option--selected" role="option" data-value="static" tabindex="-1">Static</div>
                                         <div class="custom-select-option" role="option" data-value="tracking" tabindex="-1">Tracking</div>
+                                        <div class="custom-select-option" role="option" data-value="follow" tabindex="-1">Follow</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        <div id="aimClickStats" class="hud-row">
                         <div class="hud-item">
                             <span class="hud-label">Hits</span>
                             <span id="hitsCount">0</span>
@@ -160,6 +162,17 @@
                             <span class="hud-label">Time</span>
                             <span id="timerDisplay">0.0s</span>
                         </div>
+                        </div>
+                        <div id="aimFollowStats" class="hud-row aim-follow-stats--hidden">
+                            <div class="hud-item">
+                                <span class="hud-label">Hold</span>
+                                <span id="holdTimeDisplay">0.0s</span>
+                            </div>
+                            <div class="hud-item">
+                                <span class="hud-label">Left</span>
+                                <span id="followTimeLeftDisplay">—</span>
+                            </div>
+                        </div>
                         <button id="startBtn" class="aimtrainer-btn aimtrainer-btn-primary">Start</button>
                         <button class="aimtrainer-btn" onclick="benchmark.showMainMenu()">← Back</button>
                     </div>
@@ -167,7 +180,7 @@
                     <div id="arena" class="aimtrainer-arena" tabindex="0">
                         <div id="target" class="aimtrainer-target" aria-hidden="true"></div>
                         <div id="startOverlay" class="aimtrainer-overlay">
-                            <p class="aimtrainer-overlay-text">Click <strong>Start</strong> to begin.<br>Click each target as fast as you can!</p>
+                            <p id="aimStartOverlayText" class="aimtrainer-overlay-text">Click <strong>Start</strong> to begin.<br>Click each target as fast as you can!</p>
                         </div>
                         <div id="roundOverlay" class="aimtrainer-overlay aimtrainer-overlay--hidden">
                             <p class="aimtrainer-overlay-title">Round complete</p>

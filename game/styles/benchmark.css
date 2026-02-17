@@ -356,6 +356,17 @@
     box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
 }
 
+.aimtrainer-hud .hud-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.aim-follow-stats--hidden {
+    display: none !important;
+}
+
 .aimtrainer-hud .hud-item {
     display: flex;
     flex-direction: column;

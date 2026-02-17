@@ -42,6 +42,11 @@
     const accuracyDisplay = document.getElementById('accuracyDisplay');
     const reactionDisplay = document.getElementById('reactionDisplay');
     const timerDisplay = document.getElementById('timerDisplay');
+    const aimClickStats = document.getElementById('aimClickStats');
+    const aimFollowStats = document.getElementById('aimFollowStats');
+    const holdTimeDisplay = document.getElementById('holdTimeDisplay');
+    const followTimeLeftDisplay = document.getElementById('followTimeLeftDisplay');
+    const aimStartOverlayText = document.getElementById('aimStartOverlayText');
 
     // --- Navigation (Human Benchmark hub) ---
 
@@ -364,6 +369,7 @@
         roundLength: 25,
         targetSize: 'medium',
         trackingMode: false,
+        followMode: false,
         spawnTime: 0,
         roundStartTime: 0,
         timerId: null,
@@ -373,7 +379,11 @@
         trackVy: 0,
         trackChangeAt: 0,
         trackRAF: null,
-        trackLastTime: 0
+        trackLastTime: 0,
+        holdTime: 0,
+        followRoundEndTime: null,
+        cursorX: null,
+        cursorY: null
     };
 
     function getArenaBounds() {
@@ -444,6 +454,15 @@
 
         targetEl.style.left = aimState.trackX + 'px';
         targetEl.style.top = aimState.trackY + 'px';
+
+        if (aimState.followMode) {
+            if (aimState.cursorX !== null && aimState.cursorY !== null && isClickOnTarget(aimState.cursorX, aimState.cursorY)) {
+                aimState.holdTime += dt / 1000;
+            }
+            if (aimState.followRoundEndTime !== null && timestamp >= aimState.followRoundEndTime) {
+                endFollowRound();
+            }
+        }
     }
 
     function spawnTarget() {
@@ -464,7 +483,7 @@
         targetEl.style.display = '';
         aimState.spawnTime = performance.now();
 
-        if (aimState.trackingMode) {
+        if (aimState.trackingMode || aimState.followMode) {
             aimState.trackX = left;
             aimState.trackY = top;
             const v = pickRandomVelocity();
@@ -522,9 +541,21 @@
 
     function updateAimTimer() {
         if (!aimState.active || !aimState.roundStartTime) return;
-        if (timerDisplay) {
-            const elapsed = (performance.now() - aimState.roundStartTime) / 1000;
-            timerDisplay.textContent = elapsed.toFixed(1) + 's';
+        if (aimState.followMode) {
+            if (holdTimeDisplay) holdTimeDisplay.textContent = aimState.holdTime.toFixed(1) + 's';
+            if (followTimeLeftDisplay) {
+                if (aimState.followRoundEndTime !== null) {
+                    const left = (aimState.followRoundEndTime - performance.now()) / 1000;
+                    followTimeLeftDisplay.textContent = left > 0 ? left.toFixed(1) + 's' : '0s';
+                } else {
+                    followTimeLeftDisplay.textContent = '∞';
+                }
+            }
+        } else {
+            if (timerDisplay) {
+                const elapsed = (performance.now() - aimState.roundStartTime) / 1000;
+                timerDisplay.textContent = elapsed.toFixed(1) + 's';
+            }
         }
     }
 
@@ -554,8 +585,30 @@
         if (startBtn) startBtn.textContent = 'Start';
     }
 
+    function endFollowRound() {
+        aimState.active = false;
+        if (aimState.timerId) {
+            clearInterval(aimState.timerId);
+            aimState.timerId = null;
+        }
+        hideTarget();
+        const hold = aimState.holdTime.toFixed(1);
+        let msg;
+        if (aimState.followRoundEndTime !== null && aimState.roundStartTime) {
+            const totalSec = (aimState.followRoundEndTime - aimState.roundStartTime) / 1000;
+            const pct = totalSec > 0 ? Math.round((aimState.holdTime / totalSec) * 100) : 0;
+            msg = 'Time on target: <strong>' + hold + 's</strong> out of <strong>' + totalSec.toFixed(0) + 's</strong><br>Accuracy: <strong>' + pct + '%</strong>';
+        } else {
+            msg = 'Time on target: <strong>' + hold + 's</strong>';
+        }
+        if (roundStatsEl) roundStatsEl.innerHTML = msg;
+        if (roundOverlay) roundOverlay.classList.remove('aimtrainer-overlay--hidden');
+        if (startBtn) startBtn.textContent = 'Start';
+    }
+
     function onArenaClick(e) {
         if (!aimState.active || !targetEl || targetEl.style.display === 'none') return;
+        if (aimState.followMode) return;
 
         if (isClickOnTarget(e.clientX, e.clientY)) {
             if (aimState.trackRAF) {
@@ -585,26 +638,49 @@
     }
 
     function startAimGame() {
+        const mode = getCustomSelectValue(aimModeDropdown) || 'static';
         aimState.hits = 0;
         aimState.misses = 0;
         aimState.reactionTimes = [];
         aimState.roundLength = parseInt(getCustomSelectValue(roundLengthDropdown), 10) || 0;
         aimState.targetSize = getCustomSelectValue(targetSizeDropdown) || 'medium';
-        aimState.trackingMode = getCustomSelectValue(aimModeDropdown) === 'tracking';
+        aimState.trackingMode = (mode === 'tracking' || mode === 'follow');
+        aimState.followMode = (mode === 'follow');
+        aimState.holdTime = 0;
+        aimState.cursorX = null;
+        aimState.cursorY = null;
         aimState.active = true;
         aimState.roundStartTime = performance.now();
+        aimState.followRoundEndTime = aimState.followMode && aimState.roundLength > 0
+            ? aimState.roundStartTime + aimState.roundLength * 1000
+            : null;
         aimState.timerId = setInterval(updateAimTimer, 100);
 
+        if (aimClickStats) aimClickStats.style.display = aimState.followMode ? 'none' : '';
+        if (aimFollowStats) aimFollowStats.classList.toggle('aim-follow-stats--hidden', !aimState.followMode);
+        if (aimStartOverlayText) {
+            aimStartOverlayText.innerHTML = aimState.followMode
+                ? 'Keep your cursor on the target for as long as possible!<br>Round length = <strong>' + (aimState.roundLength > 0 ? aimState.roundLength + ' sec' : 'Endless') + '</strong>.'
+                : 'Click <strong>Start</strong> to begin.<br>Click each target as fast as you can!';
+        }
         if (startOverlay) startOverlay.classList.add('aimtrainer-overlay--hidden');
         if (roundOverlay) roundOverlay.classList.add('aimtrainer-overlay--hidden');
         if (startBtn) startBtn.textContent = 'Restart';
         updateAimHUD();
         if (timerDisplay) timerDisplay.textContent = '0.0s';
+        if (holdTimeDisplay) holdTimeDisplay.textContent = '0.0s';
+        if (followTimeLeftDisplay) followTimeLeftDisplay.textContent = aimState.roundLength > 0 ? aimState.roundLength + 's' : '∞';
         spawnTarget();
         if (arena) arena.focus();
     }
 
     function stopAimTrainer() {
+        if (aimState.followMode && aimState.active) {
+            endFollowRound();
+            if (aimClickStats) aimClickStats.style.display = '';
+            if (aimFollowStats) aimFollowStats.classList.add('aim-follow-stats--hidden');
+            return;
+        }
         aimState.active = false;
         if (aimState.timerId) {
             clearInterval(aimState.timerId);
@@ -689,6 +765,14 @@
 
     if (arena) {
         arena.addEventListener('click', onArenaClick);
+        arena.addEventListener('mousemove', function (e) {
+            aimState.cursorX = e.clientX;
+            aimState.cursorY = e.clientY;
+        });
+        arena.addEventListener('mouseleave', function () {
+            aimState.cursorX = null;
+            aimState.cursorY = null;
+        });
         arena.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && aimState.active) {
                 stopAimTrainer();
