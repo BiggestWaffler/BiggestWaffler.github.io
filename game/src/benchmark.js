@@ -6,6 +6,7 @@
     const mainMenu = document.getElementById('main-menu');
     const reactionScreen = document.getElementById('reaction-screen');
     const numberScreen = document.getElementById('number-screen');
+    const consistencyScreen = document.getElementById('consistency-screen');
     const aimScreen = document.getElementById('aim-screen');
     const reactionZone = document.getElementById('reaction-zone');
     const reactionMessage = document.getElementById('reaction-message');
@@ -48,10 +49,32 @@
     const followTimeLeftDisplay = document.getElementById('followTimeLeftDisplay');
     const aimStartOverlayText = document.getElementById('aimStartOverlayText');
 
+    const consistencyDurationDropdown = document.getElementById('consistencyDurationDropdown');
+    const consistencyZone = document.getElementById('consistency-zone');
+    const consistencyStartBtn = document.getElementById('consistency-start-btn');
+    const consistencyRunning = document.getElementById('consistency-running');
+    const consistencyTapsEl = document.getElementById('consistency-taps');
+    const consistencyTimeEl = document.getElementById('consistency-time');
+    const consistencyBpmLiveEl = document.getElementById('consistency-bpm-live');
+    const consistencyUrLiveEl = document.getElementById('consistency-ur-live');
+    const consistencyStopBtn = document.getElementById('consistency-stop-btn');
+    const consistencyResults = document.getElementById('consistency-results');
+    const consistencyTapsResult = document.getElementById('consistency-taps-result');
+    const consistencyDurationResult = document.getElementById('consistency-duration-result');
+    const consistencyBpmResult = document.getElementById('consistency-bpm-result');
+    const consistencyUrResult = document.getElementById('consistency-ur-result');
+    const consistencyAgainBtn = document.getElementById('consistency-again-btn');
+    const consistencySetKey1Btn = document.getElementById('consistency-set-key1');
+    const consistencySetKey2Btn = document.getElementById('consistency-set-key2');
+    const consistencyKey1Label = document.getElementById('consistency-key1-label');
+    const consistencyKey2Label = document.getElementById('consistency-key2-label');
+    const consistencyKey1Instr = document.getElementById('consistency-key1-instr');
+    const consistencyKey2Instr = document.getElementById('consistency-key2-instr');
+
     // --- Navigation (Human Benchmark hub) ---
 
     function hideAllScreens() {
-        [mainMenu, reactionScreen, numberScreen, aimScreen].forEach(function (el) {
+        [mainMenu, reactionScreen, numberScreen, consistencyScreen, aimScreen].forEach(function (el) {
             if (el) el.classList.remove('active');
         });
     }
@@ -60,6 +83,7 @@
         showMainMenu: function () {
             stopReaction();
             stopNumberMemory();
+            stopConsistency();
             stopAimTrainer();
             hideAllScreens();
             if (mainMenu) mainMenu.classList.add('active');
@@ -75,6 +99,10 @@
                 if (numberScreen) numberScreen.classList.add('active');
                 initNumberMemory();
                 renderNumberMemoryUI();
+            } else if (id === 'consistency') {
+                if (consistencyScreen) consistencyScreen.classList.add('active');
+                initConsistency();
+                renderConsistencyUI();
             } else if (id === 'aim') {
                 if (aimScreen) aimScreen.classList.add('active');
                 updateAimHUD();
@@ -357,6 +385,257 @@
     }
     if (numberModeSequence) {
         numberModeSequence.addEventListener('click', function () { setNumberMode('sequence'); });
+    }
+
+    // --- Consistency Test ---
+
+    function formatKeyCode(code) {
+        if (!code) return '?';
+        if (code.startsWith('Key')) return code.slice(3);
+        if (code === 'Space') return 'Space';
+        if (code.startsWith('Digit')) return code.slice(5);
+        if (code.startsWith('Numpad')) return 'Num' + code.slice(6);
+        return code;
+    }
+
+    let consistencyState = {
+        phase: 'idle',
+        tapTimestamps: [],
+        startTime: null,
+        durationSec: 10,
+        timerId: null,
+        key1Code: 'KeyZ',
+        key2Code: 'KeyX',
+        lastKeyUsed: null,
+        listeningForKey: null
+    };
+
+    function initConsistency() {
+        consistencyState.phase = 'idle';
+        consistencyState.tapTimestamps = [];
+        consistencyState.startTime = null;
+        consistencyState.listeningForKey = null;
+        if (consistencyState.timerId) {
+            clearInterval(consistencyState.timerId);
+            consistencyState.timerId = null;
+        }
+        updateConsistencyKeyLabels();
+    }
+
+    function updateConsistencyKeyLabels() {
+        var k1 = formatKeyCode(consistencyState.key1Code);
+        var k2 = formatKeyCode(consistencyState.key2Code);
+        if (consistencyKey1Label) consistencyKey1Label.textContent = k1;
+        if (consistencyKey2Label) consistencyKey2Label.textContent = k2;
+        if (consistencyKey1Instr) consistencyKey1Instr.textContent = k1;
+        if (consistencyKey2Instr) consistencyKey2Instr.textContent = k2;
+    }
+
+    function stopConsistency() {
+        if (consistencyState.timerId) {
+            clearInterval(consistencyState.timerId);
+            consistencyState.timerId = null;
+        }
+        consistencyState.phase = 'idle';
+    }
+
+    function computeConsistencyStats() {
+        const ts = consistencyState.tapTimestamps;
+        if (ts.length < 2) return { bpm: 0, ur: 0, taps: ts.length, duration: 0 };
+        const intervals = [];
+        for (let i = 1; i < ts.length; i++) {
+            intervals.push(ts[i] - ts[i - 1]);
+        }
+        const mean = intervals.reduce(function (a, b) { return a + b; }, 0) / intervals.length;
+        const variance = intervals.reduce(function (sum, x) { return sum + (x - mean) * (x - mean); }, 0) / intervals.length;
+        const stdDev = Math.sqrt(variance);
+        /* BPM from 16th notes: 4 sixteenths per beat, so beat = 4 * mean_interval_ms → BPM = 60000/(4*mean) */
+        const bpm = 15000 / mean;
+        return {
+            bpm: Math.round(bpm),
+            ur: Math.round(stdDev * 10) / 10,
+            taps: ts.length,
+            duration: consistencyState.startTime ? (ts[ts.length - 1] - consistencyState.startTime) / 1000 : 0
+        };
+    }
+
+    function renderConsistencyUI() {
+        if (consistencyStartBtn) consistencyStartBtn.style.display = '';
+        if (consistencyRunning) consistencyRunning.classList.add('consistency-running--hidden');
+        if (consistencyResults) consistencyResults.classList.add('consistency-results--hidden');
+    }
+
+    function updateConsistencyLive() {
+        if (!consistencyState.startTime || consistencyState.tapTimestamps.length === 0) return;
+        const elapsed = (performance.now() - consistencyState.startTime) / 1000;
+        if (consistencyTapsEl) consistencyTapsEl.textContent = consistencyState.tapTimestamps.length;
+        if (consistencyTimeEl) consistencyTimeEl.textContent = elapsed.toFixed(1) + 's';
+        if (consistencyState.tapTimestamps.length >= 2) {
+            const s = computeConsistencyStats();
+            if (consistencyBpmLiveEl) consistencyBpmLiveEl.textContent = s.bpm;
+            if (consistencyUrLiveEl) consistencyUrLiveEl.textContent = s.ur;
+        } else {
+            if (consistencyBpmLiveEl) consistencyBpmLiveEl.textContent = '—';
+            if (consistencyUrLiveEl) consistencyUrLiveEl.textContent = '—';
+        }
+    }
+
+    function endConsistencyTest() {
+        consistencyState.phase = 'idle';
+        if (consistencyState.timerId) {
+            clearInterval(consistencyState.timerId);
+            consistencyState.timerId = null;
+        }
+        if (consistencyStartBtn) consistencyStartBtn.style.display = '';
+        if (consistencyRunning) consistencyRunning.classList.add('consistency-running--hidden');
+        if (consistencyResults) consistencyResults.classList.remove('consistency-results--hidden');
+
+        const s = computeConsistencyStats();
+        const durationSec = consistencyState.startTime && consistencyState.tapTimestamps.length > 0
+            ? (consistencyState.tapTimestamps[consistencyState.tapTimestamps.length - 1] - consistencyState.startTime) / 1000
+            : 0;
+        if (consistencyTapsResult) consistencyTapsResult.textContent = s.taps;
+        if (consistencyDurationResult) consistencyDurationResult.textContent = durationSec.toFixed(1);
+        if (consistencyBpmResult) consistencyBpmResult.textContent = s.bpm;
+        if (consistencyUrResult) consistencyUrResult.textContent = s.ur;
+    }
+
+    function onConsistencyTap(keyNum) {
+        if (consistencyState.phase !== 'running') return;
+        if (consistencyState.lastKeyUsed === keyNum) return;
+        consistencyState.lastKeyUsed = keyNum;
+        const now = performance.now();
+        if (consistencyState.tapTimestamps.length === 0) {
+            consistencyState.startTime = now;
+            if (consistencyStartBtn) consistencyStartBtn.style.display = 'none';
+            if (consistencyRunning) consistencyRunning.classList.remove('consistency-running--hidden');
+            if (consistencyState.durationSec > 0) {
+                consistencyState.timerId = setInterval(function () {
+                    if (performance.now() - consistencyState.startTime >= consistencyState.durationSec * 1000) {
+                        endConsistencyTest();
+                    } else {
+                        updateConsistencyLive();
+                    }
+                }, 100);
+            }
+        }
+        consistencyState.tapTimestamps.push(now);
+        updateConsistencyLive();
+    }
+
+    function startConsistencyTest() {
+        consistencyState.phase = 'running';
+        consistencyState.tapTimestamps = [];
+        consistencyState.startTime = null;
+        consistencyState.lastKeyUsed = null;
+        consistencyState.durationSec = parseInt(getCustomSelectValue(consistencyDurationDropdown), 10) || 0;
+        renderConsistencyUI();
+        if (consistencyStartBtn) consistencyStartBtn.style.display = 'none';
+        if (consistencyRunning) consistencyRunning.classList.remove('consistency-running--hidden');
+        if (consistencyTapsEl) consistencyTapsEl.textContent = '0';
+        if (consistencyTimeEl) consistencyTimeEl.textContent = '0.0s';
+        if (consistencyBpmLiveEl) consistencyBpmLiveEl.textContent = '—';
+        if (consistencyUrLiveEl) consistencyUrLiveEl.textContent = '—';
+        if (consistencyZone) consistencyZone.focus();
+    }
+
+    if (consistencyStartBtn) {
+        consistencyStartBtn.addEventListener('click', function () {
+            if (consistencyState.phase !== 'idle') return;
+            startConsistencyTest();
+        });
+    }
+    if (consistencyStopBtn) {
+        consistencyStopBtn.addEventListener('click', endConsistencyTest);
+    }
+    if (consistencyAgainBtn) {
+        consistencyAgainBtn.addEventListener('click', function () {
+            initConsistency();
+            renderConsistencyUI();
+        });
+    }
+    if (consistencyZone) {
+        consistencyZone.addEventListener('click', function (e) {
+            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+        });
+    }
+    document.addEventListener('keydown', function (e) {
+        if (consistencyState.listeningForKey) {
+            e.preventDefault();
+            var code = e.code;
+            if (consistencyState.listeningForKey === 1) {
+                if (code === consistencyState.key2Code) consistencyState.key2Code = 'KeyX';
+                consistencyState.key1Code = code;
+            } else {
+                if (code === consistencyState.key1Code) consistencyState.key1Code = 'KeyZ';
+                consistencyState.key2Code = code;
+            }
+            consistencyState.listeningForKey = null;
+            updateConsistencyKeyLabels();
+            if (consistencySetKey1Btn) consistencySetKey1Btn.classList.remove('consistency-key-btn--listening');
+            if (consistencySetKey2Btn) consistencySetKey2Btn.classList.remove('consistency-key-btn--listening');
+            return;
+        }
+        if (consistencyState.phase !== 'running') return;
+        if (e.repeat) return;
+        if (e.code === consistencyState.key1Code) {
+            if (consistencyState.lastKeyUsed === 2 || consistencyState.lastKeyUsed === null) {
+                e.preventDefault();
+                onConsistencyTap(1);
+            }
+            return;
+        }
+        if (e.code === consistencyState.key2Code) {
+            if (consistencyState.lastKeyUsed === 1 || consistencyState.lastKeyUsed === null) {
+                e.preventDefault();
+                onConsistencyTap(2);
+            }
+        }
+    });
+    if (consistencySetKey1Btn) {
+        consistencySetKey1Btn.addEventListener('click', function () {
+            if (consistencyState.phase !== 'idle') return;
+            consistencyState.listeningForKey = 1;
+            consistencySetKey1Btn.classList.add('consistency-key-btn--listening');
+            consistencySetKey2Btn.classList.remove('consistency-key-btn--listening');
+        });
+    }
+    if (consistencySetKey2Btn) {
+        consistencySetKey2Btn.addEventListener('click', function () {
+            if (consistencyState.phase !== 'idle') return;
+            consistencyState.listeningForKey = 2;
+            consistencySetKey2Btn.classList.add('consistency-key-btn--listening');
+            consistencySetKey1Btn.classList.remove('consistency-key-btn--listening');
+        });
+    }
+    if (consistencyDurationDropdown) {
+        (function initConsistencyDropdown() {
+            var wrapper = consistencyDurationDropdown;
+            var trigger = wrapper.querySelector('.custom-select-trigger');
+            var valueEl = wrapper.querySelector('.custom-select-value');
+            var panel = wrapper.querySelector('.custom-select-panel');
+            var options = wrapper.querySelectorAll('.custom-select-option');
+            if (!trigger || !valueEl) return;
+            function close() { wrapper.classList.remove('open'); wrapper.setAttribute('aria-expanded', 'false'); }
+            function open() {
+                document.querySelectorAll('.custom-select.open').forEach(function (o) { if (o !== wrapper) o.classList.remove('open'); });
+                wrapper.classList.add('open'); wrapper.setAttribute('aria-expanded', 'true');
+            }
+            function select(opt) {
+                var val = opt.getAttribute('data-value');
+                var label = opt.textContent.trim();
+                if (val === '0') label = 'Until stop';
+                else label = val + ' sec';
+                wrapper.setAttribute('data-value', val);
+                valueEl.textContent = label;
+                options.forEach(function (o) { o.classList.remove('custom-select-option--selected'); });
+                opt.classList.add('custom-select-option--selected');
+                close();
+            }
+            trigger.addEventListener('click', function (ev) { ev.stopPropagation(); wrapper.classList.contains('open') ? close() : open(); });
+            options.forEach(function (opt) { opt.addEventListener('click', function (ev) { ev.stopPropagation(); select(opt); }); });
+            document.addEventListener('click', function () { if (wrapper.classList.contains('open')) close(); });
+        })();
     }
 
     // --- Aim Trainer (embedded) ---

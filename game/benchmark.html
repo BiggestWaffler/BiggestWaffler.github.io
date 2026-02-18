@@ -32,6 +32,10 @@
                         <h3>Number Memory</h3>
                         <p>Memorize the number, then type it back. Each level adds one more digit.</p>
                     </button>
+                    <button class="level-btn" onclick="benchmark.showTest('consistency')">
+                        <h3>Consistency</h3>
+                        <p>Alternate taps in a steady rhythm. Try to get the highest BPM and lowest Unstable Rate (ms).</p>
+                    </button>
                 </div>
             </div>
 
@@ -87,6 +91,55 @@
                     <div id="number-gameover" class="number-gameover number-gameover--hidden">
                         <p id="number-gameover-message" class="number-gameover-message"></p>
                         <button id="number-again-btn" class="aimtrainer-btn" type="button">Play again</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Consistency Test -->
+            <div id="consistency-screen" class="screen">
+                <div class="benchmark-test-hud">
+                    <h2>Consistency</h2>
+                    <div class="custom-select-wrap consistency-duration-wrap">
+                        <span class="hud-option-label">Duration</span>
+                        <div id="consistencyDurationDropdown" class="custom-select" data-value="10" role="combobox" aria-label="Test duration">
+                            <button type="button" class="custom-select-trigger">
+                                <span class="custom-select-value">10 sec</span>
+                                <span class="custom-select-arrow" aria-hidden="true"></span>
+                            </button>
+                            <div class="custom-select-panel" role="listbox">
+                                <div class="custom-select-option" role="option" data-value="5" tabindex="-1">5 sec</div>
+                                <div class="custom-select-option custom-select-option--selected" role="option" data-value="10" tabindex="-1">10 sec</div>
+                                <div class="custom-select-option" role="option" data-value="15" tabindex="-1">15 sec</div>
+                                <div class="custom-select-option" role="option" data-value="0" tabindex="-1">Until stop</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="consistency-keys-wrap">
+                        <div class="consistency-key-row">
+                            <span class="hud-option-label">Key 1</span>
+                            <button type="button" id="consistency-set-key1" class="consistency-key-btn" title="Click then press a key"><span id="consistency-key1-label">Z</span></button>
+                        </div>
+                        <div class="consistency-key-row">
+                            <span class="hud-option-label">Key 2</span>
+                            <button type="button" id="consistency-set-key2" class="consistency-key-btn" title="Click then press a key"><span id="consistency-key2-label">X</span></button>
+                        </div>
+                    </div>
+                    <button class="btn-small" onclick="benchmark.showMainMenu()">← Back</button>
+                </div>
+                <div id="consistency-zone" class="consistency-zone" tabindex="0">
+                    <p class="consistency-instruction">Alternate between <strong id="consistency-key1-instr">Z</strong> and <strong id="consistency-key2-instr">X</strong>. Time starts on first tap. Keep a steady 16th-note rhythm.</p>
+                    <button id="consistency-start-btn" class="aimtrainer-btn aimtrainer-btn-primary" type="button">Begin Test</button>
+                    <div id="consistency-running" class="consistency-running consistency-running--hidden">
+                        <p class="consistency-live">Taps: <span id="consistency-taps">0</span> &nbsp;|&nbsp; Time: <span id="consistency-time">0.0s</span></p>
+                        <p class="consistency-live">BPM: <span id="consistency-bpm-live">—</span> &nbsp;|&nbsp; UR: <span id="consistency-ur-live">—</span> ms</p>
+                        <button id="consistency-stop-btn" class="aimtrainer-btn" type="button">Stop Test</button>
+                    </div>
+                    <div id="consistency-results" class="consistency-results consistency-results--hidden">
+                        <p class="consistency-results-title">Your Results</p>
+                        <p class="consistency-results-line">Tap speed: <strong id="consistency-taps-result">0</strong> taps / <strong id="consistency-duration-result">0</strong>s</p>
+                        <p class="consistency-results-line">Stream speed: <strong id="consistency-bpm-result">0</strong> BPM</p>
+                        <p class="consistency-results-line">Unstable Rate: <strong id="consistency-ur-result">0</strong> ms</p>
+                        <button id="consistency-again-btn" class="aimtrainer-btn" type="button">Try Again</button>
                     </div>
                 </div>
             </div>

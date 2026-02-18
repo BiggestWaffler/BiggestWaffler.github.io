@@ -321,6 +321,121 @@
     background: rgba(0, 255, 255, 0.15);
 }
 
+/* Consistency test */
+.consistency-duration-wrap {
+    margin: 0;
+}
+
+.consistency-keys-wrap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.consistency-key-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.consistency-key-btn {
+    min-width: 44px;
+    padding: 6px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #00ffff;
+    color: #00ffff;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.consistency-key-btn:hover {
+    background: rgba(0, 255, 255, 0.15);
+}
+
+.consistency-key-btn--listening {
+    animation: consistencyKeyPulse 0.8s ease-in-out infinite;
+}
+
+@keyframes consistencyKeyPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.5); }
+    50% { box-shadow: 0 0 0 8px rgba(0, 255, 255, 0); }
+}
+
+.consistency-zone {
+    min-height: min(50vh, 320px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #00ffff;
+    border-radius: 12px;
+    outline: none;
+}
+
+.consistency-instruction {
+    font-size: 1rem;
+    color: #bcdcff;
+    margin: 0 0 20px 0;
+    text-align: center;
+}
+
+.consistency-instruction strong {
+    color: #00ffff;
+}
+
+.consistency-running {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.consistency-running--hidden {
+    display: none !important;
+}
+
+.consistency-live {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    color: #00ffff;
+    margin: 0;
+}
+
+.consistency-results {
+    text-align: center;
+}
+
+.consistency-results--hidden {
+    display: none !important;
+}
+
+.consistency-results-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #00ffff;
+    margin: 0 0 16px 0;
+}
+
+.consistency-results-line {
+    font-size: 1.1rem;
+    color: #bcdcff;
+    margin: 0 0 8px 0;
+}
+
+.consistency-results-line strong {
+    color: #00ffff;
+}
+
+.consistency-results .aimtrainer-btn {
+    margin-top: 20px;
+}
+
 /* Aim screen: ensure it fits in the hub */
 #aim-screen .aimtrainer-container {
     max-width: 100%;
