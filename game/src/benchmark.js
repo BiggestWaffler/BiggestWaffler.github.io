@@ -6,6 +6,7 @@
     const mainMenu = document.getElementById('main-menu');
     const reactionScreen = document.getElementById('reaction-screen');
     const numberScreen = document.getElementById('number-screen');
+    const cpsScreen = document.getElementById('cps-screen');
     const consistencyScreen = document.getElementById('consistency-screen');
     const aimScreen = document.getElementById('aim-screen');
     const reactionZone = document.getElementById('reaction-zone');
@@ -71,10 +72,23 @@
     const consistencyKey1Instr = document.getElementById('consistency-key1-instr');
     const consistencyKey2Instr = document.getElementById('consistency-key2-instr');
 
+    const cpsDurationDropdown = document.getElementById('cpsDurationDropdown');
+    const cpsZone = document.getElementById('cps-zone');
+    const cpsStartBtn = document.getElementById('cps-start-btn');
+    const cpsRunning = document.getElementById('cps-running');
+    const cpsCountEl = document.getElementById('cps-count');
+    const cpsTimeLeftEl = document.getElementById('cps-time-left');
+    const cpsClickArea = document.getElementById('cps-click-area');
+    const cpsResults = document.getElementById('cps-results');
+    const cpsClicksResult = document.getElementById('cps-clicks-result');
+    const cpsDurationResult = document.getElementById('cps-duration-result');
+    const cpsCpsResult = document.getElementById('cps-cps-result');
+    const cpsAgainBtn = document.getElementById('cps-again-btn');
+
     // --- Navigation (Human Benchmark hub) ---
 
     function hideAllScreens() {
-        [mainMenu, reactionScreen, numberScreen, consistencyScreen, aimScreen].forEach(function (el) {
+        [mainMenu, reactionScreen, numberScreen, cpsScreen, consistencyScreen, aimScreen].forEach(function (el) {
             if (el) el.classList.remove('active');
         });
     }
@@ -83,6 +97,7 @@
         showMainMenu: function () {
             stopReaction();
             stopNumberMemory();
+            stopCps();
             stopConsistency();
             stopAimTrainer();
             hideAllScreens();
@@ -99,6 +114,10 @@
                 if (numberScreen) numberScreen.classList.add('active');
                 initNumberMemory();
                 renderNumberMemoryUI();
+            } else if (id === 'cps') {
+                if (cpsScreen) cpsScreen.classList.add('active');
+                initCps();
+                renderCpsUI();
             } else if (id === 'consistency') {
                 if (consistencyScreen) consistencyScreen.classList.add('active');
                 initConsistency();
@@ -385,6 +404,132 @@
     }
     if (numberModeSequence) {
         numberModeSequence.addEventListener('click', function () { setNumberMode('sequence'); });
+    }
+
+    // --- CPS Test ---
+
+    let cpsState = {
+        phase: 'idle',
+        clicks: 0,
+        startTime: null,
+        durationSec: 5,
+        timerId: null
+    };
+
+    function initCps() {
+        cpsState.phase = 'idle';
+        cpsState.clicks = 0;
+        cpsState.startTime = null;
+        if (cpsState.timerId) {
+            clearInterval(cpsState.timerId);
+            cpsState.timerId = null;
+        }
+    }
+
+    function stopCps() {
+        if (cpsState.timerId) {
+            clearInterval(cpsState.timerId);
+            cpsState.timerId = null;
+        }
+        cpsState.phase = 'idle';
+    }
+
+    function renderCpsUI() {
+        if (cpsStartBtn) cpsStartBtn.style.display = '';
+        if (cpsRunning) cpsRunning.classList.add('cps-running--hidden');
+        if (cpsResults) cpsResults.classList.add('cps-results--hidden');
+    }
+
+    function updateCpsTimer() {
+        if (!cpsState.startTime || cpsState.phase !== 'running') return;
+        var elapsed = (performance.now() - cpsState.startTime) / 1000;
+        var left = Math.max(0, cpsState.durationSec - elapsed);
+        if (cpsCountEl) cpsCountEl.textContent = cpsState.clicks;
+        if (cpsTimeLeftEl) cpsTimeLeftEl.textContent = left.toFixed(1) + 's';
+        if (left <= 0) endCpsTest();
+    }
+
+    function endCpsTest() {
+        cpsState.phase = 'idle';
+        if (cpsState.timerId) {
+            clearInterval(cpsState.timerId);
+            cpsState.timerId = null;
+        }
+        if (cpsStartBtn) cpsStartBtn.style.display = '';
+        if (cpsRunning) cpsRunning.classList.add('cps-running--hidden');
+        if (cpsResults) cpsResults.classList.remove('cps-results--hidden');
+
+        var duration = cpsState.durationSec;
+        var cps = duration > 0 ? (cpsState.clicks / duration).toFixed(1) : '0';
+        if (cpsClicksResult) cpsClicksResult.textContent = cpsState.clicks;
+        if (cpsDurationResult) cpsDurationResult.textContent = duration;
+        if (cpsCpsResult) cpsCpsResult.textContent = cps;
+    }
+
+    function onCpsClick() {
+        if (cpsState.phase !== 'running') return;
+        cpsState.clicks++;
+        if (cpsCountEl) cpsCountEl.textContent = cpsState.clicks;
+    }
+
+    function startCpsTest() {
+        cpsState.phase = 'running';
+        cpsState.clicks = 0;
+        cpsState.durationSec = parseInt(getCustomSelectValue(cpsDurationDropdown), 10) || 5;
+        cpsState.startTime = performance.now();
+        cpsState.timerId = setInterval(updateCpsTimer, 50);
+
+        if (cpsStartBtn) cpsStartBtn.style.display = 'none';
+        if (cpsRunning) cpsRunning.classList.remove('cps-running--hidden');
+        if (cpsCountEl) cpsCountEl.textContent = '0';
+        if (cpsTimeLeftEl) cpsTimeLeftEl.textContent = cpsState.durationSec.toFixed(1) + 's';
+        if (cpsZone) cpsZone.focus();
+    }
+
+    if (cpsStartBtn) {
+        cpsStartBtn.addEventListener('click', function () {
+            if (cpsState.phase !== 'idle') return;
+            startCpsTest();
+        });
+    }
+    if (cpsAgainBtn) {
+        cpsAgainBtn.addEventListener('click', function () {
+            initCps();
+            renderCpsUI();
+        });
+    }
+    if (cpsClickArea) {
+        cpsClickArea.addEventListener('click', function (e) {
+            e.stopPropagation();
+            onCpsClick();
+        });
+    }
+    if (cpsDurationDropdown) {
+        (function initCpsDropdown() {
+            var wrapper = cpsDurationDropdown;
+            var trigger = wrapper.querySelector('.custom-select-trigger');
+            var valueEl = wrapper.querySelector('.custom-select-value');
+            var panel = wrapper.querySelector('.custom-select-panel');
+            var options = wrapper.querySelectorAll('.custom-select-option');
+            if (!trigger || !valueEl) return;
+            function close() { wrapper.classList.remove('open'); wrapper.setAttribute('aria-expanded', 'false'); }
+            function open() {
+                document.querySelectorAll('.custom-select.open').forEach(function (o) { if (o !== wrapper) o.classList.remove('open'); });
+                wrapper.classList.add('open'); wrapper.setAttribute('aria-expanded', 'true');
+            }
+            function select(opt) {
+                var val = opt.getAttribute('data-value');
+                var label = val + ' sec';
+                wrapper.setAttribute('data-value', val);
+                valueEl.textContent = label;
+                options.forEach(function (o) { o.classList.remove('custom-select-option--selected'); });
+                opt.classList.add('custom-select-option--selected');
+                close();
+            }
+            trigger.addEventListener('click', function (ev) { ev.stopPropagation(); wrapper.classList.contains('open') ? close() : open(); });
+            options.forEach(function (opt) { opt.addEventListener('click', function (ev) { ev.stopPropagation(); select(opt); }); });
+            document.addEventListener('click', function () { if (wrapper.classList.contains('open')) close(); });
+        })();
     }
 
     // --- Consistency Test ---

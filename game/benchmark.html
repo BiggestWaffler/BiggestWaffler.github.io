@@ -36,6 +36,10 @@
                         <h3>Consistency</h3>
                         <p>Alternate taps in a steady rhythm. Try to get the highest BPM and lowest Unstable Rate (ms).</p>
                     </button>
+                    <button class="level-btn" onclick="benchmark.showTest('cps')">
+                        <h3>CPS Test</h3>
+                        <p>Click as fast as you can for a set time. Measure your clicks per second.</p>
+                    </button>
                 </div>
             </div>
 
@@ -91,6 +95,43 @@
                     <div id="number-gameover" class="number-gameover number-gameover--hidden">
                         <p id="number-gameover-message" class="number-gameover-message"></p>
                         <button id="number-again-btn" class="aimtrainer-btn" type="button">Play again</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CPS Test -->
+            <div id="cps-screen" class="screen">
+                <div class="benchmark-test-hud">
+                    <h2>CPS Test</h2>
+                    <div class="custom-select-wrap cps-duration-wrap">
+                        <span class="hud-option-label">Duration</span>
+                        <div id="cpsDurationDropdown" class="custom-select" data-value="5" role="combobox" aria-label="Test duration">
+                            <button type="button" class="custom-select-trigger">
+                                <span class="custom-select-value">5 sec</span>
+                                <span class="custom-select-arrow" aria-hidden="true"></span>
+                            </button>
+                            <div class="custom-select-panel" role="listbox">
+                                <div class="custom-select-option" role="option" data-value="1" tabindex="-1">1 sec</div>
+                                <div class="custom-select-option custom-select-option--selected" role="option" data-value="5" tabindex="-1">5 sec</div>
+                                <div class="custom-select-option" role="option" data-value="10" tabindex="-1">10 sec</div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-small" onclick="benchmark.showMainMenu()">← Back</button>
+                </div>
+                <div id="cps-zone" class="cps-zone" tabindex="0">
+                    <p class="cps-instruction">Click the area as fast as you can. Time starts when you click Start.</p>
+                    <button id="cps-start-btn" class="aimtrainer-btn aimtrainer-btn-primary" type="button">Start</button>
+                    <div id="cps-running" class="cps-running cps-running--hidden">
+                        <p class="cps-live">Clicks: <span id="cps-count">0</span> &nbsp;|&nbsp; Time left: <span id="cps-time-left">5.0s</span></p>
+                        <p class="cps-click-hint">Click here ↓</p>
+                        <div id="cps-click-area" class="cps-click-area">Click!</div>
+                    </div>
+                    <div id="cps-results" class="cps-results cps-results--hidden">
+                        <p class="cps-results-title">Your Results</p>
+                        <p class="cps-results-line"><strong id="cps-clicks-result">0</strong> clicks in <strong id="cps-duration-result">0</strong>s</p>
+                        <p class="cps-results-line">CPS: <strong id="cps-cps-result">0</strong></p>
+                        <button id="cps-again-btn" class="aimtrainer-btn" type="button">Try Again</button>
                     </div>
                 </div>
             </div>

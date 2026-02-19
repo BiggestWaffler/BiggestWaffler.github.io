@@ -436,6 +436,109 @@
     margin-top: 20px;
 }
 
+/* CPS test */
+.cps-duration-wrap {
+    margin: 0;
+}
+
+.cps-zone {
+    min-height: min(50vh, 320px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #00ffff;
+    border-radius: 12px;
+    outline: none;
+}
+
+.cps-instruction {
+    font-size: 1rem;
+    color: #bcdcff;
+    margin: 0 0 20px 0;
+    text-align: center;
+}
+
+.cps-running {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.cps-running--hidden {
+    display: none !important;
+}
+
+.cps-live {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.2rem;
+    color: #00ffff;
+    margin: 0;
+}
+
+.cps-click-hint {
+    font-size: 0.9rem;
+    color: #888;
+    margin: 0;
+}
+
+.cps-click-area {
+    min-width: 200px;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 255, 255, 0.15);
+    border: 3px solid #00ffff;
+    border-radius: 12px;
+    color: #00ffff;
+    font-size: 1.25rem;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.1s ease;
+}
+
+.cps-click-area:hover {
+    background: rgba(0, 255, 255, 0.25);
+}
+
+.cps-click-area:active {
+    background: rgba(0, 255, 255, 0.35);
+}
+
+.cps-results {
+    text-align: center;
+}
+
+.cps-results--hidden {
+    display: none !important;
+}
+
+.cps-results-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #00ffff;
+    margin: 0 0 16px 0;
+}
+
+.cps-results-line {
+    font-size: 1.1rem;
+    color: #bcdcff;
+    margin: 0 0 8px 0;
+}
+
+.cps-results-line strong {
+    color: #00ffff;
+}
+
+.cps-results .aimtrainer-btn {
+    margin-top: 20px;
+}
+
 /* Aim screen: ensure it fits in the hub */
 #aim-screen .aimtrainer-container {
     max-width: 100%;
