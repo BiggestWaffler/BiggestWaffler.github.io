@@ -40,6 +40,10 @@
                         <h3>CPS Test</h3>
                         <p>Click as fast as you can for a set time. Measure your clicks per second.</p>
                     </button>
+                    <button class="level-btn" onclick="benchmark.showTest('pitch')">
+                        <h3>Pitch Test</h3>
+                        <p>Listen to a note, then guess which one it is. Train your ear.</p>
+                    </button>
                 </div>
             </div>
 
@@ -181,6 +185,38 @@
                         <p class="consistency-results-line">Stream speed: <strong id="consistency-bpm-result">0</strong> BPM</p>
                         <p class="consistency-results-line">Unstable Rate: <strong id="consistency-ur-result">0</strong> ms</p>
                         <button id="consistency-again-btn" class="aimtrainer-btn" type="button">Try Again</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pitch Test -->
+            <div id="pitch-screen" class="screen">
+                <div class="benchmark-test-hud">
+                    <h2>Pitch Test</h2>
+                    <div class="reaction-stats">
+                        <span id="pitch-score">0</span>
+                        <span class="reaction-label">Score</span>
+                    </div>
+                    <div class="reaction-stats">
+                        <span id="pitch-round">0</span>
+                        <span class="reaction-label">Round</span>
+                    </div>
+                    <button class="btn-small" onclick="benchmark.showMainMenu()">← Back</button>
+                </div>
+                <div id="pitch-zone" class="pitch-zone">
+                    <p id="pitch-message" class="pitch-message">Click Start to hear a note, then guess which one it is.</p>
+                    <button id="pitch-start-btn" class="aimtrainer-btn aimtrainer-btn-primary" type="button">Start</button>
+                    <div id="pitch-playing" class="pitch-playing pitch-playing--hidden">
+                        <p class="pitch-instruction">Listen to the note…</p>
+                        <button id="pitch-replay-btn" class="aimtrainer-btn" type="button">Replay</button>
+                    </div>
+                    <div id="pitch-guess-wrap" class="pitch-guess-wrap pitch-guess-wrap--hidden">
+                        <p class="pitch-guess-label">What note did you hear?</p>
+                        <div id="pitch-notes" class="pitch-notes"></div>
+                    </div>
+                    <div id="pitch-feedback" class="pitch-feedback pitch-feedback--hidden">
+                        <p id="pitch-feedback-text" class="pitch-feedback-text"></p>
+                        <button id="pitch-next-btn" class="aimtrainer-btn" type="button">Next</button>
                     </div>
                 </div>
             </div>

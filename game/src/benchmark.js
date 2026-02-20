@@ -8,6 +8,7 @@
     const numberScreen = document.getElementById('number-screen');
     const cpsScreen = document.getElementById('cps-screen');
     const consistencyScreen = document.getElementById('consistency-screen');
+    const pitchScreen = document.getElementById('pitch-screen');
     const aimScreen = document.getElementById('aim-screen');
     const reactionZone = document.getElementById('reaction-zone');
     const reactionMessage = document.getElementById('reaction-message');
@@ -85,10 +86,23 @@
     const cpsCpsResult = document.getElementById('cps-cps-result');
     const cpsAgainBtn = document.getElementById('cps-again-btn');
 
+    const pitchZone = document.getElementById('pitch-zone');
+    const pitchMessage = document.getElementById('pitch-message');
+    const pitchStartBtn = document.getElementById('pitch-start-btn');
+    const pitchPlaying = document.getElementById('pitch-playing');
+    const pitchReplayBtn = document.getElementById('pitch-replay-btn');
+    const pitchGuessWrap = document.getElementById('pitch-guess-wrap');
+    const pitchNotesEl = document.getElementById('pitch-notes');
+    const pitchFeedback = document.getElementById('pitch-feedback');
+    const pitchFeedbackText = document.getElementById('pitch-feedback-text');
+    const pitchNextBtn = document.getElementById('pitch-next-btn');
+    const pitchScoreEl = document.getElementById('pitch-score');
+    const pitchRoundEl = document.getElementById('pitch-round');
+
     // --- Navigation (Human Benchmark hub) ---
 
     function hideAllScreens() {
-        [mainMenu, reactionScreen, numberScreen, cpsScreen, consistencyScreen, aimScreen].forEach(function (el) {
+        [mainMenu, reactionScreen, numberScreen, cpsScreen, consistencyScreen, pitchScreen, aimScreen].forEach(function (el) {
             if (el) el.classList.remove('active');
         });
     }
@@ -99,6 +113,7 @@
             stopNumberMemory();
             stopCps();
             stopConsistency();
+            stopPitchTest();
             stopAimTrainer();
             hideAllScreens();
             if (mainMenu) mainMenu.classList.add('active');
@@ -122,6 +137,10 @@
                 if (consistencyScreen) consistencyScreen.classList.add('active');
                 initConsistency();
                 renderConsistencyUI();
+            } else if (id === 'pitch') {
+                if (pitchScreen) pitchScreen.classList.add('active');
+                initPitchTest();
+                renderPitchUI();
             } else if (id === 'aim') {
                 if (aimScreen) aimScreen.classList.add('active');
                 updateAimHUD();
@@ -530,6 +549,149 @@
             options.forEach(function (opt) { opt.addEventListener('click', function (ev) { ev.stopPropagation(); select(opt); }); });
             document.addEventListener('click', function () { if (wrapper.classList.contains('open')) close(); });
         })();
+    }
+
+    // --- Pitch Test ---
+
+    const PITCH_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const PITCH_DURATION_MS = 800;
+    const C4_HZ = 261.63;
+
+    function getNoteFrequency(semitoneIndex) {
+        return C4_HZ * Math.pow(2, semitoneIndex / 12);
+    }
+
+    let pitchAudioContext = null;
+
+    function getPitchAudioContext() {
+        if (!pitchAudioContext) {
+            pitchAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        return pitchAudioContext;
+    }
+
+    function playPitchNote(semitoneIndex) {
+        const ctx = getPitchAudioContext();
+        if (ctx.state === 'suspended') ctx.resume();
+        const freq = getNoteFrequency(semitoneIndex);
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + PITCH_DURATION_MS / 1000);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + PITCH_DURATION_MS / 1000);
+    }
+
+    let pitchState = {
+        phase: 'idle',
+        score: 0,
+        round: 0,
+        currentNoteIndex: null
+    };
+
+    function initPitchTest() {
+        pitchState.phase = 'idle';
+        pitchState.score = 0;
+        pitchState.round = 0;
+        pitchState.currentNoteIndex = null;
+    }
+
+    function stopPitchTest() {
+        pitchState.phase = 'idle';
+    }
+
+    function renderPitchUI() {
+        if (pitchStartBtn) pitchStartBtn.style.display = '';
+        if (pitchPlaying) pitchPlaying.classList.add('pitch-playing--hidden');
+        if (pitchGuessWrap) pitchGuessWrap.classList.add('pitch-guess-wrap--hidden');
+        if (pitchFeedback) pitchFeedback.classList.add('pitch-feedback--hidden');
+        if (pitchMessage) {
+            pitchMessage.style.display = '';
+            pitchMessage.textContent = 'Click Start to hear a note, then guess which one it is.';
+        }
+        if (pitchScoreEl) pitchScoreEl.textContent = pitchState.score;
+        if (pitchRoundEl) pitchRoundEl.textContent = pitchState.round;
+    }
+
+    function buildPitchNoteButtons() {
+        if (!pitchNotesEl) return;
+        pitchNotesEl.innerHTML = '';
+        PITCH_NOTES.forEach(function (name, index) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'pitch-note-btn';
+            btn.textContent = name;
+            btn.setAttribute('data-index', String(index));
+            pitchNotesEl.appendChild(btn);
+        });
+    }
+
+    function startPitchRound() {
+        pitchState.round++;
+        pitchState.currentNoteIndex = Math.floor(Math.random() * 12);
+        if (pitchStartBtn) pitchStartBtn.style.display = 'none';
+        if (pitchMessage) pitchMessage.style.display = 'none';
+        if (pitchPlaying) pitchPlaying.classList.remove('pitch-playing--hidden');
+        if (pitchGuessWrap) pitchGuessWrap.classList.add('pitch-guess-wrap--hidden');
+        if (pitchFeedback) pitchFeedback.classList.add('pitch-feedback--hidden');
+        if (pitchRoundEl) pitchRoundEl.textContent = pitchState.round;
+        playPitchNote(pitchState.currentNoteIndex);
+        setTimeout(function () {
+            showPitchGuess();
+        }, PITCH_DURATION_MS + 300);
+    }
+
+    function showPitchGuess() {
+        if (pitchPlaying) pitchPlaying.classList.add('pitch-playing--hidden');
+        if (pitchGuessWrap) pitchGuessWrap.classList.remove('pitch-guess-wrap--hidden');
+        buildPitchNoteButtons();
+        const buttons = pitchNotesEl ? pitchNotesEl.querySelectorAll('.pitch-note-btn') : [];
+        buttons.forEach(function (btn) {
+            btn.addEventListener('click', onPitchGuess);
+        });
+    }
+
+    function onPitchGuess(e) {
+        const btn = e.target;
+        if (!btn.classList.contains('pitch-note-btn')) return;
+        const guessedIndex = parseInt(btn.getAttribute('data-index'), 10);
+        const correct = guessedIndex === pitchState.currentNoteIndex;
+        if (correct) pitchState.score++;
+        if (pitchScoreEl) pitchScoreEl.textContent = pitchState.score;
+
+        if (pitchGuessWrap) pitchGuessWrap.classList.add('pitch-guess-wrap--hidden');
+        if (pitchFeedback) pitchFeedback.classList.remove('pitch-feedback--hidden');
+        if (pitchFeedbackText) {
+            const noteName = PITCH_NOTES[pitchState.currentNoteIndex];
+            pitchFeedbackText.textContent = correct
+                ? 'Correct! It was ' + noteName + '.'
+                : 'Wrong. The note was ' + noteName + '.';
+        }
+    }
+
+    if (pitchStartBtn) {
+        pitchStartBtn.addEventListener('click', function () {
+            if (pitchState.phase !== 'idle') return;
+            pitchState.phase = 'playing';
+            startPitchRound();
+        });
+    }
+    if (pitchReplayBtn) {
+        pitchReplayBtn.addEventListener('click', function () {
+            if (pitchState.currentNoteIndex !== null) {
+                playPitchNote(pitchState.currentNoteIndex);
+            }
+        });
+    }
+    if (pitchNextBtn) {
+        pitchNextBtn.addEventListener('click', function () {
+            pitchState.phase = 'playing';
+            startPitchRound();
+        });
     }
 
     // --- Consistency Test ---

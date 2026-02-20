@@ -305,6 +305,110 @@
     color: #00ffff;
 }
 
+/* Pitch Test */
+.pitch-zone {
+    min-height: min(50vh, 320px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #00ffff;
+    border-radius: 12px;
+    position: relative;
+}
+
+.pitch-message {
+    font-size: 1.1rem;
+    color: #bcdcff;
+    margin: 0 0 16px 0;
+    text-align: center;
+}
+
+.pitch-playing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.pitch-playing--hidden {
+    display: none;
+}
+
+.pitch-instruction {
+    font-size: 1.1rem;
+    color: #bcdcff;
+    margin: 0;
+}
+
+.pitch-guess-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.pitch-guess-wrap--hidden {
+    display: none;
+}
+
+.pitch-guess-label {
+    font-size: 1rem;
+    color: #bcdcff;
+    margin: 0;
+}
+
+.pitch-notes {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    max-width: 420px;
+}
+
+.pitch-note-btn {
+    min-width: 48px;
+    padding: 12px 14px;
+    font-size: 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    background: rgba(0, 0, 0, 0.8);
+    color: #bcdcff;
+    border: 2px solid #00ffff;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pitch-note-btn:hover {
+    background: rgba(0, 255, 255, 0.15);
+    color: #00ffff;
+    box-shadow: 0 0 16px rgba(0, 255, 255, 0.3);
+}
+
+.pitch-feedback {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.pitch-feedback--hidden {
+    display: none;
+}
+
+.pitch-feedback-text {
+    font-size: 1.1rem;
+    color: #bcdcff;
+    margin: 0;
+}
+
+.pitch-feedback-text strong {
+    color: #00ffff;
+}
+
 .btn-small {
     padding: 8px 16px;
     font-size: 14px;
