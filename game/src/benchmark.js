@@ -555,10 +555,11 @@
 
     const PITCH_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     const PITCH_DURATION_MS = 800;
-    const C4_HZ = 261.63;
+    const C3_HZ = 130.81;
+    const PITCH_SEMITONES = 48;
 
     function getNoteFrequency(semitoneIndex) {
-        return C4_HZ * Math.pow(2, semitoneIndex / 12);
+        return C3_HZ * Math.pow(2, semitoneIndex / 12);
     }
 
     let pitchAudioContext = null;
@@ -590,14 +591,14 @@
         phase: 'idle',
         score: 0,
         round: 0,
-        currentNoteIndex: null
+        currentSemitoneIndex: null
     };
 
     function initPitchTest() {
         pitchState.phase = 'idle';
         pitchState.score = 0;
         pitchState.round = 0;
-        pitchState.currentNoteIndex = null;
+        pitchState.currentSemitoneIndex = null;
     }
 
     function stopPitchTest() {
@@ -632,14 +633,14 @@
 
     function startPitchRound() {
         pitchState.round++;
-        pitchState.currentNoteIndex = Math.floor(Math.random() * 12);
+        pitchState.currentSemitoneIndex = Math.floor(Math.random() * PITCH_SEMITONES);
         if (pitchStartBtn) pitchStartBtn.style.display = 'none';
         if (pitchMessage) pitchMessage.style.display = 'none';
         if (pitchPlaying) pitchPlaying.classList.remove('pitch-playing--hidden');
         if (pitchGuessWrap) pitchGuessWrap.classList.add('pitch-guess-wrap--hidden');
         if (pitchFeedback) pitchFeedback.classList.add('pitch-feedback--hidden');
         if (pitchRoundEl) pitchRoundEl.textContent = pitchState.round;
-        playPitchNote(pitchState.currentNoteIndex);
+        playPitchNote(pitchState.currentSemitoneIndex);
         setTimeout(function () {
             showPitchGuess();
         }, PITCH_DURATION_MS + 300);
@@ -659,17 +660,19 @@
         const btn = e.target;
         if (!btn.classList.contains('pitch-note-btn')) return;
         const guessedIndex = parseInt(btn.getAttribute('data-index'), 10);
-        const correct = guessedIndex === pitchState.currentNoteIndex;
+        const noteIndex = pitchState.currentSemitoneIndex % 12;
+        const octave = 3 + Math.floor(pitchState.currentSemitoneIndex / 12);
+        const correct = guessedIndex === noteIndex;
         if (correct) pitchState.score++;
         if (pitchScoreEl) pitchScoreEl.textContent = pitchState.score;
 
         if (pitchGuessWrap) pitchGuessWrap.classList.add('pitch-guess-wrap--hidden');
         if (pitchFeedback) pitchFeedback.classList.remove('pitch-feedback--hidden');
         if (pitchFeedbackText) {
-            const noteName = PITCH_NOTES[pitchState.currentNoteIndex];
+            const noteName = PITCH_NOTES[noteIndex];
             pitchFeedbackText.textContent = correct
-                ? 'Correct! It was ' + noteName + '.'
-                : 'Wrong. The note was ' + noteName + '.';
+                ? 'Correct! It was ' + noteName + ' (octave ' + octave + ').'
+                : 'Wrong. The note was ' + noteName + ' (octave ' + octave + ').';
         }
     }
 
@@ -682,8 +685,8 @@
     }
     if (pitchReplayBtn) {
         pitchReplayBtn.addEventListener('click', function () {
-            if (pitchState.currentNoteIndex !== null) {
-                playPitchNote(pitchState.currentNoteIndex);
+            if (pitchState.currentSemitoneIndex !== null) {
+                playPitchNote(pitchState.currentSemitoneIndex);
             }
         });
     }
