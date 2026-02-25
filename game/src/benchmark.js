@@ -93,11 +93,17 @@
     const pitchReplayBtn = document.getElementById('pitch-replay-btn');
     const pitchGuessWrap = document.getElementById('pitch-guess-wrap');
     const pitchNotesEl = document.getElementById('pitch-notes');
+    const pitchGuessLabel = document.getElementById('pitch-guess-label');
+    const pitchSubmitBtn = document.getElementById('pitch-submit-btn');
     const pitchFeedback = document.getElementById('pitch-feedback');
     const pitchFeedbackText = document.getElementById('pitch-feedback-text');
     const pitchNextBtn = document.getElementById('pitch-next-btn');
     const pitchScoreEl = document.getElementById('pitch-score');
     const pitchRoundEl = document.getElementById('pitch-round');
+    const pitchModeWrap = document.getElementById('pitch-mode-wrap');
+    const pitchModeSingleBtn = document.getElementById('pitch-mode-single');
+    const pitchModeChordBtn = document.getElementById('pitch-mode-chord');
+    const pitchModeHintText = document.getElementById('pitch-mode-hint-text');
 
     // --- Navigation (Human Benchmark hub) ---
 
@@ -591,18 +597,42 @@
         phase: 'idle',
         score: 0,
         round: 0,
-        currentSemitoneIndex: null
+        mode: 'single',
+        currentSemitoneIndex: null,
+        currentChordSemitones: []
     };
 
     function initPitchTest() {
         pitchState.phase = 'idle';
         pitchState.score = 0;
         pitchState.round = 0;
+        pitchState.mode = 'single';
         pitchState.currentSemitoneIndex = null;
+        pitchState.currentChordSemitones = [];
+        setPitchMode('single');
+        renderPitchUI();
     }
 
     function stopPitchTest() {
         pitchState.phase = 'idle';
+        pitchState.currentSemitoneIndex = null;
+        pitchState.currentChordSemitones = [];
+    }
+
+    function setPitchMode(mode) {
+        pitchState.mode = mode;
+        if (pitchModeSingleBtn) {
+            pitchModeSingleBtn.classList.toggle('pitch-mode-btn--active', mode === 'single');
+        }
+        if (pitchModeChordBtn) {
+            pitchModeChordBtn.classList.toggle('pitch-mode-btn--active', mode === 'chord');
+        }
+        if (pitchModeHintText) {
+            pitchModeHintText.textContent =
+                mode === 'single'
+                    ? 'Guess the single note that was played.'
+                    : 'Guess all notes in the chord (3–5 distinct notes).';
+        }
     }
 
     function renderPitchUI() {
@@ -610,9 +640,11 @@
         if (pitchPlaying) pitchPlaying.classList.add('pitch-playing--hidden');
         if (pitchGuessWrap) pitchGuessWrap.classList.add('pitch-guess-wrap--hidden');
         if (pitchFeedback) pitchFeedback.classList.add('pitch-feedback--hidden');
+        if (pitchSubmitBtn) pitchSubmitBtn.style.display = 'none';
+        if (pitchGuessLabel) pitchGuessLabel.textContent = 'What note did you hear?';
         if (pitchMessage) {
             pitchMessage.style.display = '';
-            pitchMessage.textContent = 'Click Start to hear a note, then guess which one it is.';
+            pitchMessage.textContent = 'Click Start to hear a note or chord, then guess the notes.';
         }
         if (pitchScoreEl) pitchScoreEl.textContent = pitchState.score;
         if (pitchRoundEl) pitchRoundEl.textContent = pitchState.round;
@@ -631,16 +663,69 @@
         });
     }
 
+    function playPitchChord(semitoneIndices) {
+        if (!semitoneIndices || !semitoneIndices.length) return;
+        const ctx = getPitchAudioContext();
+        if (ctx.state === 'suspended') ctx.resume();
+        const now = ctx.currentTime;
+        const duration = PITCH_DURATION_MS / 1000;
+        const gainPerVoice = 0.22 / Math.max(1, semitoneIndices.length);
+        semitoneIndices.forEach(function (idx) {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.value = getNoteFrequency(idx);
+            gain.gain.setValueAtTime(gainPerVoice, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+            osc.start(now);
+            osc.stop(now + duration);
+        });
+    }
+
+    function getNoteInfoFromSemitone(semitoneIndex) {
+        const noteIndex = ((semitoneIndex % 12) + 12) % 12;
+        const octave = 3 + Math.floor(semitoneIndex / 12);
+        return {
+            noteIndex: noteIndex,
+            octave: octave,
+            name: PITCH_NOTES[noteIndex]
+        };
+    }
+
     function startPitchRound() {
         pitchState.round++;
-        pitchState.currentSemitoneIndex = Math.floor(Math.random() * PITCH_SEMITONES);
+        pitchState.currentSemitoneIndex = null;
+        pitchState.currentChordSemitones = [];
         if (pitchStartBtn) pitchStartBtn.style.display = 'none';
         if (pitchMessage) pitchMessage.style.display = 'none';
         if (pitchPlaying) pitchPlaying.classList.remove('pitch-playing--hidden');
         if (pitchGuessWrap) pitchGuessWrap.classList.add('pitch-guess-wrap--hidden');
         if (pitchFeedback) pitchFeedback.classList.add('pitch-feedback--hidden');
         if (pitchRoundEl) pitchRoundEl.textContent = pitchState.round;
-        playPitchNote(pitchState.currentSemitoneIndex);
+        if (pitchModeHintText) {
+            pitchModeHintText.textContent =
+                pitchState.mode === 'single'
+                    ? 'Guess the single note that was played.'
+                    : 'Guess all notes in the chord (3–5 distinct notes).';
+        }
+
+        if (pitchState.mode === 'single') {
+            pitchState.currentSemitoneIndex = Math.floor(Math.random() * PITCH_SEMITONES);
+            playPitchNote(pitchState.currentSemitoneIndex);
+        } else {
+            const chordSize = 3 + Math.floor(Math.random() * 3); // 3–5
+            const used = {};
+            while (pitchState.currentChordSemitones.length < chordSize) {
+                const semi = Math.floor(Math.random() * PITCH_SEMITONES);
+                const pc = ((semi % 12) + 12) % 12;
+                if (used[pc]) continue;
+                used[pc] = true;
+                pitchState.currentChordSemitones.push(semi);
+            }
+            playPitchChord(pitchState.currentChordSemitones);
+        }
         setTimeout(function () {
             showPitchGuess();
         }, PITCH_DURATION_MS + 300);
@@ -654,26 +739,93 @@
         buttons.forEach(function (btn) {
             btn.addEventListener('click', onPitchGuess);
         });
+        if (pitchGuessLabel) {
+            pitchGuessLabel.textContent =
+                pitchState.mode === 'single'
+                    ? 'What note did you hear?'
+                    : 'Which notes are in the chord?';
+        }
+        if (pitchSubmitBtn) {
+            pitchSubmitBtn.style.display = pitchState.mode === 'chord' ? '' : 'none';
+        }
+    }
+
+    function evaluatePitchGuess(guessedIndices) {
+        if (!guessedIndices || !guessedIndices.length) return;
+        let correct = false;
+        let message = '';
+
+        if (pitchState.mode === 'single') {
+            if (pitchState.currentSemitoneIndex == null) return;
+            const info = getNoteInfoFromSemitone(pitchState.currentSemitoneIndex);
+            correct = guessedIndices.length === 1 && guessedIndices[0] === info.noteIndex;
+            if (correct) pitchState.score++;
+            message = correct
+                ? 'Correct! It was ' + info.name + ' (octave ' + info.octave + ').'
+                : 'Wrong. The note was ' + info.name + ' (octave ' + info.octave + ').';
+        } else {
+            if (!pitchState.currentChordSemitones.length) return;
+            const infos = pitchState.currentChordSemitones.map(getNoteInfoFromSemitone);
+            const actualIndicesMap = {};
+            const actualIndices = [];
+            infos.forEach(function (info) {
+                if (!actualIndicesMap[info.noteIndex]) {
+                    actualIndicesMap[info.noteIndex] = true;
+                    actualIndices.push(info.noteIndex);
+                }
+            });
+            const guessedMap = {};
+            const guessedUnique = [];
+            guessedIndices.forEach(function (idx) {
+                if (!guessedMap[idx]) {
+                    guessedMap[idx] = true;
+                    guessedUnique.push(idx);
+                }
+            });
+
+            if (guessedUnique.length === actualIndices.length) {
+                correct = actualIndices.every(function (idx) { return guessedMap[idx]; });
+            } else {
+                correct = false;
+            }
+
+            if (correct) pitchState.score++;
+
+            const chordNames = infos.map(function (info) { return info.name + info.octave; });
+            const uniqueChordNamesMap = {};
+            const uniqueChordNames = [];
+            chordNames.forEach(function (n) {
+                if (!uniqueChordNamesMap[n]) {
+                    uniqueChordNamesMap[n] = true;
+                    uniqueChordNames.push(n);
+                }
+            });
+
+            message = correct
+                ? 'Correct! The chord was ' + uniqueChordNames.join(', ') + '.'
+                : 'Wrong. The chord was ' + uniqueChordNames.join(', ') + '.';
+        }
+
+        if (pitchScoreEl) pitchScoreEl.textContent = pitchState.score;
+        if (pitchGuessWrap) pitchGuessWrap.classList.add('pitch-guess-wrap--hidden');
+        if (pitchFeedback) pitchFeedback.classList.remove('pitch-feedback--hidden');
+        if (pitchFeedbackText) {
+            pitchFeedbackText.textContent = message;
+        }
     }
 
     function onPitchGuess(e) {
         const btn = e.target;
         if (!btn.classList.contains('pitch-note-btn')) return;
         const guessedIndex = parseInt(btn.getAttribute('data-index'), 10);
-        const noteIndex = pitchState.currentSemitoneIndex % 12;
-        const octave = 3 + Math.floor(pitchState.currentSemitoneIndex / 12);
-        const correct = guessedIndex === noteIndex;
-        if (correct) pitchState.score++;
-        if (pitchScoreEl) pitchScoreEl.textContent = pitchState.score;
+        if (Number.isNaN(guessedIndex)) return;
 
-        if (pitchGuessWrap) pitchGuessWrap.classList.add('pitch-guess-wrap--hidden');
-        if (pitchFeedback) pitchFeedback.classList.remove('pitch-feedback--hidden');
-        if (pitchFeedbackText) {
-            const noteName = PITCH_NOTES[noteIndex];
-            pitchFeedbackText.textContent = correct
-                ? 'Correct! It was ' + noteName + ' (octave ' + octave + ').'
-                : 'Wrong. The note was ' + noteName + ' (octave ' + octave + ').';
+        if (pitchState.mode === 'chord') {
+            btn.classList.toggle('pitch-note-btn--selected');
+            return;
         }
+
+        evaluatePitchGuess([guessedIndex]);
     }
 
     if (pitchStartBtn) {
@@ -685,8 +837,12 @@
     }
     if (pitchReplayBtn) {
         pitchReplayBtn.addEventListener('click', function () {
-            if (pitchState.currentSemitoneIndex !== null) {
-                playPitchNote(pitchState.currentSemitoneIndex);
+            if (pitchState.mode === 'single') {
+                if (pitchState.currentSemitoneIndex !== null) {
+                    playPitchNote(pitchState.currentSemitoneIndex);
+                }
+            } else if (pitchState.currentChordSemitones && pitchState.currentChordSemitones.length) {
+                playPitchChord(pitchState.currentChordSemitones);
             }
         });
     }
@@ -694,6 +850,32 @@
         pitchNextBtn.addEventListener('click', function () {
             pitchState.phase = 'playing';
             startPitchRound();
+        });
+    }
+
+    if (pitchSubmitBtn) {
+        pitchSubmitBtn.addEventListener('click', function () {
+            if (pitchState.mode !== 'chord' || !pitchNotesEl) return;
+            const selected = pitchNotesEl.querySelectorAll('.pitch-note-btn--selected');
+            if (!selected.length) return;
+            const guessed = [];
+            selected.forEach(function (btn) {
+                const idx = parseInt(btn.getAttribute('data-index'), 10);
+                if (!Number.isNaN(idx)) guessed.push(idx);
+            });
+            if (!guessed.length) return;
+            evaluatePitchGuess(guessed);
+        });
+    }
+
+    if (pitchModeSingleBtn) {
+        pitchModeSingleBtn.addEventListener('click', function () {
+            setPitchMode('single');
+        });
+    }
+    if (pitchModeChordBtn) {
+        pitchModeChordBtn.addEventListener('click', function () {
+            setPitchMode('chord');
         });
     }
 

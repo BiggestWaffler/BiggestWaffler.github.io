@@ -204,15 +204,22 @@
                     <button class="btn-small" onclick="benchmark.showMainMenu()">← Back</button>
                 </div>
                 <div id="pitch-zone" class="pitch-zone">
-                    <p id="pitch-message" class="pitch-message">Click Start to hear a note, then guess which one it is.</p>
+                    <p id="pitch-message" class="pitch-message">Click Start to hear a note or chord, then guess the notes.</p>
+                    <div id="pitch-mode-wrap" class="pitch-mode-wrap">
+                        <span class="pitch-mode-label">Mode:</span>
+                        <button type="button" id="pitch-mode-single" class="pitch-mode-btn pitch-mode-btn--active" data-mode="single">Single note</button>
+                        <button type="button" id="pitch-mode-chord" class="pitch-mode-btn" data-mode="chord">Chord (3–5)</button>
+                    </div>
+                    <p class="pitch-mode-hint"><span id="pitch-mode-hint-text">Guess one note.</span></p>
                     <button id="pitch-start-btn" class="aimtrainer-btn aimtrainer-btn-primary" type="button">Start</button>
                     <div id="pitch-playing" class="pitch-playing pitch-playing--hidden">
-                        <p class="pitch-instruction">Listen to the note…</p>
+                        <p class="pitch-instruction">Listen carefully…</p>
                         <button id="pitch-replay-btn" class="aimtrainer-btn" type="button">Replay</button>
                     </div>
                     <div id="pitch-guess-wrap" class="pitch-guess-wrap pitch-guess-wrap--hidden">
-                        <p class="pitch-guess-label">What note did you hear?</p>
+                        <p id="pitch-guess-label" class="pitch-guess-label">What note did you hear?</p>
                         <div id="pitch-notes" class="pitch-notes"></div>
+                        <button id="pitch-submit-btn" class="aimtrainer-btn" type="button">Submit</button>
                     </div>
                     <div id="pitch-feedback" class="pitch-feedback pitch-feedback--hidden">
                         <p id="pitch-feedback-text" class="pitch-feedback-text"></p>
