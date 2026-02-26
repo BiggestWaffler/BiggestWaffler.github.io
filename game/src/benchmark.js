@@ -104,6 +104,11 @@
     const pitchModeSingleBtn = document.getElementById('pitch-mode-single');
     const pitchModeChordBtn = document.getElementById('pitch-mode-chord');
     const pitchModeHintText = document.getElementById('pitch-mode-hint-text');
+    const pitchChordSizeWrap = document.getElementById('pitch-chord-size-wrap');
+    const pitchChordSize3Btn = document.getElementById('pitch-chord-size-3');
+    const pitchChordSize4Btn = document.getElementById('pitch-chord-size-4');
+    const pitchChordSize5Btn = document.getElementById('pitch-chord-size-5');
+    const pitchReplayInGuessBtn = document.getElementById('pitch-replay-in-guess-btn');
 
     // --- Navigation (Human Benchmark hub) ---
 
@@ -598,6 +603,7 @@
         score: 0,
         round: 0,
         mode: 'single',
+        chordSize: 3,
         currentSemitoneIndex: null,
         currentChordSemitones: []
     };
@@ -607,9 +613,11 @@
         pitchState.score = 0;
         pitchState.round = 0;
         pitchState.mode = 'single';
+        pitchState.chordSize = 3;
         pitchState.currentSemitoneIndex = null;
         pitchState.currentChordSemitones = [];
         setPitchMode('single');
+        setPitchChordSize(3);
         renderPitchUI();
     }
 
@@ -627,11 +635,26 @@
         if (pitchModeChordBtn) {
             pitchModeChordBtn.classList.toggle('pitch-mode-btn--active', mode === 'chord');
         }
-        if (pitchModeHintText) {
-            pitchModeHintText.textContent =
-                mode === 'single'
-                    ? 'Guess the single note that was played.'
-                    : 'Guess all notes in the chord (3–5 distinct notes).';
+        if (pitchChordSizeWrap) {
+            pitchChordSizeWrap.classList.toggle('pitch-chord-size-wrap--hidden', mode !== 'chord');
+        }
+        updatePitchModeHint();
+    }
+
+    function setPitchChordSize(size) {
+        pitchState.chordSize = Math.min(5, Math.max(3, size));
+        if (pitchChordSize3Btn) pitchChordSize3Btn.classList.toggle('pitch-mode-btn--active', pitchState.chordSize === 3);
+        if (pitchChordSize4Btn) pitchChordSize4Btn.classList.toggle('pitch-mode-btn--active', pitchState.chordSize === 4);
+        if (pitchChordSize5Btn) pitchChordSize5Btn.classList.toggle('pitch-mode-btn--active', pitchState.chordSize === 5);
+        updatePitchModeHint();
+    }
+
+    function updatePitchModeHint() {
+        if (!pitchModeHintText) return;
+        if (pitchState.mode === 'single') {
+            pitchModeHintText.textContent = 'Guess the single note that was played.';
+        } else {
+            pitchModeHintText.textContent = 'Guess all ' + pitchState.chordSize + ' notes in the chord.';
         }
     }
 
@@ -704,18 +727,13 @@
         if (pitchGuessWrap) pitchGuessWrap.classList.add('pitch-guess-wrap--hidden');
         if (pitchFeedback) pitchFeedback.classList.add('pitch-feedback--hidden');
         if (pitchRoundEl) pitchRoundEl.textContent = pitchState.round;
-        if (pitchModeHintText) {
-            pitchModeHintText.textContent =
-                pitchState.mode === 'single'
-                    ? 'Guess the single note that was played.'
-                    : 'Guess all notes in the chord (3–5 distinct notes).';
-        }
+        updatePitchModeHint();
 
         if (pitchState.mode === 'single') {
             pitchState.currentSemitoneIndex = Math.floor(Math.random() * PITCH_SEMITONES);
             playPitchNote(pitchState.currentSemitoneIndex);
         } else {
-            const chordSize = 3 + Math.floor(Math.random() * 3); // 3–5
+            const chordSize = pitchState.chordSize;
             const used = {};
             while (pitchState.currentChordSemitones.length < chordSize) {
                 const semi = Math.floor(Math.random() * PITCH_SEMITONES);
@@ -835,16 +853,21 @@
             startPitchRound();
         });
     }
-    if (pitchReplayBtn) {
-        pitchReplayBtn.addEventListener('click', function () {
-            if (pitchState.mode === 'single') {
-                if (pitchState.currentSemitoneIndex !== null) {
-                    playPitchNote(pitchState.currentSemitoneIndex);
-                }
-            } else if (pitchState.currentChordSemitones && pitchState.currentChordSemitones.length) {
-                playPitchChord(pitchState.currentChordSemitones);
+    function replayPitchSound() {
+        if (pitchState.mode === 'single') {
+            if (pitchState.currentSemitoneIndex !== null) {
+                playPitchNote(pitchState.currentSemitoneIndex);
             }
-        });
+        } else if (pitchState.currentChordSemitones && pitchState.currentChordSemitones.length) {
+            playPitchChord(pitchState.currentChordSemitones);
+        }
+    }
+
+    if (pitchReplayBtn) {
+        pitchReplayBtn.addEventListener('click', replayPitchSound);
+    }
+    if (pitchReplayInGuessBtn) {
+        pitchReplayInGuessBtn.addEventListener('click', replayPitchSound);
     }
     if (pitchNextBtn) {
         pitchNextBtn.addEventListener('click', function () {
@@ -877,6 +900,15 @@
         pitchModeChordBtn.addEventListener('click', function () {
             setPitchMode('chord');
         });
+    }
+    if (pitchChordSize3Btn) {
+        pitchChordSize3Btn.addEventListener('click', function () { setPitchChordSize(3); });
+    }
+    if (pitchChordSize4Btn) {
+        pitchChordSize4Btn.addEventListener('click', function () { setPitchChordSize(4); });
+    }
+    if (pitchChordSize5Btn) {
+        pitchChordSize5Btn.addEventListener('click', function () { setPitchChordSize(5); });
     }
 
     // --- Consistency Test ---

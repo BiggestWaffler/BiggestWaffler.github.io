@@ -550,6 +550,18 @@
     text-align: center;
 }
 
+.pitch-chord-size-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: 12px 0 8px 0;
+}
+
+.pitch-chord-size-wrap--hidden {
+    display: none;
+}
+
 .pitch-playing {
     display: flex;
     flex-direction: column;

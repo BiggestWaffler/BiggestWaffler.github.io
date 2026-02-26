@@ -208,7 +208,13 @@
                     <div id="pitch-mode-wrap" class="pitch-mode-wrap">
                         <span class="pitch-mode-label">Mode:</span>
                         <button type="button" id="pitch-mode-single" class="pitch-mode-btn pitch-mode-btn--active" data-mode="single">Single note</button>
-                        <button type="button" id="pitch-mode-chord" class="pitch-mode-btn" data-mode="chord">Chord (3–5)</button>
+                        <button type="button" id="pitch-mode-chord" class="pitch-mode-btn" data-mode="chord">Chord</button>
+                    </div>
+                    <div id="pitch-chord-size-wrap" class="pitch-chord-size-wrap pitch-chord-size-wrap--hidden">
+                        <span class="pitch-mode-label">Notes in chord:</span>
+                        <button type="button" id="pitch-chord-size-3" class="pitch-mode-btn pitch-mode-btn--active" data-size="3">3</button>
+                        <button type="button" id="pitch-chord-size-4" class="pitch-mode-btn" data-size="4">4</button>
+                        <button type="button" id="pitch-chord-size-5" class="pitch-mode-btn" data-size="5">5</button>
                     </div>
                     <p class="pitch-mode-hint"><span id="pitch-mode-hint-text">Guess one note.</span></p>
                     <button id="pitch-start-btn" class="aimtrainer-btn aimtrainer-btn-primary" type="button">Start</button>
@@ -218,6 +224,7 @@
                     </div>
                     <div id="pitch-guess-wrap" class="pitch-guess-wrap pitch-guess-wrap--hidden">
                         <p id="pitch-guess-label" class="pitch-guess-label">What note did you hear?</p>
+                        <button id="pitch-replay-in-guess-btn" class="aimtrainer-btn" type="button">Replay</button>
                         <div id="pitch-notes" class="pitch-notes"></div>
                         <button id="pitch-submit-btn" class="aimtrainer-btn" type="button">Submit</button>
                     </div>
