@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4K Mania - Ethan Liu</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/game/styles/rhythm.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="wrap">
+        <header class="topbar">
+            <h1>4K Mania</h1>
+            <a href="/game/" class="home">← Back</a>
+        </header>
+
+        <div id="menu" class="menu">
+            <div class="menu-content">
+                <h2>Settings</h2>
+                <div class="settings-row">
+                    <label>Keybinds</label>
+                    <div class="keybind-row">
+                        <div class="keybind-item">
+                            <span class="lane-label">Lane 1</span>
+                            <button type="button" class="keybind-btn" data-lane="0">D</button>
+                        </div>
+                        <div class="keybind-item">
+                            <span class="lane-label">Lane 2</span>
+                            <button type="button" class="keybind-btn" data-lane="1">F</button>
+                        </div>
+                        <div class="keybind-item">
+                            <span class="lane-label">Lane 3</span>
+                            <button type="button" class="keybind-btn" data-lane="2">J</button>
+                        </div>
+                        <div class="keybind-item">
+                            <span class="lane-label">Lane 4</span>
+                            <button type="button" class="keybind-btn" data-lane="3">K</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-row">
+                    <label>Scroll speed</label>
+                    <input type="range" id="scrollSpeed" min="5" max="40" value="20" step="1">
+                    <span id="scrollSpeedValue">20</span>
+                </div>
+                <div class="settings-row">
+                    <label>Skin</label>
+                    <div class="skin-buttons">
+                        <button type="button" class="skin-btn active" data-skin="circle">Circle</button>
+                        <button type="button" class="skin-btn" data-skin="square">Square</button>
+                    </div>
+                </div>
+
+                <h2>Game</h2>
+                <div class="settings-row">
+                    <label>Notes per second (difficulty)</label>
+                    <input type="range" id="notesPerSecond" min="1" max="30" value="8" step="1">
+                    <span id="notesPerSecondValue">8</span>
+                </div>
+                <div class="settings-row">
+                    <label>Game style</label>
+                    <div class="style-buttons">
+                        <button type="button" class="style-btn" data-style="chords">Chords</button>
+                        <button type="button" class="style-btn active" data-style="stream">Stream</button>
+                        <button type="button" class="style-btn" data-style="random">Random</button>
+                    </div>
+                </div>
+                <div class="settings-row">
+                    <label>Duration</label>
+                    <input type="range" id="gameDuration" min="15" max="300" value="60" step="15">
+                    <span id="gameDurationValue">1:00</span>
+                </div>
+
+                <div class="instructions">
+                    <h3>How to play</h3>
+                    <p>Hit the keys when notes reach the receptor line.</p>
+                </div>
+                <button type="button" class="start-btn">Start</button>
+            </div>
+        </div>
+
+        <main id="gameContainer" class="game-container" style="display: none;">
+            <div class="game-hud">
+                <div class="hud-score">Score: <span id="score">0</span></div>
+                <div class="hud-combo">Combo: <span id="combo">0</span></div>
+                <div class="hud-accuracy">Accuracy: <span id="accuracy">100.00</span>%</div>
+                <div class="hud-timer">Time: <span id="timer">0:00</span> / <span id="timerTotal">1:00</span></div>
+                <div class="hud-judge" id="judge"></div>
+            </div>
+            <div class="playfield-scaler" id="playfieldScaler">
+            <div class="playfield">
+                <div class="lanes" id="lanes">
+                    <div class="lane" data-lane="0"><div class="receptor" data-skin="circle"></div><div class="notes-layer"></div></div>
+                    <div class="lane" data-lane="1"><div class="receptor" data-skin="circle"></div><div class="notes-layer"></div></div>
+                    <div class="lane" data-lane="2"><div class="receptor" data-skin="circle"></div><div class="notes-layer"></div></div>
+                    <div class="lane" data-lane="3"><div class="receptor" data-skin="circle"></div><div class="notes-layer"></div></div>
+                </div>
+            </div>
+            </div>
+            <div class="keys-hint">
+                <span id="key1">D</span> <span id="key2">F</span> <span id="key3">J</span> <span id="key4">K</span>
+            </div>
+            <div id="pauseOverlay" class="pause-overlay" style="display: none;">
+                <div class="pause-content">
+                    <h2>Paused</h2>
+                    <button type="button" class="pause-btn" id="pauseContinue">Continue</button>
+                    <button type="button" class="pause-btn secondary" id="pauseMenu">Menu</button>
+                </div>
+            </div>
+            <div id="results" class="results" style="display: none;">
+                <h2>Results</h2>
+                <div class="results-stats">
+                    <span>Perfect: <strong id="resPerfect">0</strong></span>
+                    <span>Great: <strong id="resGreat">0</strong></span>
+                    <span>Good: <strong id="resGood">0</strong></span>
+                    <span>Miss: <strong id="resMiss">0</strong></span>
+                </div>
+                <p class="results-accuracy">Accuracy: <strong id="resAccuracy">100.00</strong>%</p>
+                <p class="results-score">Score: <strong id="resScore">0</strong></p>
+                <button type="button" class="back-btn">Back to menu</button>
+            </div>
+        </main>
+    </div>
+    <script src="/game/src/rhythm.js"></script>
+</body>
+</html>
