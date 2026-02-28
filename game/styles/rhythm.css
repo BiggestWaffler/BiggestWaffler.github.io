@@ -298,18 +298,197 @@ body {
     color: #fff;
 }
 
-.hud-judge {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 18px;
-    font-weight: 700;
-    min-height: 24px;
-    transition: opacity 0.15s;
+/* Judge on board – position/size set from JS */
+.judge-wrap {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 15;
 }
 
-.hud-judge.perfect { color: #60ffa0; }
-.hud-judge.great   { color: #60c0ff; }
-.hud-judge.good    { color: #ffc060; }
-.hud-judge.miss    { color: #ff6060; }
+.judge-wrap.hidden {
+    display: none;
+}
+
+.judge {
+    position: absolute;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 0.8);
+    transition: opacity 0.15s;
+    transform: translate(-50%, -50%);
+}
+
+.judge.perfect { color: #60ffa0; }
+.judge.great   { color: #60c0ff; }
+.judge.good    { color: #ffc060; }
+.judge.miss    { color: #ff6060; }
+
+.customize-judge-btn {
+    padding: 8px 16px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    background: rgba(80, 60, 140, 0.5);
+    border: 1px solid rgba(160, 140, 255, 0.5);
+    border-radius: 8px;
+    color: #e0d8ff;
+    cursor: pointer;
+}
+
+.customize-judge-btn:hover {
+    background: rgba(100, 80, 160, 0.6);
+    border-color: rgba(180, 160, 255, 0.7);
+}
+
+/* Judge customize overlay */
+.judge-customize-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.judge-customize-content {
+    background: rgba(24, 22, 34, 0.98);
+    border: 1px solid rgba(160, 140, 255, 0.4);
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 400px;
+    width: 100%;
+}
+
+.judge-customize-content h3 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    color: #c0b0e0;
+}
+
+.judge-preview-wrap {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.judge-preview-board {
+    position: relative;
+    width: 248px;
+    height: 420px;
+    background: rgba(12, 10, 18, 0.95);
+    border: 1px solid rgba(160, 140, 255, 0.3);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.judge-preview-lanes {
+    display: flex;
+    gap: 6px;
+    height: 100%;
+    padding: 0 4px;
+}
+
+.judge-preview-lane {
+    width: 56px;
+    flex: 0 0 56px;
+    background: linear-gradient(to bottom, rgba(40, 35, 60, 0.3), rgba(20, 18, 35, 0.5));
+    border-radius: 4px;
+}
+
+.judge-preview-draggable {
+    position: absolute;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #60ffa0;
+    cursor: grab;
+    user-select: none;
+    transform: translate(-50%, -50%);
+    border: 2px dashed rgba(160, 140, 255, 0.6);
+}
+
+.judge-preview-draggable:active {
+    cursor: grabbing;
+}
+
+.judge-customize-controls {
+    margin-bottom: 20px;
+}
+
+.judge-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #b0a0c0;
+    margin-bottom: 12px;
+}
+
+.judge-toggle-row input {
+    width: 18px;
+    height: 18px;
+}
+
+.judge-size-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.judge-size-row label {
+    font-size: 14px;
+    color: #b0a0c0;
+}
+
+.judge-size-row input[type="range"] {
+    flex: 1;
+    height: 8px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(80, 60, 140, 0.4);
+    border-radius: 4px;
+}
+
+.judge-size-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #a090ff;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.judge-size-row #judgeSizeValue {
+    font-family: 'JetBrains Mono', monospace;
+    min-width: 24px;
+    color: #c0b0e0;
+}
+
+.judge-customize-done {
+    width: 100%;
+    padding: 12px 24px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #7860e0, #a080ff);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    cursor: pointer;
+}
+
+.judge-customize-done:hover {
+    opacity: 0.95;
+}
 
 /* Playfield scaler – fills remaining space, keeps aspect ratio */
 .playfield-scaler {

@@ -51,6 +51,39 @@
                         <button type="button" class="skin-btn" data-skin="square">Square</button>
                     </div>
                 </div>
+                <div class="settings-row">
+                    <label>Judge</label>
+                    <button type="button" class="customize-judge-btn" id="customizeJudgeBtn">Customize Judge</button>
+                </div>
+
+                <div id="judgeCustomizeOverlay" class="judge-customize-overlay" style="display: none;">
+                    <div class="judge-customize-content">
+                        <h3>Drag the judge on the board</h3>
+                        <div class="judge-preview-wrap">
+                            <div class="judge-preview-board" id="judgePreviewBoard">
+                                <div class="judge-preview-lanes">
+                                    <div class="judge-preview-lane"></div>
+                                    <div class="judge-preview-lane"></div>
+                                    <div class="judge-preview-lane"></div>
+                                    <div class="judge-preview-lane"></div>
+                                </div>
+                                <div class="judge-preview-draggable" id="judgePreviewDraggable">PERFECT</div>
+                            </div>
+                        </div>
+                        <div class="judge-customize-controls">
+                            <label class="judge-toggle-row">
+                                <input type="checkbox" id="judgeVisibleCheck" checked>
+                                <span>Show judge during play</span>
+                            </label>
+                            <div class="judge-size-row">
+                                <label>Size</label>
+                                <input type="range" id="judgeSizeSlider" min="12" max="36" value="22" step="2">
+                                <span id="judgeSizeValue">22</span>
+                            </div>
+                        </div>
+                        <button type="button" class="judge-customize-done" id="judgeCustomizeDone">Done</button>
+                    </div>
+                </div>
 
                 <h2>Game</h2>
                 <div class="settings-row">
@@ -86,10 +119,12 @@
                 <div class="hud-combo">Combo: <span id="combo">0</span></div>
                 <div class="hud-accuracy">Accuracy: <span id="accuracy">100.00</span>%</div>
                 <div class="hud-timer">Time: <span id="timer">0:00</span> / <span id="timerTotal">1:00</span></div>
-                <div class="hud-judge" id="judge"></div>
             </div>
             <div class="playfield-scaler" id="playfieldScaler">
             <div class="playfield">
+                <div class="judge-wrap">
+                    <div class="judge" id="judge"></div>
+                </div>
                 <div class="lanes" id="lanes">
                     <div class="lane" data-lane="0"><div class="receptor" data-skin="circle"></div><div class="notes-layer"></div></div>
                     <div class="lane" data-lane="1"><div class="receptor" data-skin="circle"></div><div class="notes-layer"></div></div>

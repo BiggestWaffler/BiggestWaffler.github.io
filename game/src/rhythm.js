@@ -22,6 +22,10 @@
         keybinds: [...defaultKeybinds],
         scrollSpeed: 40,
         skin: 'circle',
+        judgeVisible: true,
+        judgeX: 50,
+        judgeY: 50,
+        judgeSize: 22,
         notesPerSecond: 8,
         gameStyle: 'stream',
         gameDurationSec: 60,
@@ -39,6 +43,15 @@
     const scoreEl = document.getElementById('score');
     const comboEl = document.getElementById('combo');
     const judgeEl = document.getElementById('judge');
+    const judgeWrapEl = document.querySelector('.judge-wrap');
+    const judgeCustomizeOverlay = document.getElementById('judgeCustomizeOverlay');
+    const judgePreviewBoard = document.getElementById('judgePreviewBoard');
+    const judgePreviewDraggable = document.getElementById('judgePreviewDraggable');
+    const judgeVisibleCheck = document.getElementById('judgeVisibleCheck');
+    const judgeSizeSlider = document.getElementById('judgeSizeSlider');
+    const judgeSizeValue = document.getElementById('judgeSizeValue');
+    const customizeJudgeBtn = document.getElementById('customizeJudgeBtn');
+    const judgeCustomizeDone = document.getElementById('judgeCustomizeDone');
     const resultsEl = document.getElementById('results');
     const scrollSpeedInput = document.getElementById('scrollSpeed');
     const scrollSpeedValue = document.getElementById('scrollSpeedValue');
@@ -62,6 +75,10 @@
                 if (saved.keybinds && saved.keybinds.length === 4) state.keybinds = saved.keybinds;
                 if (typeof saved.scrollSpeed === 'number' && saved.scrollSpeed >= 5) state.scrollSpeed = saved.scrollSpeed;
                 if (saved.skin === 'circle' || saved.skin === 'square') state.skin = saved.skin;
+                if (typeof saved.judgeVisible === 'boolean') state.judgeVisible = saved.judgeVisible;
+                if (typeof saved.judgeX === 'number' && saved.judgeX >= 0 && saved.judgeX <= 100) state.judgeX = saved.judgeX;
+                if (typeof saved.judgeY === 'number' && saved.judgeY >= 0 && saved.judgeY <= 100) state.judgeY = saved.judgeY;
+                if (typeof saved.judgeSize === 'number' && saved.judgeSize >= 12 && saved.judgeSize <= 36) state.judgeSize = saved.judgeSize;
             }
         } catch (_) {}
     }
@@ -71,7 +88,11 @@
             localStorage.setItem(STORAGE_KEY, JSON.stringify({
                 keybinds: state.keybinds,
                 scrollSpeed: state.scrollSpeed,
-                skin: state.skin
+                skin: state.skin,
+                judgeVisible: state.judgeVisible,
+                judgeX: state.judgeX,
+                judgeY: state.judgeY,
+                judgeSize: state.judgeSize
             }));
         } catch (_) {}
     }
@@ -109,6 +130,15 @@
                 updateReceptorSkin();
             });
         });
+
+        if (customizeJudgeBtn) customizeJudgeBtn.addEventListener('click', openJudgeCustomize);
+        if (judgeCustomizeDone) judgeCustomizeDone.addEventListener('click', closeJudgeCustomize);
+        if (judgeCustomizeOverlay) {
+            judgeCustomizeOverlay.addEventListener('click', function (e) {
+                if (e.target === judgeCustomizeOverlay) closeJudgeCustomize();
+            });
+        }
+        applyJudgeStyle();
 
         document.querySelectorAll('.style-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.style === state.gameStyle);
@@ -151,6 +181,75 @@
         });
     }
 
+    function applyJudgeStyle() {
+        if (!judgeEl) return;
+        judgeEl.style.left = state.judgeX + '%';
+        judgeEl.style.top = state.judgeY + '%';
+        judgeEl.style.fontSize = state.judgeSize + 'px';
+        if (judgeWrapEl) {
+            judgeWrapEl.classList.toggle('hidden', !state.judgeVisible);
+        }
+    }
+
+    let judgeDragStart = null;
+
+    function openJudgeCustomize() {
+        if (!judgeCustomizeOverlay || !judgePreviewDraggable || !judgePreviewBoard) return;
+        if (judgeCustomizeOverlay._cleanup) judgeCustomizeOverlay._cleanup();
+        judgeVisibleCheck.checked = state.judgeVisible;
+        judgeSizeSlider.value = state.judgeSize;
+        judgeSizeValue.textContent = state.judgeSize;
+        judgePreviewDraggable.style.left = state.judgeX + '%';
+        judgePreviewDraggable.style.top = state.judgeY + '%';
+        judgePreviewDraggable.style.fontSize = state.judgeSize + 'px';
+        judgeCustomizeOverlay.style.display = 'flex';
+
+        judgeSizeSlider.oninput = function () {
+            const size = parseInt(judgeSizeSlider.value, 10);
+            state.judgeSize = size;
+            judgeSizeValue.textContent = size;
+            judgePreviewDraggable.style.fontSize = size + 'px';
+        };
+
+        function onPointerDown(e) {
+            e.preventDefault();
+            judgeDragStart = { x: e.clientX, y: e.clientY, startX: state.judgeX, startY: state.judgeY };
+        }
+        function onPointerMove(e) {
+            if (!judgeDragStart) return;
+            const rect = judgePreviewBoard.getBoundingClientRect();
+            const dx = (e.clientX - judgeDragStart.x) / rect.width * 100;
+            const dy = (e.clientY - judgeDragStart.y) / rect.height * 100;
+            state.judgeX = Math.max(0, Math.min(100, judgeDragStart.startX + dx));
+            state.judgeY = Math.max(0, Math.min(100, judgeDragStart.startY + dy));
+            judgePreviewDraggable.style.left = state.judgeX + '%';
+            judgePreviewDraggable.style.top = state.judgeY + '%';
+        }
+        function onPointerUp() {
+            judgeDragStart = null;
+        }
+        judgePreviewDraggable.onpointerdown = onPointerDown;
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
+        document.addEventListener('pointercancel', onPointerUp);
+        judgeCustomizeOverlay._cleanup = function () {
+            document.removeEventListener('pointermove', onPointerMove);
+            document.removeEventListener('pointerup', onPointerUp);
+            document.removeEventListener('pointercancel', onPointerUp);
+            judgePreviewDraggable.onpointerdown = null;
+            judgeCustomizeOverlay._cleanup = null;
+        };
+    }
+
+    function closeJudgeCustomize() {
+        if (!judgeCustomizeOverlay) return;
+        state.judgeVisible = judgeVisibleCheck.checked;
+        if (judgeCustomizeOverlay._cleanup) judgeCustomizeOverlay._cleanup();
+        judgeCustomizeOverlay.style.display = 'none';
+        saveSettings();
+        applyJudgeStyle();
+    }
+
     function updateKeyHints() {
         const keys = ['key1', 'key2', 'key3', 'key4'];
         state.keybinds.forEach((code, i) => {
@@ -183,6 +282,11 @@
             return;
         }
         if (e.code === 'Escape') {
+            if (judgeCustomizeOverlay && judgeCustomizeOverlay.style.display === 'flex') {
+                e.preventDefault();
+                closeJudgeCustomize();
+                return;
+            }
             if (gameState && gameState.running && !gameState.paused) {
                 e.preventDefault();
                 setPaused(true);
@@ -288,7 +392,8 @@
         resultsEl.style.display = 'none';
         pauseOverlayEl.style.display = 'none';
         judgeEl.textContent = '';
-        judgeEl.className = 'hud-judge';
+        judgeEl.className = 'judge';
+        applyJudgeStyle();
         if (timerTotalEl) timerTotalEl.textContent = formatDuration(durationSec);
 
         lanesEl.querySelectorAll('.notes-layer').forEach(layer => {
@@ -396,7 +501,7 @@
                 gameState.combo = 0;
             } else {
                 gameState.combo++;
-                const points = judgement === 'perfect' ? 100 : judgement === 'great' ? 75 : 50;
+                const points = judgement === 'perfect' ? 100 : judgement === 'great' ? 50 : 20;
                 gameState.score += points * (1 + Math.min(gameState.combo - 1, 10) * 0.1);
             }
             showJudge(judgement);
@@ -414,8 +519,12 @@
     }
 
     function showJudge(judgement) {
+        if (!state.judgeVisible) return;
         judgeEl.textContent = judgement.toUpperCase();
-        judgeEl.className = 'hud-judge ' + judgement;
+        judgeEl.className = 'judge ' + judgement;
+        judgeEl.style.left = state.judgeX + '%';
+        judgeEl.style.top = state.judgeY + '%';
+        judgeEl.style.fontSize = state.judgeSize + 'px';
         judgeEl.style.opacity = '1';
         clearTimeout(judgeEl._hide);
         judgeEl._hide = setTimeout(() => {
@@ -433,7 +542,9 @@
         const s = gameState.stats;
         const total = s.perfect + s.great + s.good + s.miss;
         if (total === 0) return 100;
-        return ((s.perfect + s.great + s.good) / total * 100);
+        /* Perfect=100%, Great=50%, Good=20%, Miss=0% */
+        const weighted = s.perfect * 100 + s.great * 50 + s.good * 20;
+        return weighted / total;
     }
 
     function gameLoop() {
@@ -454,14 +565,19 @@
             /* Note not on screen yet (above playfield) – skip, don’t remove */
             if (y < -NOTE_SIZE - 20) continue;
 
-            /* Note passed receptor without being hit – count as miss */
-            if (y > PLAYFIELD_HEIGHT + 20) {
+            /* Only count as miss after the late window: GOOD_MS past the hit time */
+            const dtMs = dt * 1000;
+            if (dtMs < -GOOD_MS) {
                 gameState.hit[i] = true;
                 gameState.stats.miss++;
                 gameState.combo = 0;
+                showJudge('miss');
                 removeNoteElement(i);
                 continue;
             }
+
+            /* Note past receptor but still in late window – don't remove yet */
+            if (y > PLAYFIELD_HEIGHT + 20) continue;
 
             let el = gameState.noteElements.get(i);
             if (!el) {
