@@ -93,10 +93,31 @@ body {
     gap: 10px;
 }
 
-.settings-row label {
+.settings-row > label:first-child {
     flex: 0 0 100%;
     font-size: 13px;
     color: #b0a0c0;
+}
+
+.receptor-feedback-toggles {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.settings-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #b0a0c0;
+}
+
+.settings-toggle-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #a090ff;
 }
 
 .keybind-row {
@@ -557,6 +578,25 @@ body {
     box-shadow:
         0 0 20px rgba(160, 140, 255, 0.5),
         inset 0 2px 8px rgba(255, 255, 255, 0.2);
+}
+
+.receptor {
+    transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
+}
+
+.receptor.receptor-hit-light {
+    box-shadow:
+        0 0 24px rgba(200, 160, 255, 0.75),
+        0 0 36px rgba(180, 140, 255, 0.4),
+        inset 0 2px 10px rgba(255, 255, 255, 0.3);
+}
+
+.receptor.receptor-hit-pulse {
+    transform: translateX(-50%) scale(1.18);
+    box-shadow:
+        0 0 28px rgba(200, 160, 255, 0.85),
+        0 0 42px rgba(180, 140, 255, 0.5),
+        inset 0 2px 10px rgba(255, 255, 255, 0.35);
 }
 
 .notes-layer {

@@ -26,6 +26,8 @@
         judgeX: 50,
         judgeY: 50,
         judgeSize: 22,
+        receptorPulse: true,
+        receptorLight: true,
         notesPerSecond: 8,
         gameStyle: 'stream',
         gameDurationSec: 60,
@@ -35,6 +37,7 @@
     let gameState = null;
     let keyToLane = {};
     let rafId = null;
+    const keysHeld = new Set();
 
     const menu = document.getElementById('menu');
     const gameContainer = document.getElementById('gameContainer');
@@ -79,6 +82,8 @@
                 if (typeof saved.judgeX === 'number' && saved.judgeX >= 0 && saved.judgeX <= 100) state.judgeX = saved.judgeX;
                 if (typeof saved.judgeY === 'number' && saved.judgeY >= 0 && saved.judgeY <= 100) state.judgeY = saved.judgeY;
                 if (typeof saved.judgeSize === 'number' && saved.judgeSize >= 12 && saved.judgeSize <= 36) state.judgeSize = saved.judgeSize;
+                if (typeof saved.receptorPulse === 'boolean') state.receptorPulse = saved.receptorPulse;
+                if (typeof saved.receptorLight === 'boolean') state.receptorLight = saved.receptorLight;
             }
         } catch (_) {}
     }
@@ -92,7 +97,9 @@
                 judgeVisible: state.judgeVisible,
                 judgeX: state.judgeX,
                 judgeY: state.judgeY,
-                judgeSize: state.judgeSize
+                judgeSize: state.judgeSize,
+                receptorPulse: state.receptorPulse,
+                receptorLight: state.receptorLight
             }));
         } catch (_) {}
     }
@@ -139,6 +146,23 @@
             });
         }
         applyJudgeStyle();
+
+        const receptorLightCheck = document.getElementById('receptorLightCheck');
+        const receptorPulseCheck = document.getElementById('receptorPulseCheck');
+        if (receptorLightCheck) {
+            receptorLightCheck.checked = state.receptorLight;
+            receptorLightCheck.addEventListener('change', () => {
+                state.receptorLight = receptorLightCheck.checked;
+                saveSettings();
+            });
+        }
+        if (receptorPulseCheck) {
+            receptorPulseCheck.checked = state.receptorPulse;
+            receptorPulseCheck.addEventListener('change', () => {
+                state.receptorPulse = receptorPulseCheck.checked;
+                saveSettings();
+            });
+        }
 
         document.querySelectorAll('.style-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.style === state.gameStyle);
@@ -300,11 +324,34 @@
         const lane = keyToLane[e.code];
         if (lane === undefined) return;
         e.preventDefault();
+        if (!keysHeld.has(e.code)) {
+            keysHeld.add(e.code);
+            const receptor = lanesEl.querySelector(`.lane[data-lane="${lane}"] .receptor`);
+            if (receptor) {
+                if (state.receptorLight) receptor.classList.add('receptor-hit-light');
+                if (state.receptorPulse) receptor.classList.add('receptor-hit-pulse');
+            }
+        }
         handleHit(lane);
     }
 
     function onKeyUp(e) {
         if (state.listeningLane !== null) return;
+        const lane = keyToLane[e.code];
+        if (lane !== undefined) {
+            keysHeld.delete(e.code);
+            const receptor = lanesEl.querySelector(`.lane[data-lane="${lane}"] .receptor`);
+            if (receptor) {
+                receptor.classList.remove('receptor-hit-light', 'receptor-hit-pulse');
+            }
+        }
+    }
+
+    function clearReceptorHitState() {
+        keysHeld.clear();
+        lanesEl.querySelectorAll('.receptor').forEach(el => {
+            el.classList.remove('receptor-hit-light', 'receptor-hit-pulse');
+        });
     }
 
     function formatDuration(sec) {
@@ -426,6 +473,7 @@
         if (paused) {
             gameState.paused = true;
             gameState.pauseStartTime = performance.now();
+            clearReceptorHitState();
             pauseOverlayEl.style.display = 'flex';
         } else {
             gameState.paused = false;
@@ -442,6 +490,7 @@
         if (rafId != null) cancelAnimationFrame(rafId);
         rafId = null;
         gameState = null;
+        clearReceptorHitState();
         resultsEl.style.display = 'none';
         pauseOverlayEl.style.display = 'none';
         gameContainer.style.display = 'none';
@@ -605,6 +654,7 @@
         gameState.running = false;
         if (rafId != null) cancelAnimationFrame(rafId);
         rafId = null;
+        clearReceptorHitState();
         window.removeEventListener('resize', scalePlayfield);
 
         document.getElementById('resPerfect').textContent = gameState.stats.perfect;
