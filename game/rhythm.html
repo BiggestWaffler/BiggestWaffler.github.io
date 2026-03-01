@@ -52,8 +52,8 @@
                     </div>
                 </div>
                 <div class="settings-row">
-                    <label>Judge</label>
-                    <button type="button" class="customize-judge-btn" id="customizeJudgeBtn">Customize Judge</button>
+                    <label>Layout</label>
+                    <button type="button" class="customize-judge-btn" id="customizeGameplayUIBtn">Customize</button>
                 </div>
                 <div class="settings-row">
                     <label>Receptor key feedback</label>
@@ -69,32 +69,101 @@
                     </div>
                 </div>
 
-                <div id="judgeCustomizeOverlay" class="judge-customize-overlay" style="display: none;">
-                    <div class="judge-customize-content">
-                        <h3>Drag the judge on the board</h3>
-                        <div class="judge-preview-wrap">
-                            <div class="judge-preview-board" id="judgePreviewBoard">
-                                <div class="judge-preview-lanes">
-                                    <div class="judge-preview-lane"></div>
-                                    <div class="judge-preview-lane"></div>
-                                    <div class="judge-preview-lane"></div>
-                                    <div class="judge-preview-lane"></div>
+                <div id="gameplayUICustomizeOverlay" class="gameplay-ui-customize-overlay" style="display: none;">
+                    <div class="gameplay-ui-customize-content">
+                        <h3>Customize</h3>
+                        <p class="gameplay-ui-customize-hint">Select an element, then change its visibility, size, or drag on the board to move.</p>
+                        <div class="gameplay-ui-preview-area">
+                            <div class="gameplay-ui-preview-corners">
+                                <div class="gameplay-ui-topleft-preview" id="topLeftPreview">
+                                    <div class="gameplay-ui-preview-score" id="previewScore">Score: 12345</div>
                                 </div>
-                                <div class="judge-preview-draggable" id="judgePreviewDraggable">PERFECT</div>
+                                <div class="gameplay-ui-topright-preview" id="topRightPreview">
+                                    <div class="gameplay-ui-preview-accuracy" id="previewAccuracy">98.50%</div>
+                                    <div class="gameplay-ui-preview-timer" id="previewTimer">1:23 / 2:00</div>
+                                </div>
+                            </div>
+                            <div class="gameplay-ui-board-wrap">
+                                <div class="judge-preview-board gameplay-ui-preview-board" id="judgePreviewBoard">
+                                    <div class="judge-preview-lanes">
+                                        <div class="judge-preview-lane"></div>
+                                        <div class="judge-preview-lane"></div>
+                                        <div class="judge-preview-lane"></div>
+                                        <div class="judge-preview-lane"></div>
+                                    </div>
+                                    <div class="judge-preview-draggable" id="judgePreviewDraggable">PERFECT</div>
+                                    <div class="combo-preview-draggable" id="comboPreviewDraggable">0</div>
+                                </div>
                             </div>
                         </div>
-                        <div class="judge-customize-controls">
-                            <label class="judge-toggle-row">
-                                <input type="checkbox" id="judgeVisibleCheck" checked>
-                                <span>Show judge during play</span>
-                            </label>
-                            <div class="judge-size-row">
-                                <label>Size</label>
-                                <input type="range" id="judgeSizeSlider" min="12" max="36" value="22" step="2">
-                                <span id="judgeSizeValue">22</span>
+                        <div class="gameplay-ui-tabs">
+                            <button type="button" class="gameplay-ui-tab active" data-panel="judge">Judge</button>
+                            <button type="button" class="gameplay-ui-tab" data-panel="combo">Combo</button>
+                            <button type="button" class="gameplay-ui-tab" data-panel="score">Score</button>
+                            <button type="button" class="gameplay-ui-tab" data-panel="accuracy">Accuracy</button>
+                            <button type="button" class="gameplay-ui-tab" data-panel="timer">Timer</button>
+                        </div>
+                        <div class="gameplay-ui-panels">
+                            <div class="gameplay-ui-panel active" id="panel-judge">
+                                <label class="gameplay-ui-toggle-row">
+                                    <input type="checkbox" id="judgeVisibleCheck" checked>
+                                    <span>Show judge</span>
+                                </label>
+                                <div class="gameplay-ui-size-row">
+                                    <label>Size</label>
+                                    <input type="range" id="judgeSizeSlider" min="12" max="36" value="22" step="2">
+                                    <span id="judgeSizeValue">22</span>
+                                </div>
+                                <p class="gameplay-ui-drag-hint">Drag on the board to move.</p>
+                            </div>
+                            <div class="gameplay-ui-panel" id="panel-combo">
+                                <label class="gameplay-ui-toggle-row">
+                                    <input type="checkbox" id="comboVisibleCheck" checked>
+                                    <span>Show combo</span>
+                                </label>
+                                <div class="gameplay-ui-size-row">
+                                    <label>Size</label>
+                                    <input type="range" id="comboSizeSlider" min="14" max="32" value="20" step="2">
+                                    <span id="comboSizeValue">20</span>
+                                </div>
+                                <p class="gameplay-ui-drag-hint">Drag on the board to move.</p>
+                            </div>
+                            <div class="gameplay-ui-panel" id="panel-score">
+                                <label class="gameplay-ui-toggle-row">
+                                    <input type="checkbox" id="scoreVisibleCheck" checked>
+                                    <span>Show score</span>
+                                </label>
+                                <div class="gameplay-ui-size-row">
+                                    <label>Size</label>
+                                    <input type="range" id="scoreSizeSlider" min="12" max="24" value="14" step="1">
+                                    <span id="scoreSizeValue">14</span>
+                                </div>
+                                <p class="gameplay-ui-drag-hint">Score appears top-left during play.</p>
+                            </div>
+                            <div class="gameplay-ui-panel" id="panel-accuracy">
+                                <label class="gameplay-ui-toggle-row">
+                                    <input type="checkbox" id="accuracyVisibleCheck" checked>
+                                    <span>Show accuracy</span>
+                                </label>
+                                <div class="gameplay-ui-size-row">
+                                    <label>Size</label>
+                                    <input type="range" id="accuracySizeSlider" min="12" max="24" value="16" step="1">
+                                    <span id="accuracySizeValue">16</span>
+                                </div>
+                            </div>
+                            <div class="gameplay-ui-panel" id="panel-timer">
+                                <label class="gameplay-ui-toggle-row">
+                                    <input type="checkbox" id="timerVisibleCheck" checked>
+                                    <span>Show timer</span>
+                                </label>
+                                <div class="gameplay-ui-size-row">
+                                    <label>Size</label>
+                                    <input type="range" id="timerSizeSlider" min="12" max="24" value="16" step="1">
+                                    <span id="timerSizeValue">16</span>
+                                </div>
                             </div>
                         </div>
-                        <button type="button" class="judge-customize-done" id="judgeCustomizeDone">Done</button>
+                        <button type="button" class="judge-customize-done" id="gameplayUICustomizeDone">Done</button>
                     </div>
                 </div>
 
@@ -127,16 +196,20 @@
         </div>
 
         <main id="gameContainer" class="game-container" style="display: none;">
-            <div class="game-hud">
+            <div class="game-hud game-hud-score" id="scoreWrap">
                 <div class="hud-score">Score: <span id="score">0</span></div>
-                <div class="hud-combo">Combo: <span id="combo">0</span></div>
-                <div class="hud-accuracy">Accuracy: <span id="accuracy">100.00</span>%</div>
-                <div class="hud-timer">Time: <span id="timer">0:00</span> / <span id="timerTotal">1:00</span></div>
+            </div>
+            <div class="game-hud-topright">
+                <div class="hud-accuracy-wrap" id="accuracyWrap"><span id="accuracy">100.00</span>%</div>
+                <div class="hud-timer-wrap" id="timerWrap"><span id="timer">0:00</span> / <span id="timerTotal">1:00</span></div>
             </div>
             <div class="playfield-scaler" id="playfieldScaler">
             <div class="playfield">
                 <div class="judge-wrap">
                     <div class="judge" id="judge"></div>
+                </div>
+                <div class="combo-wrap" id="comboWrap">
+                    <span class="combo-number" id="combo">0</span>
                 </div>
                 <div class="lanes" id="lanes">
                     <div class="lane" data-lane="0"><div class="receptor" data-skin="circle"></div><div class="notes-layer"></div></div>

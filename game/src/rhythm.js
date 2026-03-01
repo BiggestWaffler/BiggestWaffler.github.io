@@ -2,6 +2,9 @@
     'use strict';
 
     const PLAYFIELD_HEIGHT = 420;
+    const PLAYFIELD_WIDTH = 248;
+    /* Preview board in customize UI is 400×677; scale font sizes so judge/combo match relative size in game */
+    const PREVIEW_BOARD_SCALE = 400 / PLAYFIELD_WIDTH;
     const NOTE_SIZE = 48;
     const RECEPTOR_SIZE = 52;
     const PERFECT_MS = 50;
@@ -26,6 +29,16 @@
         judgeX: 50,
         judgeY: 50,
         judgeSize: 22,
+        comboVisible: true,
+        comboX: 50,
+        comboY: 62,
+        comboSize: 20,
+        scoreVisible: true,
+        scoreSize: 14,
+        accuracyVisible: true,
+        accuracySize: 16,
+        timerVisible: true,
+        timerSize: 16,
         receptorPulse: true,
         receptorLight: true,
         notesPerSecond: 8,
@@ -47,14 +60,34 @@
     const comboEl = document.getElementById('combo');
     const judgeEl = document.getElementById('judge');
     const judgeWrapEl = document.querySelector('.judge-wrap');
-    const judgeCustomizeOverlay = document.getElementById('judgeCustomizeOverlay');
+    const gameplayUICustomizeOverlay = document.getElementById('gameplayUICustomizeOverlay');
     const judgePreviewBoard = document.getElementById('judgePreviewBoard');
     const judgePreviewDraggable = document.getElementById('judgePreviewDraggable');
+    const comboPreviewDraggable = document.getElementById('comboPreviewDraggable');
     const judgeVisibleCheck = document.getElementById('judgeVisibleCheck');
     const judgeSizeSlider = document.getElementById('judgeSizeSlider');
     const judgeSizeValue = document.getElementById('judgeSizeValue');
-    const customizeJudgeBtn = document.getElementById('customizeJudgeBtn');
-    const judgeCustomizeDone = document.getElementById('judgeCustomizeDone');
+    const comboVisibleCheck = document.getElementById('comboVisibleCheck');
+    const comboSizeSlider = document.getElementById('comboSizeSlider');
+    const comboSizeValue = document.getElementById('comboSizeValue');
+    const scoreVisibleCheck = document.getElementById('scoreVisibleCheck');
+    const scoreSizeSlider = document.getElementById('scoreSizeSlider');
+    const scoreSizeValue = document.getElementById('scoreSizeValue');
+    const previewScoreEl = document.getElementById('previewScore');
+    const accuracyVisibleCheck = document.getElementById('accuracyVisibleCheck');
+    const accuracySizeSlider = document.getElementById('accuracySizeSlider');
+    const accuracySizeValue = document.getElementById('accuracySizeValue');
+    const timerVisibleCheck = document.getElementById('timerVisibleCheck');
+    const timerSizeSlider = document.getElementById('timerSizeSlider');
+    const timerSizeValue = document.getElementById('timerSizeValue');
+    const previewAccuracyEl = document.getElementById('previewAccuracy');
+    const previewTimerEl = document.getElementById('previewTimer');
+    const customizeGameplayUIBtn = document.getElementById('customizeGameplayUIBtn');
+    const gameplayUICustomizeDone = document.getElementById('gameplayUICustomizeDone');
+    const comboWrapEl = document.getElementById('comboWrap');
+    const scoreWrapEl = document.getElementById('scoreWrap');
+    const accuracyWrapEl = document.getElementById('accuracyWrap');
+    const timerWrapEl = document.getElementById('timerWrap');
     const resultsEl = document.getElementById('results');
     const scrollSpeedInput = document.getElementById('scrollSpeed');
     const scrollSpeedValue = document.getElementById('scrollSpeedValue');
@@ -82,6 +115,16 @@
                 if (typeof saved.judgeX === 'number' && saved.judgeX >= 0 && saved.judgeX <= 100) state.judgeX = saved.judgeX;
                 if (typeof saved.judgeY === 'number' && saved.judgeY >= 0 && saved.judgeY <= 100) state.judgeY = saved.judgeY;
                 if (typeof saved.judgeSize === 'number' && saved.judgeSize >= 12 && saved.judgeSize <= 36) state.judgeSize = saved.judgeSize;
+                if (typeof saved.comboVisible === 'boolean') state.comboVisible = saved.comboVisible;
+                if (typeof saved.comboX === 'number' && saved.comboX >= 0 && saved.comboX <= 100) state.comboX = saved.comboX;
+                if (typeof saved.comboY === 'number' && saved.comboY >= 0 && saved.comboY <= 100) state.comboY = saved.comboY;
+                if (typeof saved.comboSize === 'number' && saved.comboSize >= 14 && saved.comboSize <= 32) state.comboSize = saved.comboSize;
+                if (typeof saved.scoreVisible === 'boolean') state.scoreVisible = saved.scoreVisible;
+                if (typeof saved.scoreSize === 'number' && saved.scoreSize >= 12 && saved.scoreSize <= 24) state.scoreSize = saved.scoreSize;
+                if (typeof saved.accuracyVisible === 'boolean') state.accuracyVisible = saved.accuracyVisible;
+                if (typeof saved.accuracySize === 'number' && saved.accuracySize >= 12 && saved.accuracySize <= 24) state.accuracySize = saved.accuracySize;
+                if (typeof saved.timerVisible === 'boolean') state.timerVisible = saved.timerVisible;
+                if (typeof saved.timerSize === 'number' && saved.timerSize >= 12 && saved.timerSize <= 24) state.timerSize = saved.timerSize;
                 if (typeof saved.receptorPulse === 'boolean') state.receptorPulse = saved.receptorPulse;
                 if (typeof saved.receptorLight === 'boolean') state.receptorLight = saved.receptorLight;
             }
@@ -98,6 +141,16 @@
                 judgeX: state.judgeX,
                 judgeY: state.judgeY,
                 judgeSize: state.judgeSize,
+                comboVisible: state.comboVisible,
+                comboX: state.comboX,
+                comboY: state.comboY,
+                comboSize: state.comboSize,
+                scoreVisible: state.scoreVisible,
+                scoreSize: state.scoreSize,
+                accuracyVisible: state.accuracyVisible,
+                accuracySize: state.accuracySize,
+                timerVisible: state.timerVisible,
+                timerSize: state.timerSize,
                 receptorPulse: state.receptorPulse,
                 receptorLight: state.receptorLight
             }));
@@ -138,14 +191,26 @@
             });
         });
 
-        if (customizeJudgeBtn) customizeJudgeBtn.addEventListener('click', openJudgeCustomize);
-        if (judgeCustomizeDone) judgeCustomizeDone.addEventListener('click', closeJudgeCustomize);
-        if (judgeCustomizeOverlay) {
-            judgeCustomizeOverlay.addEventListener('click', function (e) {
-                if (e.target === judgeCustomizeOverlay) closeJudgeCustomize();
+        if (customizeGameplayUIBtn) customizeGameplayUIBtn.addEventListener('click', openGameplayUICustomize);
+        if (gameplayUICustomizeDone) gameplayUICustomizeDone.addEventListener('click', closeGameplayUICustomize);
+        if (gameplayUICustomizeOverlay) {
+            gameplayUICustomizeOverlay.addEventListener('click', function (e) {
+                if (e.target === gameplayUICustomizeOverlay) closeGameplayUICustomize();
             });
         }
+        document.querySelectorAll('.gameplay-ui-tab').forEach(tab => {
+            tab.addEventListener('click', function () {
+                const panelId = this.dataset.panel;
+                if (!panelId) return;
+                document.querySelectorAll('.gameplay-ui-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.gameplay-ui-panel').forEach(p => p.classList.remove('active'));
+                this.classList.add('active');
+                const panel = document.getElementById('panel-' + panelId);
+                if (panel) panel.classList.add('active');
+            });
+        });
         applyJudgeStyle();
+        applyGameplayUIStyle();
 
         const receptorLightCheck = document.getElementById('receptorLightCheck');
         const receptorPulseCheck = document.getElementById('receptorPulseCheck');
@@ -215,63 +280,160 @@
         }
     }
 
-    let judgeDragStart = null;
+    function applyGameplayUIStyle() {
+        if (comboWrapEl) {
+            comboWrapEl.classList.toggle('hidden', !state.comboVisible);
+            const comboNum = comboWrapEl.querySelector('.combo-number');
+            if (comboNum) {
+                comboNum.style.left = state.comboX + '%';
+                comboNum.style.top = state.comboY + '%';
+                comboNum.style.fontSize = state.comboSize + 'px';
+            }
+        }
+        if (scoreWrapEl) {
+            scoreWrapEl.classList.toggle('hidden', !state.scoreVisible);
+            const hudScore = scoreWrapEl.querySelector('.hud-score');
+            if (hudScore) hudScore.style.fontSize = state.scoreSize + 'px';
+        }
+        if (accuracyWrapEl) {
+            accuracyWrapEl.classList.toggle('hidden', !state.accuracyVisible);
+            accuracyWrapEl.style.fontSize = state.accuracySize + 'px';
+        }
+        if (timerWrapEl) {
+            timerWrapEl.classList.toggle('hidden', !state.timerVisible);
+            timerWrapEl.style.fontSize = state.timerSize + 'px';
+        }
+    }
 
-    function openJudgeCustomize() {
-        if (!judgeCustomizeOverlay || !judgePreviewDraggable || !judgePreviewBoard) return;
-        if (judgeCustomizeOverlay._cleanup) judgeCustomizeOverlay._cleanup();
+    let judgeDragStart = null;
+    let comboDragStart = null;
+
+    function openGameplayUICustomize() {
+        if (!gameplayUICustomizeOverlay || !judgePreviewBoard) return;
+        if (gameplayUICustomizeOverlay._cleanup) gameplayUICustomizeOverlay._cleanup();
+
         judgeVisibleCheck.checked = state.judgeVisible;
         judgeSizeSlider.value = state.judgeSize;
         judgeSizeValue.textContent = state.judgeSize;
         judgePreviewDraggable.style.left = state.judgeX + '%';
         judgePreviewDraggable.style.top = state.judgeY + '%';
-        judgePreviewDraggable.style.fontSize = state.judgeSize + 'px';
-        judgeCustomizeOverlay.style.display = 'flex';
+        judgePreviewDraggable.style.fontSize = Math.round(state.judgeSize * PREVIEW_BOARD_SCALE) + 'px';
+
+        comboVisibleCheck.checked = state.comboVisible;
+        comboSizeSlider.value = state.comboSize;
+        comboSizeValue.textContent = state.comboSize;
+        if (comboPreviewDraggable) {
+            comboPreviewDraggable.style.left = state.comboX + '%';
+            comboPreviewDraggable.style.top = state.comboY + '%';
+            comboPreviewDraggable.style.fontSize = Math.round(state.comboSize * PREVIEW_BOARD_SCALE) + 'px';
+        }
+
+        scoreVisibleCheck.checked = state.scoreVisible;
+        scoreSizeSlider.value = state.scoreSize;
+        scoreSizeValue.textContent = state.scoreSize;
+        if (previewScoreEl) previewScoreEl.style.fontSize = state.scoreSize + 'px';
+
+        accuracyVisibleCheck.checked = state.accuracyVisible;
+        accuracySizeSlider.value = state.accuracySize;
+        accuracySizeValue.textContent = state.accuracySize;
+        if (previewAccuracyEl) previewAccuracyEl.style.fontSize = state.accuracySize + 'px';
+
+        timerVisibleCheck.checked = state.timerVisible;
+        timerSizeSlider.value = state.timerSize;
+        timerSizeValue.textContent = state.timerSize;
+        if (previewTimerEl) previewTimerEl.style.fontSize = state.timerSize + 'px';
+
+        gameplayUICustomizeOverlay.style.display = 'flex';
 
         judgeSizeSlider.oninput = function () {
             const size = parseInt(judgeSizeSlider.value, 10);
             state.judgeSize = size;
             judgeSizeValue.textContent = size;
-            judgePreviewDraggable.style.fontSize = size + 'px';
+            judgePreviewDraggable.style.fontSize = Math.round(size * PREVIEW_BOARD_SCALE) + 'px';
+        };
+        comboSizeSlider.oninput = function () {
+            const size = parseInt(comboSizeSlider.value, 10);
+            state.comboSize = size;
+            comboSizeValue.textContent = size;
+            if (comboPreviewDraggable) comboPreviewDraggable.style.fontSize = Math.round(size * PREVIEW_BOARD_SCALE) + 'px';
+        };
+        scoreSizeSlider.oninput = function () {
+            const size = parseInt(scoreSizeSlider.value, 10);
+            state.scoreSize = size;
+            scoreSizeValue.textContent = size;
+            if (previewScoreEl) previewScoreEl.style.fontSize = size + 'px';
+        };
+        accuracySizeSlider.oninput = function () {
+            const size = parseInt(accuracySizeSlider.value, 10);
+            state.accuracySize = size;
+            accuracySizeValue.textContent = size;
+            if (previewAccuracyEl) previewAccuracyEl.style.fontSize = size + 'px';
+        };
+        timerSizeSlider.oninput = function () {
+            const size = parseInt(timerSizeSlider.value, 10);
+            state.timerSize = size;
+            timerSizeValue.textContent = size;
+            if (previewTimerEl) previewTimerEl.style.fontSize = size + 'px';
         };
 
-        function onPointerDown(e) {
+        function onJudgePointerDown(e) {
             e.preventDefault();
             judgeDragStart = { x: e.clientX, y: e.clientY, startX: state.judgeX, startY: state.judgeY };
         }
+        function onComboPointerDown(e) {
+            e.preventDefault();
+            comboDragStart = { x: e.clientX, y: e.clientY, startX: state.comboX, startY: state.comboY };
+        }
         function onPointerMove(e) {
-            if (!judgeDragStart) return;
             const rect = judgePreviewBoard.getBoundingClientRect();
-            const dx = (e.clientX - judgeDragStart.x) / rect.width * 100;
-            const dy = (e.clientY - judgeDragStart.y) / rect.height * 100;
-            state.judgeX = Math.max(0, Math.min(100, judgeDragStart.startX + dx));
-            state.judgeY = Math.max(0, Math.min(100, judgeDragStart.startY + dy));
-            judgePreviewDraggable.style.left = state.judgeX + '%';
-            judgePreviewDraggable.style.top = state.judgeY + '%';
+            if (judgeDragStart) {
+                const dx = (e.clientX - judgeDragStart.x) / rect.width * 100;
+                const dy = (e.clientY - judgeDragStart.y) / rect.height * 100;
+                state.judgeX = Math.max(0, Math.min(100, judgeDragStart.startX + dx));
+                state.judgeY = Math.max(0, Math.min(100, judgeDragStart.startY + dy));
+                judgePreviewDraggable.style.left = state.judgeX + '%';
+                judgePreviewDraggable.style.top = state.judgeY + '%';
+            }
+            if (comboDragStart && comboPreviewDraggable) {
+                const dx = (e.clientX - comboDragStart.x) / rect.width * 100;
+                const dy = (e.clientY - comboDragStart.y) / rect.height * 100;
+                state.comboX = Math.max(0, Math.min(100, comboDragStart.startX + dx));
+                state.comboY = Math.max(0, Math.min(100, comboDragStart.startY + dy));
+                comboPreviewDraggable.style.left = state.comboX + '%';
+                comboPreviewDraggable.style.top = state.comboY + '%';
+            }
         }
         function onPointerUp() {
             judgeDragStart = null;
+            comboDragStart = null;
         }
-        judgePreviewDraggable.onpointerdown = onPointerDown;
+        judgePreviewDraggable.onpointerdown = onJudgePointerDown;
+        if (comboPreviewDraggable) comboPreviewDraggable.onpointerdown = onComboPointerDown;
         document.addEventListener('pointermove', onPointerMove);
         document.addEventListener('pointerup', onPointerUp);
         document.addEventListener('pointercancel', onPointerUp);
-        judgeCustomizeOverlay._cleanup = function () {
+        gameplayUICustomizeOverlay._cleanup = function () {
             document.removeEventListener('pointermove', onPointerMove);
             document.removeEventListener('pointerup', onPointerUp);
             document.removeEventListener('pointercancel', onPointerUp);
             judgePreviewDraggable.onpointerdown = null;
-            judgeCustomizeOverlay._cleanup = null;
+            if (comboPreviewDraggable) comboPreviewDraggable.onpointerdown = null;
+            gameplayUICustomizeOverlay._cleanup = null;
         };
     }
 
-    function closeJudgeCustomize() {
-        if (!judgeCustomizeOverlay) return;
+    function closeGameplayUICustomize() {
+        if (!gameplayUICustomizeOverlay) return;
         state.judgeVisible = judgeVisibleCheck.checked;
-        if (judgeCustomizeOverlay._cleanup) judgeCustomizeOverlay._cleanup();
-        judgeCustomizeOverlay.style.display = 'none';
+        state.comboVisible = comboVisibleCheck.checked;
+        state.scoreVisible = scoreVisibleCheck.checked;
+        state.accuracyVisible = accuracyVisibleCheck.checked;
+        state.timerVisible = timerVisibleCheck.checked;
+        if (gameplayUICustomizeOverlay._cleanup) gameplayUICustomizeOverlay._cleanup();
+        gameplayUICustomizeOverlay.style.display = 'none';
         saveSettings();
         applyJudgeStyle();
+        applyGameplayUIStyle();
     }
 
     function updateKeyHints() {
@@ -306,9 +468,9 @@
             return;
         }
         if (e.code === 'Escape') {
-            if (judgeCustomizeOverlay && judgeCustomizeOverlay.style.display === 'flex') {
+            if (gameplayUICustomizeOverlay && gameplayUICustomizeOverlay.style.display === 'flex') {
                 e.preventDefault();
-                closeJudgeCustomize();
+                closeGameplayUICustomize();
                 return;
             }
             if (gameState && gameState.running && !gameState.paused) {
@@ -441,6 +603,7 @@
         judgeEl.textContent = '';
         judgeEl.className = 'judge';
         applyJudgeStyle();
+        applyGameplayUIStyle();
         if (timerTotalEl) timerTotalEl.textContent = formatDuration(durationSec);
 
         lanesEl.querySelectorAll('.notes-layer').forEach(layer => {
@@ -464,7 +627,7 @@
         if (!playfield) return;
         const w = playfieldScalerEl.clientWidth;
         const h = playfieldScalerEl.clientHeight;
-        const scale = Math.min(w / 248, h / 420, 10) || 1;
+        const scale = Math.min(w / PLAYFIELD_WIDTH, h / PLAYFIELD_HEIGHT, 10) || 1;
         playfield.style.transform = 'scale(' + scale + ')';
     }
 

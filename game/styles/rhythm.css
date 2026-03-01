@@ -300,7 +300,6 @@ body {
     align-items: center;
     flex-wrap: wrap;
     gap: 16px 24px;
-    margin-bottom: 8px;
     padding: 8px 14px;
     background: rgba(20, 18, 28, 0.9);
     border-radius: 10px;
@@ -308,15 +307,77 @@ body {
     flex-shrink: 0;
 }
 
-.hud-score, .hud-combo, .hud-accuracy, .hud-timer {
+.game-hud-score {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 12;
+    margin: 0;
+}
+
+.game-hud-score.hidden {
+    display: none;
+}
+
+.hud-score {
     font-size: 14px;
     color: #b0a0c0;
 }
 
-.hud-score span, .hud-combo span, .hud-accuracy span, .hud-timer span {
+.hud-score span {
     font-family: 'JetBrains Mono', monospace;
     font-weight: 700;
     color: #fff;
+}
+
+/* Top-right HUD: accuracy and timer (outside board) */
+.game-hud-topright {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 12;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    pointer-events: none;
+}
+
+.hud-accuracy-wrap,
+.hud-timer-wrap {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.hud-accuracy-wrap.hidden,
+.hud-timer-wrap.hidden {
+    display: none;
+}
+
+/* Combo inside board */
+.combo-wrap {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 14;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.combo-wrap.hidden {
+    display: none;
+}
+
+.combo-number {
+    position: absolute;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: #e0d8ff;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 0.8);
+    transform: translate(-50%, -50%);
 }
 
 /* Judge on board – position/size set from JS */
@@ -365,37 +426,152 @@ body {
     border-color: rgba(180, 160, 255, 0.7);
 }
 
-/* Judge customize overlay */
-.judge-customize-overlay {
+/* Unified Gameplay UI customize overlay – large so scaling isn't confusing */
+.gameplay-ui-customize-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(0, 0, 0, 0.88);
     z-index: 100;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 24px;
+    overflow-y: auto;
 }
 
-.judge-customize-content {
+/* Custom scrollbar – overlay */
+.gameplay-ui-customize-overlay::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.gameplay-ui-customize-overlay::-webkit-scrollbar-track {
+    background: rgba(40, 35, 60, 0.4);
+    border-radius: 5px;
+}
+
+.gameplay-ui-customize-overlay::-webkit-scrollbar-thumb {
+    background: rgba(160, 140, 255, 0.5);
+    border-radius: 5px;
+}
+
+.gameplay-ui-customize-overlay::-webkit-scrollbar-thumb:hover {
+    background: rgba(160, 140, 255, 0.7);
+}
+
+.gameplay-ui-customize-overlay {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(160, 140, 255, 0.5) rgba(40, 35, 60, 0.4);
+}
+
+.gameplay-ui-customize-content {
     background: rgba(24, 22, 34, 0.98);
     border: 1px solid rgba(160, 140, 255, 0.4);
     border-radius: 16px;
-    padding: 24px;
-    max-width: 400px;
+    padding: 28px 32px;
     width: 100%;
+    max-width: 920px;
+    min-width: 320px;
+    max-height: 85vh;
+    overflow-y: auto;
 }
 
-.judge-customize-content h3 {
-    margin: 0 0 16px 0;
-    font-size: 16px;
+/* Custom scrollbar – content */
+.gameplay-ui-customize-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.gameplay-ui-customize-content::-webkit-scrollbar-track {
+    background: rgba(40, 35, 60, 0.4);
+    border-radius: 5px;
+}
+
+.gameplay-ui-customize-content::-webkit-scrollbar-thumb {
+    background: rgba(160, 140, 255, 0.5);
+    border-radius: 5px;
+}
+
+.gameplay-ui-customize-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(160, 140, 255, 0.7);
+}
+
+.gameplay-ui-customize-content {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(160, 140, 255, 0.5) rgba(40, 35, 60, 0.4);
+}
+
+.gameplay-ui-customize-content h3 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
     color: #c0b0e0;
 }
 
-.judge-preview-wrap {
-    margin-bottom: 20px;
+.gameplay-ui-customize-hint {
+    margin: 0 0 20px 0;
+    font-size: 13px;
+    color: #9080a0;
+}
+
+.gameplay-ui-preview-area {
+    position: relative;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.gameplay-ui-preview-corners {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 400px;
+}
+
+.gameplay-ui-topleft-preview {
+    padding: 10px 14px;
+    background: rgba(20, 18, 28, 0.8);
+    border: 1px solid rgba(160, 140, 255, 0.25);
+    border-radius: 10px;
+}
+
+.gameplay-ui-preview-score {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: #e0d8ff;
+}
+
+/* Top-right preview (accuracy + timer) in overlay */
+.gameplay-ui-topright-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    padding: 10px 14px;
+    background: rgba(20, 18, 28, 0.8);
+    border: 1px solid rgba(160, 140, 255, 0.25);
+    border-radius: 10px;
+}
+
+.gameplay-ui-preview-accuracy,
+.gameplay-ui-preview-timer {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: #e0d8ff;
+}
+
+.gameplay-ui-board-wrap {
     display: flex;
     justify-content: center;
+}
+
+/* Large preview board so scaling isn't confusing (same aspect as real playfield) */
+.judge-preview-board.gameplay-ui-preview-board {
+    width: 400px;
+    height: 677px;
+    min-width: 400px;
+    min-height: 677px;
 }
 
 .judge-preview-board {
@@ -422,6 +598,16 @@ body {
     border-radius: 4px;
 }
 
+.gameplay-ui-preview-board .judge-preview-lanes {
+    padding: 0 6px;
+    gap: 10px;
+}
+
+.gameplay-ui-preview-board .judge-preview-lane {
+    flex: 1;
+    min-width: 0;
+}
+
 .judge-preview-draggable {
     position: absolute;
     font-family: 'JetBrains Mono', monospace;
@@ -440,38 +626,104 @@ body {
     cursor: grabbing;
 }
 
-.judge-customize-controls {
+.combo-preview-draggable {
+    position: absolute;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: #e0d8ff;
+    cursor: grab;
+    user-select: none;
+    transform: translate(-50%, -50%);
+    border: 2px dashed rgba(160, 140, 255, 0.5);
+    padding: 4px 12px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.combo-preview-draggable:active {
+    cursor: grabbing;
+}
+
+.gameplay-ui-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.gameplay-ui-tab {
+    padding: 8px 16px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    background: rgba(80, 60, 140, 0.4);
+    border: 1px solid rgba(160, 140, 255, 0.4);
+    border-radius: 8px;
+    color: #b0a0c0;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.gameplay-ui-tab:hover {
+    background: rgba(100, 80, 160, 0.5);
+    color: #e0d8ff;
+}
+
+.gameplay-ui-tab.active {
+    background: rgba(160, 140, 255, 0.35);
+    border-color: #a090ff;
+    color: #fff;
+}
+
+.gameplay-ui-panels {
     margin-bottom: 20px;
 }
 
-.judge-toggle-row {
+.gameplay-ui-panel {
+    display: none;
+}
+
+.gameplay-ui-panel.active {
+    display: block;
+}
+
+.gameplay-ui-drag-hint {
+    margin: 10px 0 0 0;
+    font-size: 12px;
+    color: #8080a0;
+}
+
+.gameplay-ui-toggle-row {
     display: flex;
     align-items: center;
     gap: 10px;
     cursor: pointer;
     font-size: 14px;
     color: #b0a0c0;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
-.judge-toggle-row input {
+.gameplay-ui-toggle-row input {
     width: 18px;
     height: 18px;
+    accent-color: #a090ff;
 }
 
-.judge-size-row {
+.gameplay-ui-size-row {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-.judge-size-row label {
-    font-size: 14px;
+.gameplay-ui-size-row label {
+    font-size: 13px;
     color: #b0a0c0;
+    flex-shrink: 0;
 }
 
-.judge-size-row input[type="range"] {
+.gameplay-ui-size-row input[type="range"] {
     flex: 1;
+    min-width: 0;
     height: 8px;
     -webkit-appearance: none;
     appearance: none;
@@ -479,7 +731,7 @@ body {
     border-radius: 4px;
 }
 
-.judge-size-row input[type="range"]::-webkit-slider-thumb {
+.gameplay-ui-size-row input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 16px;
     height: 16px;
@@ -488,7 +740,20 @@ body {
     cursor: pointer;
 }
 
-.judge-size-row #judgeSizeValue {
+.gameplay-ui-size-row input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #a090ff;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.gameplay-ui-size-row #judgeSizeValue,
+.gameplay-ui-size-row #comboSizeValue,
+.gameplay-ui-size-row #scoreSizeValue,
+.gameplay-ui-size-row #accuracySizeValue,
+.gameplay-ui-size-row #timerSizeValue {
     font-family: 'JetBrains Mono', monospace;
     min-width: 24px;
     color: #c0b0e0;
