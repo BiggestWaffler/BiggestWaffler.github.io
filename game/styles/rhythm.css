@@ -371,6 +371,71 @@ body {
     display: none;
 }
 
+/* Unstable bar (early/late tendency) – position/size set from JS */
+.unstable-bar-wrap {
+    position: absolute;
+    pointer-events: none;
+    z-index: 14;
+    transform: translate(-50%, -50%);
+}
+
+.unstable-bar-wrap.hidden {
+    display: none;
+}
+
+.unstable-bar-track {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: rgba(80, 60, 140, 0.5);
+    border-radius: 2px;
+    border: 1px solid rgba(160, 140, 255, 0.3);
+}
+
+.unstable-bar-midline {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    margin-left: -0.5px;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 0;
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.unstable-bar-ticks {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.unstable-bar-tick {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    margin-left: -1px;
+    border-radius: 1px;
+    transform: translateX(-50%);
+    opacity: 0.5;
+}
+
+.unstable-bar-tick.perfect {
+    background: rgba(96, 255, 160, 0.8);
+}
+
+.unstable-bar-tick.great {
+    background: rgba(96, 192, 255, 0.8);
+}
+
+.unstable-bar-tick.good {
+    background: rgba(255, 192, 96, 0.8);
+}
+
 .combo-number {
     position: absolute;
     font-family: 'JetBrains Mono', monospace;
@@ -644,6 +709,34 @@ body {
     cursor: grabbing;
 }
 
+.unstable-bar-preview {
+    position: absolute;
+    cursor: grab;
+    user-select: none;
+    transform: translate(-50%, -50%);
+    border: 2px dashed rgba(160, 140, 255, 0.5);
+    border-radius: 2px;
+    background: rgba(80, 60, 140, 0.5);
+    pointer-events: auto;
+}
+
+.unstable-bar-preview::after {
+    content: '';
+    display: block;
+    width: 8px;
+    height: 6px;
+    margin: -3px 0 0 -4px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    background: rgba(224, 216, 255, 0.9);
+    border-radius: 1px;
+}
+
+.unstable-bar-preview:active {
+    cursor: grabbing;
+}
+
 .gameplay-ui-tabs {
     display: flex;
     gap: 8px;
@@ -751,6 +844,7 @@ body {
 
 .gameplay-ui-size-row #judgeSizeValue,
 .gameplay-ui-size-row #comboSizeValue,
+.gameplay-ui-size-row #unstableBarWidthValue,
 .gameplay-ui-size-row #scoreSizeValue,
 .gameplay-ui-size-row #accuracySizeValue,
 .gameplay-ui-size-row #timerSizeValue {

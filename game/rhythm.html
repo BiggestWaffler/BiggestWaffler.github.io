@@ -93,12 +93,14 @@
                                     </div>
                                     <div class="judge-preview-draggable" id="judgePreviewDraggable">PERFECT</div>
                                     <div class="combo-preview-draggable" id="comboPreviewDraggable">0</div>
+                                    <div class="unstable-bar-preview" id="unstableBarPreview"></div>
                                 </div>
                             </div>
                         </div>
                         <div class="gameplay-ui-tabs">
                             <button type="button" class="gameplay-ui-tab active" data-panel="judge">Judge</button>
                             <button type="button" class="gameplay-ui-tab" data-panel="combo">Combo</button>
+                            <button type="button" class="gameplay-ui-tab" data-panel="unstable">Unstable</button>
                             <button type="button" class="gameplay-ui-tab" data-panel="score">Score</button>
                             <button type="button" class="gameplay-ui-tab" data-panel="accuracy">Accuracy</button>
                             <button type="button" class="gameplay-ui-tab" data-panel="timer">Timer</button>
@@ -127,6 +129,18 @@
                                     <span id="comboSizeValue">20</span>
                                 </div>
                                 <p class="gameplay-ui-drag-hint">Drag on the board to move.</p>
+                            </div>
+                            <div class="gameplay-ui-panel" id="panel-unstable">
+                                <label class="gameplay-ui-toggle-row">
+                                    <input type="checkbox" id="unstableBarVisibleCheck" checked>
+                                    <span>Show unstable bar</span>
+                                </label>
+                                <div class="gameplay-ui-size-row">
+                                    <label>Width</label>
+                                    <input type="range" id="unstableBarWidthSlider" min="15" max="40" value="24" step="1">
+                                    <span id="unstableBarWidthValue">24</span>
+                                </div>
+                                <p class="gameplay-ui-drag-hint">Drag on the board to move. Bar shows early vs late tendency.</p>
                             </div>
                             <div class="gameplay-ui-panel" id="panel-score">
                                 <label class="gameplay-ui-toggle-row">
@@ -211,6 +225,12 @@
                 <div class="combo-wrap" id="comboWrap">
                     <span class="combo-number" id="combo">0</span>
                 </div>
+                <div class="unstable-bar-wrap" id="unstableBarWrap">
+                    <div class="unstable-bar-track">
+                        <div class="unstable-bar-midline"></div>
+                        <div class="unstable-bar-ticks" id="unstableBarTicks"></div>
+                    </div>
+                </div>
                 <div class="lanes" id="lanes">
                     <div class="lane" data-lane="0"><div class="receptor" data-skin="circle"></div><div class="notes-layer"></div></div>
                     <div class="lane" data-lane="1"><div class="receptor" data-skin="circle"></div><div class="notes-layer"></div></div>
@@ -218,9 +238,6 @@
                     <div class="lane" data-lane="3"><div class="receptor" data-skin="circle"></div><div class="notes-layer"></div></div>
                 </div>
             </div>
-            </div>
-            <div class="keys-hint">
-                <span id="key1">D</span> <span id="key2">F</span> <span id="key3">J</span> <span id="key4">K</span>
             </div>
             <div id="pauseOverlay" class="pause-overlay" style="display: none;">
                 <div class="pause-content">

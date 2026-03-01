@@ -33,6 +33,10 @@
         comboX: 50,
         comboY: 62,
         comboSize: 20,
+        unstableBarVisible: true,
+        unstableBarX: 50,
+        unstableBarY: 72,
+        unstableBarWidth: 24,
         scoreVisible: true,
         scoreSize: 14,
         accuracyVisible: true,
@@ -85,6 +89,12 @@
     const customizeGameplayUIBtn = document.getElementById('customizeGameplayUIBtn');
     const gameplayUICustomizeDone = document.getElementById('gameplayUICustomizeDone');
     const comboWrapEl = document.getElementById('comboWrap');
+    const unstableBarWrapEl = document.getElementById('unstableBarWrap');
+    const unstableBarTicksEl = document.getElementById('unstableBarTicks');
+    const unstableBarPreviewEl = document.getElementById('unstableBarPreview');
+    const unstableBarVisibleCheck = document.getElementById('unstableBarVisibleCheck');
+    const unstableBarWidthSlider = document.getElementById('unstableBarWidthSlider');
+    const unstableBarWidthValue = document.getElementById('unstableBarWidthValue');
     const scoreWrapEl = document.getElementById('scoreWrap');
     const accuracyWrapEl = document.getElementById('accuracyWrap');
     const timerWrapEl = document.getElementById('timerWrap');
@@ -119,6 +129,10 @@
                 if (typeof saved.comboX === 'number' && saved.comboX >= 0 && saved.comboX <= 100) state.comboX = saved.comboX;
                 if (typeof saved.comboY === 'number' && saved.comboY >= 0 && saved.comboY <= 100) state.comboY = saved.comboY;
                 if (typeof saved.comboSize === 'number' && saved.comboSize >= 14 && saved.comboSize <= 32) state.comboSize = saved.comboSize;
+                if (typeof saved.unstableBarVisible === 'boolean') state.unstableBarVisible = saved.unstableBarVisible;
+                if (typeof saved.unstableBarX === 'number' && saved.unstableBarX >= 0 && saved.unstableBarX <= 100) state.unstableBarX = saved.unstableBarX;
+                if (typeof saved.unstableBarY === 'number' && saved.unstableBarY >= 0 && saved.unstableBarY <= 100) state.unstableBarY = saved.unstableBarY;
+                if (typeof saved.unstableBarWidth === 'number' && saved.unstableBarWidth >= 15 && saved.unstableBarWidth <= 40) state.unstableBarWidth = saved.unstableBarWidth;
                 if (typeof saved.scoreVisible === 'boolean') state.scoreVisible = saved.scoreVisible;
                 if (typeof saved.scoreSize === 'number' && saved.scoreSize >= 12 && saved.scoreSize <= 24) state.scoreSize = saved.scoreSize;
                 if (typeof saved.accuracyVisible === 'boolean') state.accuracyVisible = saved.accuracyVisible;
@@ -145,6 +159,10 @@
                 comboX: state.comboX,
                 comboY: state.comboY,
                 comboSize: state.comboSize,
+                unstableBarVisible: state.unstableBarVisible,
+                unstableBarX: state.unstableBarX,
+                unstableBarY: state.unstableBarY,
+                unstableBarWidth: state.unstableBarWidth,
                 scoreVisible: state.scoreVisible,
                 scoreSize: state.scoreSize,
                 accuracyVisible: state.accuracyVisible,
@@ -290,6 +308,13 @@
                 comboNum.style.fontSize = state.comboSize + 'px';
             }
         }
+        if (unstableBarWrapEl) {
+            unstableBarWrapEl.classList.toggle('hidden', !state.unstableBarVisible);
+            unstableBarWrapEl.style.left = state.unstableBarX + '%';
+            unstableBarWrapEl.style.top = state.unstableBarY + '%';
+            unstableBarWrapEl.style.width = state.unstableBarWidth + '%';
+            unstableBarWrapEl.style.height = '6px';
+        }
         if (scoreWrapEl) {
             scoreWrapEl.classList.toggle('hidden', !state.scoreVisible);
             const hudScore = scoreWrapEl.querySelector('.hud-score');
@@ -307,6 +332,7 @@
 
     let judgeDragStart = null;
     let comboDragStart = null;
+    let unstableBarDragStart = null;
 
     function openGameplayUICustomize() {
         if (!gameplayUICustomizeOverlay || !judgePreviewBoard) return;
@@ -326,6 +352,16 @@
             comboPreviewDraggable.style.left = state.comboX + '%';
             comboPreviewDraggable.style.top = state.comboY + '%';
             comboPreviewDraggable.style.fontSize = Math.round(state.comboSize * PREVIEW_BOARD_SCALE) + 'px';
+        }
+
+        unstableBarVisibleCheck.checked = state.unstableBarVisible;
+        unstableBarWidthSlider.value = state.unstableBarWidth;
+        unstableBarWidthValue.textContent = state.unstableBarWidth;
+        if (unstableBarPreviewEl) {
+            unstableBarPreviewEl.style.left = state.unstableBarX + '%';
+            unstableBarPreviewEl.style.top = state.unstableBarY + '%';
+            unstableBarPreviewEl.style.width = state.unstableBarWidth + '%';
+            unstableBarPreviewEl.style.height = '6px';
         }
 
         scoreVisibleCheck.checked = state.scoreVisible;
@@ -357,6 +393,12 @@
             comboSizeValue.textContent = size;
             if (comboPreviewDraggable) comboPreviewDraggable.style.fontSize = Math.round(size * PREVIEW_BOARD_SCALE) + 'px';
         };
+        unstableBarWidthSlider.oninput = function () {
+            const w = parseInt(unstableBarWidthSlider.value, 10);
+            state.unstableBarWidth = w;
+            unstableBarWidthValue.textContent = w;
+            if (unstableBarPreviewEl) unstableBarPreviewEl.style.width = w + '%';
+        };
         scoreSizeSlider.oninput = function () {
             const size = parseInt(scoreSizeSlider.value, 10);
             state.scoreSize = size;
@@ -384,6 +426,10 @@
             e.preventDefault();
             comboDragStart = { x: e.clientX, y: e.clientY, startX: state.comboX, startY: state.comboY };
         }
+        function onUnstableBarPointerDown(e) {
+            e.preventDefault();
+            unstableBarDragStart = { x: e.clientX, y: e.clientY, startX: state.unstableBarX, startY: state.unstableBarY };
+        }
         function onPointerMove(e) {
             const rect = judgePreviewBoard.getBoundingClientRect();
             if (judgeDragStart) {
@@ -402,13 +448,23 @@
                 comboPreviewDraggable.style.left = state.comboX + '%';
                 comboPreviewDraggable.style.top = state.comboY + '%';
             }
+            if (unstableBarDragStart && unstableBarPreviewEl) {
+                const dx = (e.clientX - unstableBarDragStart.x) / rect.width * 100;
+                const dy = (e.clientY - unstableBarDragStart.y) / rect.height * 100;
+                state.unstableBarX = Math.max(0, Math.min(100, unstableBarDragStart.startX + dx));
+                state.unstableBarY = Math.max(0, Math.min(100, unstableBarDragStart.startY + dy));
+                unstableBarPreviewEl.style.left = state.unstableBarX + '%';
+                unstableBarPreviewEl.style.top = state.unstableBarY + '%';
+            }
         }
         function onPointerUp() {
             judgeDragStart = null;
             comboDragStart = null;
+            unstableBarDragStart = null;
         }
         judgePreviewDraggable.onpointerdown = onJudgePointerDown;
         if (comboPreviewDraggable) comboPreviewDraggable.onpointerdown = onComboPointerDown;
+        if (unstableBarPreviewEl) unstableBarPreviewEl.onpointerdown = onUnstableBarPointerDown;
         document.addEventListener('pointermove', onPointerMove);
         document.addEventListener('pointerup', onPointerUp);
         document.addEventListener('pointercancel', onPointerUp);
@@ -418,6 +474,7 @@
             document.removeEventListener('pointercancel', onPointerUp);
             judgePreviewDraggable.onpointerdown = null;
             if (comboPreviewDraggable) comboPreviewDraggable.onpointerdown = null;
+            if (unstableBarPreviewEl) unstableBarPreviewEl.onpointerdown = null;
             gameplayUICustomizeOverlay._cleanup = null;
         };
     }
@@ -426,6 +483,7 @@
         if (!gameplayUICustomizeOverlay) return;
         state.judgeVisible = judgeVisibleCheck.checked;
         state.comboVisible = comboVisibleCheck.checked;
+        state.unstableBarVisible = unstableBarVisibleCheck.checked;
         state.scoreVisible = scoreVisibleCheck.checked;
         state.accuracyVisible = accuracyVisibleCheck.checked;
         state.timerVisible = timerVisibleCheck.checked;
@@ -587,6 +645,7 @@
             stats: { perfect: 0, great: 0, good: 0, miss: 0 },
             score: 0,
             combo: 0,
+            recentHitOffsets: [],
             scrollSpeedPxPerSec,
             noteElements: new Map()
         };
@@ -604,6 +663,7 @@
         judgeEl.className = 'judge';
         applyJudgeStyle();
         applyGameplayUIStyle();
+        updateUnstableBarTicks();
         if (timerTotalEl) timerTotalEl.textContent = formatDuration(durationSec);
 
         lanesEl.querySelectorAll('.notes-layer').forEach(layer => {
@@ -715,9 +775,12 @@
                 gameState.combo++;
                 const points = judgement === 'perfect' ? 100 : judgement === 'great' ? 50 : 20;
                 gameState.score += points * (1 + Math.min(gameState.combo - 1, 10) * 0.1);
+                gameState.recentHitOffsets.push({ offsetMs: bestDt, judgement });
+                if (gameState.recentHitOffsets.length > 20) gameState.recentHitOffsets.shift();
             }
             showJudge(judgement);
             removeNoteElement(bestIdx);
+            updateUnstableBarTicks();
             return;
         }
 
@@ -748,6 +811,21 @@
         const el = gameState.noteElements.get(noteIdx);
         if (el && el.parentNode) el.parentNode.removeChild(el);
         gameState.noteElements.delete(noteIdx);
+    }
+
+    function updateUnstableBarTicks() {
+        if (!unstableBarTicksEl || !state.unstableBarVisible || !gameState) return;
+        unstableBarTicksEl.innerHTML = '';
+        const entries = gameState.recentHitOffsets;
+        for (let i = 0; i < entries.length; i++) {
+            const { offsetMs, judgement } = entries[i];
+            const pct = 50 + (offsetMs / GOOD_MS) * 50;
+            const left = Math.max(0, Math.min(100, pct));
+            const tick = document.createElement('div');
+            tick.className = 'unstable-bar-tick ' + judgement;
+            tick.style.left = left + '%';
+            unstableBarTicksEl.appendChild(tick);
+        }
     }
 
     function getAccuracy() {
