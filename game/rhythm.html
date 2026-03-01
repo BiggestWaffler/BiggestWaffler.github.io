@@ -177,7 +177,14 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="judge-customize-done" id="gameplayUICustomizeDone">Done</button>
+                        <label class="gameplay-ui-toggle-row gameplay-ui-snap-row">
+                            <input type="checkbox" id="snapToCenterCheck">
+                            <span>Snap to center when dragging</span>
+                        </label>
+                        <div class="gameplay-ui-modal-actions">
+                            <button type="button" class="gameplay-ui-reset-layout-btn" id="resetLayoutBtn">Reset layout</button>
+                            <button type="button" class="judge-customize-done" id="gameplayUICustomizeDone">Done</button>
+                        </div>
                     </div>
                 </div>
 
@@ -205,7 +212,10 @@
                     <h3>How to play</h3>
                     <p>Hit the keys when notes reach the receptor line.</p>
                 </div>
-                <button type="button" class="start-btn">Start</button>
+                <div class="menu-actions">
+                    <button type="button" class="reset-default-btn" id="resetToDefaultBtn">Reset to default</button>
+                    <button type="button" class="start-btn" id="startBtn">Start</button>
+                </div>
             </div>
         </div>
 

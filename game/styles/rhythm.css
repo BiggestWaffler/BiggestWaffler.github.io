@@ -282,6 +282,31 @@ body {
     transform: translateY(0);
 }
 
+.menu-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.reset-default-btn {
+    padding: 10px 20px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    background: rgba(80, 60, 140, 0.4);
+    border: 1px solid rgba(160, 140, 255, 0.5);
+    border-radius: 10px;
+    color: #b0a0c0;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.reset-default-btn:hover {
+    background: rgba(100, 80, 160, 0.5);
+    color: #e0d8ff;
+}
+
 /* Game container – fill viewport */
 .game-container {
     position: fixed;
@@ -853,8 +878,38 @@ body {
     color: #c0b0e0;
 }
 
+.gameplay-ui-snap-row {
+    margin-bottom: 16px;
+}
+
+.gameplay-ui-modal-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.gameplay-ui-reset-layout-btn {
+    padding: 10px 18px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    background: rgba(80, 60, 140, 0.4);
+    border: 1px solid rgba(160, 140, 255, 0.5);
+    border-radius: 8px;
+    color: #b0a0c0;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.gameplay-ui-reset-layout-btn:hover {
+    background: rgba(100, 80, 160, 0.5);
+    color: #e0d8ff;
+}
+
 .judge-customize-done {
-    width: 100%;
+    flex: 1;
+    min-width: 120px;
     padding: 12px 24px;
     font-family: inherit;
     font-size: 15px;

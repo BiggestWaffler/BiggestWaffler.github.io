@@ -14,6 +14,62 @@
 
     const defaultKeybinds = ['KeyD', 'KeyF', 'KeyJ', 'KeyK'];
 
+    function getDefaultState() {
+        return {
+            keybinds: [...defaultKeybinds],
+            scrollSpeed: 20,
+            skin: 'circle',
+            judgeVisible: true,
+            judgeX: 50,
+            judgeY: 48,
+            judgeSize: 22,
+            comboVisible: true,
+            comboX: 50,
+            comboY: 56,
+            comboSize: 20,
+            unstableBarVisible: true,
+            unstableBarX: 50,
+            unstableBarY: 64,
+            unstableBarWidth: 24,
+            scoreVisible: true,
+            scoreSize: 14,
+            accuracyVisible: true,
+            accuracySize: 16,
+            timerVisible: true,
+            timerSize: 16,
+            receptorPulse: true,
+            receptorLight: true,
+            notesPerSecond: 8,
+            gameStyle: 'stream',
+            gameDurationSec: 60,
+            snapToCenter: false,
+            listeningLane: null
+        };
+    }
+
+    function getDefaultLayout() {
+        return {
+            judgeVisible: true,
+            judgeX: 50,
+            judgeY: 48,
+            judgeSize: 22,
+            comboVisible: true,
+            comboX: 50,
+            comboY: 56,
+            comboSize: 20,
+            unstableBarVisible: true,
+            unstableBarX: 50,
+            unstableBarY: 64,
+            unstableBarWidth: 24,
+            scoreVisible: true,
+            scoreSize: 14,
+            accuracyVisible: true,
+            accuracySize: 16,
+            timerVisible: true,
+            timerSize: 16
+        };
+    }
+
     function keyToDisplay(code) {
         if (code.startsWith('Key')) return code.slice(3);
         if (code.startsWith('Digit')) return code.slice(5);
@@ -21,35 +77,7 @@
         return code.length === 1 ? code : code;
     }
 
-    let state = {
-        keybinds: [...defaultKeybinds],
-        scrollSpeed: 40,
-        skin: 'circle',
-        judgeVisible: true,
-        judgeX: 50,
-        judgeY: 50,
-        judgeSize: 22,
-        comboVisible: true,
-        comboX: 50,
-        comboY: 62,
-        comboSize: 20,
-        unstableBarVisible: true,
-        unstableBarX: 50,
-        unstableBarY: 72,
-        unstableBarWidth: 24,
-        scoreVisible: true,
-        scoreSize: 14,
-        accuracyVisible: true,
-        accuracySize: 16,
-        timerVisible: true,
-        timerSize: 16,
-        receptorPulse: true,
-        receptorLight: true,
-        notesPerSecond: 8,
-        gameStyle: 'stream',
-        gameDurationSec: 60,
-        listeningLane: null
-    };
+    let state = getDefaultState();
 
     let gameState = null;
     let keyToLane = {};
@@ -88,6 +116,8 @@
     const previewTimerEl = document.getElementById('previewTimer');
     const customizeGameplayUIBtn = document.getElementById('customizeGameplayUIBtn');
     const gameplayUICustomizeDone = document.getElementById('gameplayUICustomizeDone');
+    const resetLayoutBtn = document.getElementById('resetLayoutBtn');
+    const snapToCenterCheck = document.getElementById('snapToCenterCheck');
     const comboWrapEl = document.getElementById('comboWrap');
     const unstableBarWrapEl = document.getElementById('unstableBarWrap');
     const unstableBarTicksEl = document.getElementById('unstableBarTicks');
@@ -141,6 +171,7 @@
                 if (typeof saved.timerSize === 'number' && saved.timerSize >= 12 && saved.timerSize <= 24) state.timerSize = saved.timerSize;
                 if (typeof saved.receptorPulse === 'boolean') state.receptorPulse = saved.receptorPulse;
                 if (typeof saved.receptorLight === 'boolean') state.receptorLight = saved.receptorLight;
+                if (typeof saved.snapToCenter === 'boolean') state.snapToCenter = saved.snapToCenter;
             }
         } catch (_) {}
     }
@@ -170,7 +201,8 @@
                 timerVisible: state.timerVisible,
                 timerSize: state.timerSize,
                 receptorPulse: state.receptorPulse,
-                receptorLight: state.receptorLight
+                receptorLight: state.receptorLight,
+                snapToCenter: state.snapToCenter
             }));
         } catch (_) {}
     }
@@ -178,6 +210,30 @@
     function buildKeyToLane() {
         keyToLane = {};
         state.keybinds.forEach((code, i) => { keyToLane[code] = i; });
+    }
+
+    function applyStateToMenuUI() {
+        buildKeyToLane();
+        document.querySelectorAll('.keybind-btn').forEach((btn, i) => {
+            btn.textContent = keyToDisplay(state.keybinds[i]);
+        });
+        scrollSpeedInput.value = state.scrollSpeed;
+        scrollSpeedValue.textContent = state.scrollSpeed;
+        document.querySelectorAll('.skin-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.skin === state.skin);
+        });
+        const receptorLightCheck = document.getElementById('receptorLightCheck');
+        const receptorPulseCheck = document.getElementById('receptorPulseCheck');
+        if (receptorLightCheck) receptorLightCheck.checked = state.receptorLight;
+        if (receptorPulseCheck) receptorPulseCheck.checked = state.receptorPulse;
+        notesPerSecondInput.value = state.notesPerSecond;
+        notesPerSecondValue.textContent = state.notesPerSecond;
+        gameDurationInput.value = state.gameDurationSec;
+        gameDurationValue.textContent = formatDuration(state.gameDurationSec);
+        document.querySelectorAll('.style-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.style === state.gameStyle);
+        });
+        updateReceptorSkin();
     }
 
     function initUI() {
@@ -272,6 +328,17 @@
 
         document.querySelector('.start-btn').addEventListener('click', startGame);
         document.querySelector('.back-btn').addEventListener('click', backToMenu);
+
+        const resetToDefaultBtn = document.getElementById('resetToDefaultBtn');
+        if (resetToDefaultBtn) {
+            resetToDefaultBtn.addEventListener('click', function () {
+                Object.assign(state, getDefaultState());
+                saveSettings();
+                applyStateToMenuUI();
+                applyJudgeStyle();
+                applyGameplayUIStyle();
+            });
+        }
         if (pauseContinueBtn) pauseContinueBtn.addEventListener('click', () => setPaused(false));
         if (pauseMenuBtn) pauseMenuBtn.addEventListener('click', backToMenu);
 
@@ -379,6 +446,50 @@
         timerSizeValue.textContent = state.timerSize;
         if (previewTimerEl) previewTimerEl.style.fontSize = state.timerSize + 'px';
 
+        if (snapToCenterCheck) snapToCenterCheck.checked = state.snapToCenter;
+
+        if (resetLayoutBtn) {
+            resetLayoutBtn.onclick = function () {
+                const layout = getDefaultLayout();
+                Object.assign(state, layout);
+                judgeVisibleCheck.checked = state.judgeVisible;
+                judgeSizeSlider.value = state.judgeSize;
+                judgeSizeValue.textContent = state.judgeSize;
+                judgePreviewDraggable.style.left = state.judgeX + '%';
+                judgePreviewDraggable.style.top = state.judgeY + '%';
+                judgePreviewDraggable.style.fontSize = Math.round(state.judgeSize * PREVIEW_BOARD_SCALE) + 'px';
+                comboVisibleCheck.checked = state.comboVisible;
+                comboSizeSlider.value = state.comboSize;
+                comboSizeValue.textContent = state.comboSize;
+                if (comboPreviewDraggable) {
+                    comboPreviewDraggable.style.left = state.comboX + '%';
+                    comboPreviewDraggable.style.top = state.comboY + '%';
+                    comboPreviewDraggable.style.fontSize = Math.round(state.comboSize * PREVIEW_BOARD_SCALE) + 'px';
+                }
+                unstableBarVisibleCheck.checked = state.unstableBarVisible;
+                unstableBarWidthSlider.value = state.unstableBarWidth;
+                unstableBarWidthValue.textContent = state.unstableBarWidth;
+                if (unstableBarPreviewEl) {
+                    unstableBarPreviewEl.style.left = state.unstableBarX + '%';
+                    unstableBarPreviewEl.style.top = state.unstableBarY + '%';
+                    unstableBarPreviewEl.style.width = state.unstableBarWidth + '%';
+                }
+                scoreVisibleCheck.checked = state.scoreVisible;
+                scoreSizeSlider.value = state.scoreSize;
+                scoreSizeValue.textContent = state.scoreSize;
+                if (previewScoreEl) previewScoreEl.style.fontSize = state.scoreSize + 'px';
+                accuracyVisibleCheck.checked = state.accuracyVisible;
+                accuracySizeSlider.value = state.accuracySize;
+                accuracySizeValue.textContent = state.accuracySize;
+                if (previewAccuracyEl) previewAccuracyEl.style.fontSize = state.accuracySize + 'px';
+                timerVisibleCheck.checked = state.timerVisible;
+                timerSizeSlider.value = state.timerSize;
+                timerSizeValue.textContent = state.timerSize;
+                if (previewTimerEl) previewTimerEl.style.fontSize = state.timerSize + 'px';
+                saveSettings();
+            };
+        }
+
         gameplayUICustomizeOverlay.style.display = 'flex';
 
         judgeSizeSlider.oninput = function () {
@@ -432,26 +543,27 @@
         }
         function onPointerMove(e) {
             const rect = judgePreviewBoard.getBoundingClientRect();
+            const snap = snapToCenterCheck ? snapToCenterCheck.checked : state.snapToCenter;
             if (judgeDragStart) {
-                const dx = (e.clientX - judgeDragStart.x) / rect.width * 100;
+                const dx = snap ? 0 : (e.clientX - judgeDragStart.x) / rect.width * 100;
                 const dy = (e.clientY - judgeDragStart.y) / rect.height * 100;
-                state.judgeX = Math.max(0, Math.min(100, judgeDragStart.startX + dx));
+                state.judgeX = snap ? 50 : Math.max(0, Math.min(100, judgeDragStart.startX + dx));
                 state.judgeY = Math.max(0, Math.min(100, judgeDragStart.startY + dy));
                 judgePreviewDraggable.style.left = state.judgeX + '%';
                 judgePreviewDraggable.style.top = state.judgeY + '%';
             }
             if (comboDragStart && comboPreviewDraggable) {
-                const dx = (e.clientX - comboDragStart.x) / rect.width * 100;
+                const dx = snap ? 0 : (e.clientX - comboDragStart.x) / rect.width * 100;
                 const dy = (e.clientY - comboDragStart.y) / rect.height * 100;
-                state.comboX = Math.max(0, Math.min(100, comboDragStart.startX + dx));
+                state.comboX = snap ? 50 : Math.max(0, Math.min(100, comboDragStart.startX + dx));
                 state.comboY = Math.max(0, Math.min(100, comboDragStart.startY + dy));
                 comboPreviewDraggable.style.left = state.comboX + '%';
                 comboPreviewDraggable.style.top = state.comboY + '%';
             }
             if (unstableBarDragStart && unstableBarPreviewEl) {
-                const dx = (e.clientX - unstableBarDragStart.x) / rect.width * 100;
+                const dx = snap ? 0 : (e.clientX - unstableBarDragStart.x) / rect.width * 100;
                 const dy = (e.clientY - unstableBarDragStart.y) / rect.height * 100;
-                state.unstableBarX = Math.max(0, Math.min(100, unstableBarDragStart.startX + dx));
+                state.unstableBarX = snap ? 50 : Math.max(0, Math.min(100, unstableBarDragStart.startX + dx));
                 state.unstableBarY = Math.max(0, Math.min(100, unstableBarDragStart.startY + dy));
                 unstableBarPreviewEl.style.left = state.unstableBarX + '%';
                 unstableBarPreviewEl.style.top = state.unstableBarY + '%';
@@ -487,6 +599,8 @@
         state.scoreVisible = scoreVisibleCheck.checked;
         state.accuracyVisible = accuracyVisibleCheck.checked;
         state.timerVisible = timerVisibleCheck.checked;
+        if (snapToCenterCheck) state.snapToCenter = snapToCenterCheck.checked;
+        if (resetLayoutBtn) resetLayoutBtn.onclick = null;
         if (gameplayUICustomizeOverlay._cleanup) gameplayUICustomizeOverlay._cleanup();
         gameplayUICustomizeOverlay.style.display = 'none';
         saveSettings();
