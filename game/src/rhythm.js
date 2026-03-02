@@ -11,8 +11,68 @@
     const GREAT_MS = 100;
     const GOOD_MS = 150;
     const STORAGE_KEY = 'rhythm4k_settings';
+    const STORAGE_KEY_SCORES = 'rhythm4k_scores';
+    const STORAGE_KEY_CAREER = 'rhythm4k_career';
+    const MIN_RATED_DURATION_SEC = 90;
+    const MAX_MODE_RATING = 30;
 
     const defaultKeybinds = ['KeyD', 'KeyF', 'KeyJ', 'KeyK'];
+
+    function getModeDisplayName(style) {
+        if (style === 'stream') return 'Speed';
+        if (style === 'chords') return 'Chord';
+        if (style === 'random') return 'Random';
+        return style || '—';
+    }
+
+    function accuracyBalancer(accuracyPct) {
+        if (accuracyPct >= 98) return 0.98 + (accuracyPct - 98) / 2 * 0.02; /* 98–100: linear 0.98 → 1.00 */
+        if (accuracyPct >= 90) return 0.60 + (accuracyPct - 90) / 8 * 0.38;  /* 90–98: linear 0.60 → 0.98 */
+        if (accuracyPct >= 75) return 0.60 * Math.pow((accuracyPct - 75) / 15, 3); /* 75–90: harsh exponent 0 → 0.60 */
+        return 0;
+    }
+
+    function computeModeRating(difficulty, accuracyPct) {
+        const balancer = accuracyBalancer(accuracyPct);
+        return Math.min(MAX_MODE_RATING, difficulty * balancer);
+    }
+
+    function loadScores() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY_SCORES);
+            return raw ? JSON.parse(raw) : [];
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function saveScores(scores) {
+        try {
+            localStorage.setItem(STORAGE_KEY_SCORES, JSON.stringify(scores));
+        } catch (_) {}
+    }
+
+    function loadCareer() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY_CAREER);
+            const def = { speed: 0, chord: 0, random: 0 };
+            if (!raw) return def;
+            const o = JSON.parse(raw);
+            return {
+                speed: typeof o.speed === 'number' ? o.speed : 0,
+                chord: typeof o.chord === 'number' ? o.chord : 0,
+                random: typeof o.random === 'number' ? o.random : 0
+            };
+        } catch (_) {
+            return { speed: 0, chord: 0, random: 0 };
+        }
+    }
+
+    function saveCareer(career) {
+        try {
+            localStorage.setItem(STORAGE_KEY_CAREER, JSON.stringify(career));
+        } catch (_) {}
+    }
 
     function getDefaultState() {
         return {
@@ -142,6 +202,26 @@
     const pauseOverlayEl = document.getElementById('pauseOverlay');
     const pauseContinueBtn = document.getElementById('pauseContinue');
     const pauseMenuBtn = document.getElementById('pauseMenu');
+    const ratedPlayHint = document.getElementById('ratedPlayHint');
+    const resRatingEl = document.getElementById('resRating');
+    const careerOverlay = document.getElementById('careerOverlay');
+    const careerBtn = document.getElementById('careerBtn');
+    const careerCloseBtn = document.getElementById('careerCloseBtn');
+    const careerTotalSREl = document.getElementById('careerTotalSR');
+    const careerSpeedEl = document.getElementById('careerSpeed');
+    const careerChordEl = document.getElementById('careerChord');
+    const careerRandomEl = document.getElementById('careerRandom');
+    const careerScoresBody = document.getElementById('careerScoresBody');
+    const careerNoScoresEl = document.getElementById('careerNoScores');
+    const clearScoresBtn = document.getElementById('clearScoresBtn');
+    const resetCareerBtn = document.getElementById('resetCareerBtn');
+    const confirmModal = document.getElementById('confirmModal');
+    const confirmModalMessage = document.getElementById('confirmModalMessage');
+    const confirmModalCancel = document.getElementById('confirmModalCancel');
+    const confirmModalConfirm = document.getElementById('confirmModalConfirm');
+
+    let careerFilterRating = 'all';
+    let careerFilterMode = 'all';
 
     function loadSettings() {
         try {
@@ -230,10 +310,84 @@
         notesPerSecondValue.textContent = state.notesPerSecond;
         gameDurationInput.value = state.gameDurationSec;
         gameDurationValue.textContent = formatDuration(state.gameDurationSec);
+        updateRatedPlayHint();
         document.querySelectorAll('.style-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.style === state.gameStyle);
         });
         updateReceptorSkin();
+    }
+
+    function updateRatedPlayHint() {
+        const sec = parseInt(gameDurationInput?.value ?? state.gameDurationSec, 10);
+        if (ratedPlayHint) ratedPlayHint.style.display = sec >= MIN_RATED_DURATION_SEC ? 'block' : 'none';
+    }
+
+    let confirmModalPending = null;
+
+    function showConfirmModal(message, onConfirm) {
+        if (!confirmModal || !confirmModalMessage) return;
+        confirmModalMessage.textContent = message;
+        confirmModalPending = typeof onConfirm === 'function' ? onConfirm : null;
+        confirmModal.style.display = 'flex';
+    }
+
+    function hideConfirmModal() {
+        confirmModalPending = null;
+        if (confirmModal) confirmModal.style.display = 'none';
+    }
+
+    function openCareer() {
+        const career = loadCareer();
+        const total = career.speed + career.chord + career.random;
+        if (careerTotalSREl) careerTotalSREl.textContent = total.toFixed(2);
+        if (careerSpeedEl) careerSpeedEl.textContent = career.speed.toFixed(2);
+        if (careerChordEl) careerChordEl.textContent = career.chord.toFixed(2);
+        if (careerRandomEl) careerRandomEl.textContent = career.random.toFixed(2);
+
+        document.querySelectorAll('#filterRatingGroup .career-filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.rating === careerFilterRating);
+        });
+        document.querySelectorAll('#filterModeGroup .career-filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === careerFilterMode);
+        });
+
+        renderCareerScores();
+        if (careerOverlay) careerOverlay.style.display = 'flex';
+    }
+
+    function renderCareerScores() {
+        const scores = loadScores();
+        let filtered = scores;
+        if (careerFilterRating === 'ranked') filtered = filtered.filter(e => e.ranked !== false);
+        if (careerFilterRating === 'unranked') filtered = filtered.filter(e => e.ranked === false);
+        if (careerFilterMode !== 'all') filtered = filtered.filter(e => e.mode === careerFilterMode);
+
+        if (careerScoresBody) {
+            careerScoresBody.innerHTML = '';
+            filtered.forEach(entry => {
+                const tr = document.createElement('tr');
+                const ratingNum = entry.rating != null ? entry.rating : 0;
+                const ratingText = entry.ranked === false ? ratingNum.toFixed(2) + ' (Unranked)' : (entry.rating != null ? ratingNum.toFixed(2) : '—');
+                tr.innerHTML =
+                    '<td>' + escapeHtml(entry.mode) + '</td>' +
+                    '<td>' + escapeHtml(String(entry.difficulty)) + '</td>' +
+                    '<td>' + escapeHtml(entry.accuracy.toFixed(2)) + '%</td>' +
+                    '<td>' + escapeHtml(String(entry.score)) + '</td>' +
+                    '<td>' + (entry.ranked === false ? '<span class="unrated">' + escapeHtml(ratingText) + '</span>' : escapeHtml(ratingText)) + '</td>';
+                careerScoresBody.appendChild(tr);
+            });
+        }
+        if (careerNoScoresEl) careerNoScoresEl.classList.toggle('visible', filtered.length === 0);
+    }
+
+    function escapeHtml(s) {
+        const div = document.createElement('div');
+        div.textContent = s;
+        return div.innerHTML;
+    }
+
+    function closeCareer() {
+        if (careerOverlay) careerOverlay.style.display = 'none';
     }
 
     function initUI() {
@@ -321,22 +475,86 @@
 
         gameDurationInput.value = state.gameDurationSec;
         gameDurationValue.textContent = formatDuration(state.gameDurationSec);
+        updateRatedPlayHint();
         gameDurationInput.addEventListener('input', () => {
             state.gameDurationSec = parseInt(gameDurationInput.value, 10);
             gameDurationValue.textContent = formatDuration(state.gameDurationSec);
+            updateRatedPlayHint();
         });
 
         document.querySelector('.start-btn').addEventListener('click', startGame);
         document.querySelector('.back-btn').addEventListener('click', backToMenu);
+        if (careerBtn) careerBtn.addEventListener('click', openCareer);
+        if (careerCloseBtn) careerCloseBtn.addEventListener('click', closeCareer);
+        if (careerOverlay) {
+            careerOverlay.addEventListener('click', function (e) {
+                if (e.target === careerOverlay) closeCareer();
+            });
+        }
+
+        document.querySelectorAll('#filterRatingGroup .career-filter-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                careerFilterRating = this.dataset.rating || 'all';
+                renderCareerScores();
+                document.querySelectorAll('#filterRatingGroup .career-filter-btn').forEach(b => b.classList.toggle('active', b.dataset.rating === careerFilterRating));
+            });
+        });
+        document.querySelectorAll('#filterModeGroup .career-filter-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                careerFilterMode = this.dataset.mode || 'all';
+                renderCareerScores();
+                document.querySelectorAll('#filterModeGroup .career-filter-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === careerFilterMode));
+            });
+        });
+
+        if (clearScoresBtn) {
+            clearScoresBtn.addEventListener('click', function () {
+                showConfirmModal('Are you sure? This will delete all saved scores.', function () {
+                    saveScores([]);
+                    hideConfirmModal();
+                    if (careerOverlay && careerOverlay.style.display === 'flex') {
+                        renderCareerScores();
+                        if (careerNoScoresEl) careerNoScoresEl.classList.add('visible');
+                    }
+                });
+            });
+        }
+        if (resetCareerBtn) {
+            resetCareerBtn.addEventListener('click', function () {
+                showConfirmModal('Are you sure? This will reset your SR (Speed, Chord, Random) to 0.', function () {
+                    saveCareer({ speed: 0, chord: 0, random: 0 });
+                    hideConfirmModal();
+                    if (careerOverlay && careerOverlay.style.display === 'flex') {
+                        const c = loadCareer();
+                        if (careerTotalSREl) careerTotalSREl.textContent = '0.00';
+                        if (careerSpeedEl) careerSpeedEl.textContent = '0.00';
+                        if (careerChordEl) careerChordEl.textContent = '0.00';
+                        if (careerRandomEl) careerRandomEl.textContent = '0.00';
+                    }
+                });
+            });
+        }
+
+        if (confirmModalConfirm) confirmModalConfirm.addEventListener('click', function () {
+            if (confirmModalPending) confirmModalPending();
+            hideConfirmModal();
+        });
+        if (confirmModalCancel) confirmModalCancel.addEventListener('click', hideConfirmModal);
+        if (confirmModal) confirmModal.addEventListener('click', function (e) {
+            if (e.target === confirmModal) hideConfirmModal();
+        });
 
         const resetToDefaultBtn = document.getElementById('resetToDefaultBtn');
         if (resetToDefaultBtn) {
             resetToDefaultBtn.addEventListener('click', function () {
-                Object.assign(state, getDefaultState());
-                saveSettings();
-                applyStateToMenuUI();
-                applyJudgeStyle();
-                applyGameplayUIStyle();
+                showConfirmModal('Are you sure? This will reset all settings to default.', function () {
+                    Object.assign(state, getDefaultState());
+                    saveSettings();
+                    applyStateToMenuUI();
+                    applyJudgeStyle();
+                    applyGameplayUIStyle();
+                    hideConfirmModal();
+                });
             });
         }
         if (pauseContinueBtn) pauseContinueBtn.addEventListener('click', () => setPaused(false));
@@ -450,43 +668,46 @@
 
         if (resetLayoutBtn) {
             resetLayoutBtn.onclick = function () {
-                const layout = getDefaultLayout();
-                Object.assign(state, layout);
-                judgeVisibleCheck.checked = state.judgeVisible;
-                judgeSizeSlider.value = state.judgeSize;
-                judgeSizeValue.textContent = state.judgeSize;
-                judgePreviewDraggable.style.left = state.judgeX + '%';
-                judgePreviewDraggable.style.top = state.judgeY + '%';
-                judgePreviewDraggable.style.fontSize = Math.round(state.judgeSize * PREVIEW_BOARD_SCALE) + 'px';
-                comboVisibleCheck.checked = state.comboVisible;
-                comboSizeSlider.value = state.comboSize;
-                comboSizeValue.textContent = state.comboSize;
-                if (comboPreviewDraggable) {
-                    comboPreviewDraggable.style.left = state.comboX + '%';
-                    comboPreviewDraggable.style.top = state.comboY + '%';
-                    comboPreviewDraggable.style.fontSize = Math.round(state.comboSize * PREVIEW_BOARD_SCALE) + 'px';
-                }
-                unstableBarVisibleCheck.checked = state.unstableBarVisible;
-                unstableBarWidthSlider.value = state.unstableBarWidth;
-                unstableBarWidthValue.textContent = state.unstableBarWidth;
-                if (unstableBarPreviewEl) {
-                    unstableBarPreviewEl.style.left = state.unstableBarX + '%';
-                    unstableBarPreviewEl.style.top = state.unstableBarY + '%';
-                    unstableBarPreviewEl.style.width = state.unstableBarWidth + '%';
-                }
-                scoreVisibleCheck.checked = state.scoreVisible;
-                scoreSizeSlider.value = state.scoreSize;
-                scoreSizeValue.textContent = state.scoreSize;
-                if (previewScoreEl) previewScoreEl.style.fontSize = state.scoreSize + 'px';
-                accuracyVisibleCheck.checked = state.accuracyVisible;
-                accuracySizeSlider.value = state.accuracySize;
-                accuracySizeValue.textContent = state.accuracySize;
-                if (previewAccuracyEl) previewAccuracyEl.style.fontSize = state.accuracySize + 'px';
-                timerVisibleCheck.checked = state.timerVisible;
-                timerSizeSlider.value = state.timerSize;
-                timerSizeValue.textContent = state.timerSize;
-                if (previewTimerEl) previewTimerEl.style.fontSize = state.timerSize + 'px';
-                saveSettings();
+                showConfirmModal('Are you sure? This will reset the layout to default.', function () {
+                    const layout = getDefaultLayout();
+                    Object.assign(state, layout);
+                    judgeVisibleCheck.checked = state.judgeVisible;
+                    judgeSizeSlider.value = state.judgeSize;
+                    judgeSizeValue.textContent = state.judgeSize;
+                    judgePreviewDraggable.style.left = state.judgeX + '%';
+                    judgePreviewDraggable.style.top = state.judgeY + '%';
+                    judgePreviewDraggable.style.fontSize = Math.round(state.judgeSize * PREVIEW_BOARD_SCALE) + 'px';
+                    comboVisibleCheck.checked = state.comboVisible;
+                    comboSizeSlider.value = state.comboSize;
+                    comboSizeValue.textContent = state.comboSize;
+                    if (comboPreviewDraggable) {
+                        comboPreviewDraggable.style.left = state.comboX + '%';
+                        comboPreviewDraggable.style.top = state.comboY + '%';
+                        comboPreviewDraggable.style.fontSize = Math.round(state.comboSize * PREVIEW_BOARD_SCALE) + 'px';
+                    }
+                    unstableBarVisibleCheck.checked = state.unstableBarVisible;
+                    unstableBarWidthSlider.value = state.unstableBarWidth;
+                    unstableBarWidthValue.textContent = state.unstableBarWidth;
+                    if (unstableBarPreviewEl) {
+                        unstableBarPreviewEl.style.left = state.unstableBarX + '%';
+                        unstableBarPreviewEl.style.top = state.unstableBarY + '%';
+                        unstableBarPreviewEl.style.width = state.unstableBarWidth + '%';
+                    }
+                    scoreVisibleCheck.checked = state.scoreVisible;
+                    scoreSizeSlider.value = state.scoreSize;
+                    scoreSizeValue.textContent = state.scoreSize;
+                    if (previewScoreEl) previewScoreEl.style.fontSize = state.scoreSize + 'px';
+                    accuracyVisibleCheck.checked = state.accuracyVisible;
+                    accuracySizeSlider.value = state.accuracySize;
+                    accuracySizeValue.textContent = state.accuracySize;
+                    if (previewAccuracyEl) previewAccuracyEl.style.fontSize = state.accuracySize + 'px';
+                    timerVisibleCheck.checked = state.timerVisible;
+                    timerSizeSlider.value = state.timerSize;
+                    timerSizeValue.textContent = state.timerSize;
+                    if (previewTimerEl) previewTimerEl.style.fontSize = state.timerSize + 'px';
+                    saveSettings();
+                    hideConfirmModal();
+                });
             };
         }
 
@@ -1012,13 +1233,50 @@
         clearReceptorHitState();
         window.removeEventListener('resize', scalePlayfield);
 
+        const accuracy = getAccuracy();
+        const durationSec = gameState.durationSec;
+        const difficulty = Math.max(1, Math.min(30, state.notesPerSecond));
+        const modeStyle = state.gameStyle;
+        const isRated = durationSec >= MIN_RATED_DURATION_SEC;
+        const modeRating = computeModeRating(difficulty, accuracy);
+
         document.getElementById('resPerfect').textContent = gameState.stats.perfect;
         document.getElementById('resGreat').textContent = gameState.stats.great;
         document.getElementById('resGood').textContent = gameState.stats.good;
         document.getElementById('resMiss').textContent = gameState.stats.miss;
         document.getElementById('resScore').textContent = Math.round(gameState.score);
-        document.getElementById('resAccuracy').textContent = getAccuracy().toFixed(2);
+        document.getElementById('resAccuracy').textContent = accuracy.toFixed(2);
+        if (resRatingEl) {
+            if (isRated) {
+                resRatingEl.textContent = modeRating.toFixed(2);
+                resRatingEl.classList.remove('unrated');
+            } else {
+                resRatingEl.textContent = modeRating.toFixed(2) + ' (Unranked)';
+                resRatingEl.classList.add('unrated');
+            }
+        }
         resultsEl.style.display = 'flex';
+
+        const scoreEntry = {
+            mode: getModeDisplayName(modeStyle),
+            difficulty,
+            accuracy: Math.round(accuracy * 100) / 100,
+            score: Math.round(gameState.score),
+            rating: Math.round(modeRating * 100) / 100,
+            ranked: isRated,
+            timestamp: Date.now()
+        };
+        const scores = loadScores();
+        scores.unshift(scoreEntry);
+        if (scores.length > 100) scores.length = 100;
+        saveScores(scores);
+
+        if (isRated) {
+            const career = loadCareer();
+            const key = modeStyle === 'stream' ? 'speed' : modeStyle === 'chords' ? 'chord' : 'random';
+            career[key] = Math.max(career[key], modeRating);
+            saveCareer(career);
+        }
     }
 
     initUI();

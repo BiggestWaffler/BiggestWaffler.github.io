@@ -1184,3 +1184,321 @@ body {
 .results-accuracy strong {
     color: #a090ff;
 }
+
+.results-rating {
+    margin: 0 0 24px 0;
+    font-size: 16px;
+    color: #c0b0e0;
+}
+
+.results-rating strong {
+    color: #a090ff;
+}
+
+.results-rating .unrated {
+    color: #8080a0;
+    font-weight: 400;
+}
+
+.rated-play-hint {
+    margin: -8px 0 0 0;
+    font-size: 12px;
+    color: #80c080;
+    flex: 0 0 100%;
+}
+
+/* Career overlay */
+.career-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(12, 10, 18, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+}
+
+.career-content {
+    background: rgba(24, 22, 34, 0.98);
+    border: 1px solid rgba(160, 140, 255, 0.4);
+    border-radius: 16px;
+    padding: 28px 32px;
+    max-width: 560px;
+    width: 100%;
+    max-height: 85vh;
+    overflow: auto;
+}
+
+.career-content h2 {
+    margin: 0 0 20px 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.career-sr-section {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: rgba(80, 60, 140, 0.2);
+    border-radius: 10px;
+    border: 1px solid rgba(160, 140, 255, 0.3);
+}
+
+.career-total-sr {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    color: #c0b0e0;
+}
+
+.career-total-sr strong {
+    color: #a090ff;
+}
+
+.career-sr-max {
+    font-size: 14px;
+    color: #8080a0;
+}
+
+.career-mode-ratings {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    font-size: 14px;
+    color: #b0a0c0;
+}
+
+.career-mode-ratings strong {
+    color: #e0d8ff;
+}
+
+.career-actions-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.career-danger-btn {
+    padding: 8px 16px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    background: rgba(180, 60, 60, 0.3);
+    border: 1px solid rgba(220, 100, 100, 0.5);
+    border-radius: 8px;
+    color: #e0a0a0;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.career-danger-btn:hover {
+    background: rgba(180, 60, 60, 0.5);
+    color: #ffb0b0;
+}
+
+.career-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 24px;
+    margin-bottom: 12px;
+}
+
+.career-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.career-filter-label {
+    font-size: 12px;
+    color: #8080a0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.career-filter-btns {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.career-filter-btn {
+    padding: 6px 12px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(80, 60, 140, 0.4);
+    border: 1px solid rgba(160, 140, 255, 0.4);
+    border-radius: 6px;
+    color: #b0a0c0;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.career-filter-btn:hover {
+    background: rgba(100, 80, 160, 0.5);
+    color: #e0d8ff;
+}
+
+.career-filter-btn.active {
+    background: rgba(160, 140, 255, 0.35);
+    border-color: #a090ff;
+    color: #fff;
+}
+
+.career-scores-heading {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #a090ff;
+}
+
+.career-scores-wrap {
+    margin-bottom: 20px;
+    overflow-x: auto;
+}
+
+.career-scores-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.career-scores-table th,
+.career-scores-table td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid rgba(160, 140, 255, 0.2);
+}
+
+.career-scores-table th {
+    color: #a090ff;
+    font-weight: 600;
+}
+
+.career-scores-table td {
+    color: #c0b0e0;
+}
+
+.career-scores-table tbody tr:hover {
+    background: rgba(80, 60, 140, 0.15);
+}
+
+.career-scores-table .unrated {
+    color: #8080a0;
+    font-weight: 400;
+}
+
+.career-no-scores {
+    margin: 12px 0 0 0;
+    font-size: 13px;
+    color: #8080a0;
+    display: none;
+}
+
+.career-no-scores.visible {
+    display: block;
+}
+
+.career-close-btn {
+    padding: 10px 24px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    background: rgba(160, 140, 255, 0.4);
+    border: 1px solid rgba(160, 140, 255, 0.6);
+    border-radius: 10px;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.career-close-btn:hover {
+    background: rgba(160, 140, 255, 0.6);
+}
+
+.career-btn {
+    padding: 10px 20px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    background: rgba(80, 60, 140, 0.4);
+    border: 1px solid rgba(160, 140, 255, 0.5);
+    border-radius: 10px;
+    color: #b0a0c0;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.career-btn:hover {
+    background: rgba(100, 80, 160, 0.5);
+    color: #e0d8ff;
+}
+
+/* Confirm modal */
+.confirm-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(12, 10, 18, 0.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 20px;
+}
+
+.confirm-modal-content {
+    background: rgba(28, 26, 38, 0.98);
+    border: 1px solid rgba(160, 140, 255, 0.4);
+    border-radius: 14px;
+    padding: 24px 28px;
+    max-width: 360px;
+    width: 100%;
+}
+
+.confirm-modal-message {
+    margin: 0 0 20px 0;
+    font-size: 15px;
+    color: #e0d8f0;
+    line-height: 1.5;
+}
+
+.confirm-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.confirm-modal-btn {
+    padding: 10px 20px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.confirm-modal-btn.cancel {
+    background: rgba(80, 60, 140, 0.4);
+    border: 1px solid rgba(160, 140, 255, 0.5);
+    color: #b0a0c0;
+}
+
+.confirm-modal-btn.cancel:hover {
+    background: rgba(100, 80, 160, 0.5);
+    color: #e0d8ff;
+}
+
+.confirm-modal-btn.confirm {
+    background: linear-gradient(135deg, #7860e0, #a080ff);
+    border: none;
+    color: #fff;
+}
+
+.confirm-modal-btn.confirm:hover {
+    opacity: 0.95;
+}

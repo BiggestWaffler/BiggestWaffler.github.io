@@ -207,14 +207,80 @@
                     <input type="range" id="gameDuration" min="15" max="300" value="60" step="15">
                     <span id="gameDurationValue">1:00</span>
                 </div>
+                <p id="ratedPlayHint" class="rated-play-hint" style="display: none;">Rating can be gained from this play</p>
 
                 <div class="instructions">
                     <h3>How to play</h3>
                     <p>Hit the keys when notes reach the receptor line.</p>
                 </div>
                 <div class="menu-actions">
+                    <button type="button" class="career-btn" id="careerBtn">Career</button>
                     <button type="button" class="reset-default-btn" id="resetToDefaultBtn">Reset to default</button>
                     <button type="button" class="start-btn" id="startBtn">Start</button>
+                </div>
+            </div>
+
+            <div id="careerOverlay" class="career-overlay" style="display: none;">
+                <div class="career-content">
+                    <h2>Career</h2>
+                    <div class="career-sr-section">
+                        <p class="career-total-sr">Total SR: <strong id="careerTotalSR">0</strong> <span class="career-sr-max">/ 90</span></p>
+                        <div class="career-mode-ratings">
+                            <span>Speed: <strong id="careerSpeed">0</strong></span>
+                            <span>Chord: <strong id="careerChord">0</strong></span>
+                            <span>Random: <strong id="careerRandom">0</strong></span>
+                        </div>
+                    </div>
+                    <div class="career-actions-row">
+                        <button type="button" class="career-danger-btn" id="clearScoresBtn">Clear Scores</button>
+                        <button type="button" class="career-danger-btn" id="resetCareerBtn">Reset Career</button>
+                    </div>
+                    <h3 class="career-scores-heading">Score history</h3>
+                    <div class="career-filters">
+                        <div class="career-filter-group">
+                            <span class="career-filter-label">Rating:</span>
+                            <div class="career-filter-btns" id="filterRatingGroup">
+                                <button type="button" class="career-filter-btn active" data-rating="all">Show All</button>
+                                <button type="button" class="career-filter-btn" data-rating="ranked">Ranked</button>
+                                <button type="button" class="career-filter-btn" data-rating="unranked">Unranked</button>
+                            </div>
+                        </div>
+                        <div class="career-filter-group">
+                            <span class="career-filter-label">Mode:</span>
+                            <div class="career-filter-btns" id="filterModeGroup">
+                                <button type="button" class="career-filter-btn active" data-mode="all">Show All</button>
+                                <button type="button" class="career-filter-btn" data-mode="Chord">Chord</button>
+                                <button type="button" class="career-filter-btn" data-mode="Speed">Speed</button>
+                                <button type="button" class="career-filter-btn" data-mode="Random">Random</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="career-scores-wrap">
+                        <table class="career-scores-table">
+                            <thead>
+                                <tr>
+                                    <th>Mode</th>
+                                    <th>Difficulty</th>
+                                    <th>Accuracy</th>
+                                    <th>Score</th>
+                                    <th>Rating</th>
+                                </tr>
+                            </thead>
+                            <tbody id="careerScoresBody"></tbody>
+                        </table>
+                        <p id="careerNoScores" class="career-no-scores">No scores yet. Play to save.</p>
+                    </div>
+                    <button type="button" class="career-close-btn" id="careerCloseBtn">Close</button>
+                </div>
+            </div>
+
+            <div id="confirmModal" class="confirm-modal" style="display: none;">
+                <div class="confirm-modal-content">
+                    <p class="confirm-modal-message" id="confirmModalMessage">Are you sure?</p>
+                    <div class="confirm-modal-actions">
+                        <button type="button" class="confirm-modal-btn cancel" id="confirmModalCancel">Cancel</button>
+                        <button type="button" class="confirm-modal-btn confirm" id="confirmModalConfirm">Confirm</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -266,6 +332,7 @@
                 </div>
                 <p class="results-accuracy">Accuracy: <strong id="resAccuracy">100.00</strong>%</p>
                 <p class="results-score">Score: <strong id="resScore">0</strong></p>
+                <p class="results-rating">Rating: <strong id="resRating">—</strong></p>
                 <button type="button" class="back-btn">Back to menu</button>
             </div>
         </main>
