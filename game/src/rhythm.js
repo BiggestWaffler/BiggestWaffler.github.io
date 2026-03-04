@@ -13,7 +13,7 @@
     const STORAGE_KEY = 'rhythm4k_settings';
     const STORAGE_KEY_SCORES = 'rhythm4k_scores';
     const STORAGE_KEY_CAREER = 'rhythm4k_career';
-    const MIN_RATED_DURATION_SEC = 90;
+    const MIN_RATED_DURATION_SEC = 30;
     const MAX_MODE_RATING = 30;
 
     const defaultKeybinds = ['KeyD', 'KeyF', 'KeyJ', 'KeyK'];
@@ -204,6 +204,7 @@
     const pauseMenuBtn = document.getElementById('pauseMenu');
     const ratedPlayHint = document.getElementById('ratedPlayHint');
     const resRatingEl = document.getElementById('resRating');
+    const resSREl = document.getElementById('resSR');
     const careerOverlay = document.getElementById('careerOverlay');
     const careerBtn = document.getElementById('careerBtn');
     const careerCloseBtn = document.getElementById('careerCloseBtn');
@@ -373,7 +374,8 @@
                     '<td>' + escapeHtml(String(entry.difficulty)) + '</td>' +
                     '<td>' + escapeHtml(entry.accuracy.toFixed(2)) + '%</td>' +
                     '<td>' + escapeHtml(String(entry.score)) + '</td>' +
-                    '<td>' + (entry.ranked === false ? '<span class="unrated">' + escapeHtml(ratingText) + '</span>' : escapeHtml(ratingText)) + '</td>';
+                    '<td>' + (entry.ranked === false ? '<span class="unrated">' + escapeHtml(ratingText) + '</span>' : escapeHtml(ratingText)) + '</td>' +
+                    '<td><button type="button" class="career-delete-btn" data-ts="' + String(entry.timestamp || '') + '">✕</button></td>';
                 careerScoresBody.appendChild(tr);
             });
         }
@@ -489,6 +491,22 @@
         if (careerOverlay) {
             careerOverlay.addEventListener('click', function (e) {
                 if (e.target === careerOverlay) closeCareer();
+            });
+        }
+
+        if (careerScoresBody) {
+            careerScoresBody.addEventListener('click', function (e) {
+                const btn = e.target.closest('.career-delete-btn');
+                if (!btn) return;
+                const ts = parseInt(btn.dataset.ts, 10);
+                if (!ts) return;
+                showConfirmModal('Delete this score from history? This does not affect your SR.', function () {
+                    let scores = loadScores();
+                    scores = scores.filter(entry => entry.timestamp !== ts);
+                    saveScores(scores);
+                    renderCareerScores();
+                    hideConfirmModal();
+                });
             });
         }
 
@@ -1240,6 +1258,10 @@
         const isRated = durationSec >= MIN_RATED_DURATION_SEC;
         const modeRating = computeModeRating(difficulty, accuracy);
 
+        const careerBefore = loadCareer();
+        const totalBefore = careerBefore.speed + careerBefore.chord + careerBefore.random;
+        let careerAfter = careerBefore;
+
         document.getElementById('resPerfect').textContent = gameState.stats.perfect;
         document.getElementById('resGreat').textContent = gameState.stats.great;
         document.getElementById('resGood').textContent = gameState.stats.good;
@@ -1255,6 +1277,25 @@
                 resRatingEl.classList.add('unrated');
             }
         }
+
+        if (isRated) {
+            const key = modeStyle === 'stream' ? 'speed' : modeStyle === 'chords' ? 'chord' : 'random';
+            const updated = {
+                speed: careerBefore.speed,
+                chord: careerBefore.chord,
+                random: careerBefore.random
+            };
+            updated[key] = Math.max(updated[key], modeRating);
+            careerAfter = updated;
+            saveCareer(updated);
+        }
+
+        const totalAfter = careerAfter.speed + careerAfter.chord + careerAfter.random;
+        const srGain = totalAfter - totalBefore;
+        if (resSREl) {
+            resSREl.textContent = totalAfter.toFixed(2) + ' (+' + srGain.toFixed(2) + ')';
+        }
+
         resultsEl.style.display = 'flex';
 
         const scoreEntry = {
@@ -1270,13 +1311,6 @@
         scores.unshift(scoreEntry);
         if (scores.length > 100) scores.length = 100;
         saveScores(scores);
-
-        if (isRated) {
-            const career = loadCareer();
-            const key = modeStyle === 'stream' ? 'speed' : modeStyle === 'chords' ? 'chord' : 'random';
-            career[key] = Math.max(career[key], modeRating);
-            saveCareer(career);
-        }
     }
 
     initUI();
