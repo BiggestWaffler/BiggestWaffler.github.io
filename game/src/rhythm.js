@@ -13,7 +13,7 @@
     const STORAGE_KEY = 'rhythm4k_settings';
     const STORAGE_KEY_SCORES = 'rhythm4k_scores';
     const STORAGE_KEY_CAREER = 'rhythm4k_career';
-    const MIN_RATED_DURATION_SEC = 30;
+    const MIN_RATED_DURATION_SEC = 90;
     const MAX_MODE_RATING = 30;
 
     const defaultKeybinds = ['KeyD', 'KeyF', 'KeyJ', 'KeyK'];
@@ -999,6 +999,7 @@
             score: 0,
             combo: 0,
             recentHitOffsets: [],
+            hitHistory: [],
             scrollSpeedPxPerSec,
             noteElements: new Map()
         };
@@ -1022,6 +1023,9 @@
         lanesEl.querySelectorAll('.notes-layer').forEach(layer => {
             layer.innerHTML = '';
         });
+
+        const timingGraphEl = document.getElementById('resultsTimingGraph');
+        if (timingGraphEl) timingGraphEl.innerHTML = '';
 
         gameState.startTime = performance.now();
         window.addEventListener('resize', scalePlayfield);
@@ -1131,6 +1135,9 @@
                 gameState.recentHitOffsets.push({ offsetMs: bestDt, judgement });
                 if (gameState.recentHitOffsets.length > 20) gameState.recentHitOffsets.shift();
             }
+            if (gameState.hitHistory) {
+                gameState.hitHistory.push({ time: now, offsetMs: bestDt, judgement });
+            }
             showJudge(judgement);
             removeNoteElement(bestIdx);
             updateUnstableBarTicks();
@@ -1141,6 +1148,9 @@
             gameState.hit[missIdx] = true;
             gameState.stats.miss++;
             gameState.combo = 0;
+            if (gameState.hitHistory) {
+                gameState.hitHistory.push({ time: now, offsetMs: missDt, judgement: 'miss' });
+            }
             showJudge('miss');
             removeNoteElement(missIdx);
         }
@@ -1181,6 +1191,87 @@
         }
     }
 
+    function renderTimingGraph() {
+        const container = document.getElementById('resultsTimingGraph');
+        if (!container || !gameState || !gameState.hitHistory) return;
+        const history = gameState.hitHistory;
+        container.innerHTML = '';
+        if (!history.length) return;
+
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+        const width = 260;
+        const height = 120;
+        const paddingX = 10;
+        const paddingY = 8;
+
+        let maxAbs = GOOD_MS;
+        for (let i = 0; i < history.length; i++) {
+            const v = Math.abs(history[i].offsetMs);
+            if (v > maxAbs) maxAbs = v;
+        }
+        const midY = height / 2;
+        const scaleY = (height / 2 - paddingY) / maxAbs;
+
+        const svg = document.createElementNS(SVG_NS, 'svg');
+        svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+        svg.setAttribute('preserveAspectRatio', 'none');
+
+        const zero = document.createElementNS(SVG_NS, 'line');
+        zero.setAttribute('x1', '0');
+        zero.setAttribute('y1', String(midY));
+        zero.setAttribute('x2', String(width));
+        zero.setAttribute('y2', String(midY));
+        zero.setAttribute('class', 'results-timing-zero');
+        svg.appendChild(zero);
+
+        const count = history.length;
+        const coords = [];
+        for (let i = 0; i < count; i++) {
+            const e = history[i];
+            const x = paddingX + (count <= 1 ? 0 : (width - paddingX * 2) * (i / (count - 1)));
+            const y = midY - e.offsetMs * scaleY;
+            coords.push({ x, y, judgement: e.judgement });
+        }
+
+        let prev = null;
+        for (let i = 0; i < coords.length; i++) {
+            const cur = coords[i];
+            if (cur.judgement !== 'miss' && prev !== null) {
+                const line = document.createElementNS(SVG_NS, 'line');
+                line.setAttribute('x1', String(prev.x));
+                line.setAttribute('y1', String(prev.y));
+                line.setAttribute('x2', String(cur.x));
+                line.setAttribute('y2', String(cur.y));
+                line.setAttribute('class', 'results-timing-line results-timing-line-' + cur.judgement);
+                svg.appendChild(line);
+            }
+            if (cur.judgement !== 'miss') prev = cur;
+        }
+
+        for (let i = 0; i < coords.length; i++) {
+            const c = coords[i];
+            if (c.judgement === 'miss') {
+                const text = document.createElementNS(SVG_NS, 'text');
+                text.setAttribute('x', String(c.x));
+                text.setAttribute('y', String(c.y));
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dominant-baseline', 'central');
+                text.setAttribute('class', 'results-timing-miss');
+                text.textContent = 'X';
+                svg.appendChild(text);
+            } else {
+                const dot = document.createElementNS(SVG_NS, 'circle');
+                dot.setAttribute('cx', String(c.x));
+                dot.setAttribute('cy', String(c.y));
+                dot.setAttribute('r', '2.5');
+                dot.setAttribute('class', 'results-timing-dot results-timing-' + c.judgement);
+                svg.appendChild(dot);
+            }
+        }
+
+        container.appendChild(svg);
+    }
+
     function getAccuracy() {
         const s = gameState.stats;
         const total = s.perfect + s.great + s.good + s.miss;
@@ -1214,6 +1305,9 @@
                 gameState.hit[i] = true;
                 gameState.stats.miss++;
                 gameState.combo = 0;
+                if (gameState.hitHistory) {
+                    gameState.hitHistory.push({ time: now, offsetMs: dtMs, judgement: 'miss' });
+                }
                 showJudge('miss');
                 removeNoteElement(i);
                 continue;
@@ -1296,6 +1390,7 @@
             resSREl.textContent = totalAfter.toFixed(2) + ' (+' + srGain.toFixed(2) + ')';
         }
 
+        renderTimingGraph();
         resultsEl.style.display = 'flex';
 
         const scoreEntry = {
