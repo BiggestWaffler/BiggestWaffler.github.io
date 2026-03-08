@@ -207,6 +207,11 @@
                     <input type="range" id="gameDuration" min="15" max="300" value="60" step="15">
                     <span id="gameDurationValue">1:00</span>
                 </div>
+                <div class="settings-row">
+                    <label>Start delay (countdown)</label>
+                    <input type="range" id="startDelay" min="0" max="3" value="1" step="0.5">
+                    <span id="startDelayValue">1.0s</span>
+                </div>
                 <p id="ratedPlayHint" class="rated-play-hint" style="display: none;">Rating can be gained from this play</p>
 
                 <div class="instructions">
@@ -315,6 +320,11 @@
                     <div class="lane" data-lane="3"><div class="receptor" data-skin="circle"></div><div class="notes-layer"></div></div>
                 </div>
             </div>
+            </div>
+            <div id="countdownOverlay" class="countdown-overlay" style="display: none;">
+                <div class="countdown-content">
+                    <span id="countdownText">3</span>
+                </div>
             </div>
             <div id="pauseOverlay" class="pause-overlay" style="display: none;">
                 <div class="pause-content">

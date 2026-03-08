@@ -102,6 +102,7 @@
             notesPerSecond: 8,
             gameStyle: 'stream',
             gameDurationSec: 60,
+            startDelaySec: 1,
             snapToCenter: false,
             listeningLane: null
         };
@@ -195,6 +196,8 @@
     const notesPerSecondValue = document.getElementById('notesPerSecondValue');
     const gameDurationInput = document.getElementById('gameDuration');
     const gameDurationValue = document.getElementById('gameDurationValue');
+    const startDelayInput = document.getElementById('startDelay');
+    const startDelayValue = document.getElementById('startDelayValue');
     const playfieldScalerEl = document.getElementById('playfieldScaler');
     const timerEl = document.getElementById('timer');
     const timerTotalEl = document.getElementById('timerTotal');
@@ -202,6 +205,8 @@
     const pauseOverlayEl = document.getElementById('pauseOverlay');
     const pauseContinueBtn = document.getElementById('pauseContinue');
     const pauseMenuBtn = document.getElementById('pauseMenu');
+    const countdownOverlayEl = document.getElementById('countdownOverlay');
+    const countdownTextEl = document.getElementById('countdownText');
     const ratedPlayHint = document.getElementById('ratedPlayHint');
     const resRatingEl = document.getElementById('resRating');
     const resSREl = document.getElementById('resSR');
@@ -253,6 +258,7 @@
                 if (typeof saved.receptorPulse === 'boolean') state.receptorPulse = saved.receptorPulse;
                 if (typeof saved.receptorLight === 'boolean') state.receptorLight = saved.receptorLight;
                 if (typeof saved.snapToCenter === 'boolean') state.snapToCenter = saved.snapToCenter;
+                if (typeof saved.startDelaySec === 'number' && saved.startDelaySec >= 0 && saved.startDelaySec <= 3) state.startDelaySec = saved.startDelaySec;
             }
         } catch (_) {}
     }
@@ -283,7 +289,8 @@
                 timerSize: state.timerSize,
                 receptorPulse: state.receptorPulse,
                 receptorLight: state.receptorLight,
-                snapToCenter: state.snapToCenter
+                snapToCenter: state.snapToCenter,
+                startDelaySec: state.startDelaySec
             }));
         } catch (_) {}
     }
@@ -311,6 +318,10 @@
         notesPerSecondValue.textContent = state.notesPerSecond;
         gameDurationInput.value = state.gameDurationSec;
         gameDurationValue.textContent = formatDuration(state.gameDurationSec);
+        if (startDelayInput && startDelayValue) {
+            startDelayInput.value = state.startDelaySec;
+            startDelayValue.textContent = state.startDelaySec.toFixed(1) + 's';
+        }
         updateRatedPlayHint();
         document.querySelectorAll('.style-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.style === state.gameStyle);
@@ -324,6 +335,7 @@
     }
 
     let confirmModalPending = null;
+    let countdownTimerId = null;
 
     function showConfirmModal(message, onConfirm) {
         if (!confirmModal || !confirmModalMessage) return;
@@ -335,6 +347,35 @@
     function hideConfirmModal() {
         confirmModalPending = null;
         if (confirmModal) confirmModal.style.display = 'none';
+    }
+
+    function startCountdownOverlay(delaySec) {
+        if (!countdownOverlayEl || !countdownTextEl) return;
+        if (countdownTimerId != null) {
+            clearInterval(countdownTimerId);
+            countdownTimerId = null;
+        }
+        if (!delaySec || delaySec <= 0) {
+            countdownOverlayEl.style.display = 'none';
+            return;
+        }
+        let remaining = delaySec;
+        countdownOverlayEl.style.display = 'flex';
+        const update = () => {
+            if (remaining <= 0) {
+                countdownOverlayEl.style.display = 'none';
+                if (countdownTimerId != null) {
+                    clearInterval(countdownTimerId);
+                    countdownTimerId = null;
+                }
+                return;
+            }
+            const secondsInt = Math.ceil(remaining);
+            countdownTextEl.textContent = String(secondsInt);
+            remaining -= 0.1;
+        };
+        update();
+        countdownTimerId = setInterval(update, 100);
     }
 
     function openCareer() {
@@ -483,6 +524,18 @@
             gameDurationValue.textContent = formatDuration(state.gameDurationSec);
             updateRatedPlayHint();
         });
+
+        if (startDelayInput && startDelayValue) {
+            startDelayInput.value = state.startDelaySec;
+            startDelayValue.textContent = state.startDelaySec.toFixed(1) + 's';
+            startDelayInput.addEventListener('input', () => {
+                state.startDelaySec = parseFloat(startDelayInput.value) || 0;
+                if (state.startDelaySec < 0) state.startDelaySec = 0;
+                if (state.startDelaySec > 3) state.startDelaySec = 3;
+                startDelayValue.textContent = state.startDelaySec.toFixed(1) + 's';
+                saveSettings();
+            });
+        }
 
         document.querySelector('.start-btn').addEventListener('click', startGame);
         document.querySelector('.back-btn').addEventListener('click', backToMenu);
@@ -1027,7 +1080,9 @@
         const timingGraphEl = document.getElementById('resultsTimingGraph');
         if (timingGraphEl) timingGraphEl.innerHTML = '';
 
-        gameState.startTime = performance.now();
+        const delayMs = (state.startDelaySec || 0) * 1000;
+        gameState.startTime = performance.now() + delayMs;
+        startCountdownOverlay(state.startDelaySec || 0);
         window.addEventListener('resize', scalePlayfield);
         requestAnimationFrame(() => { scalePlayfield(); gameLoop(); });
     }
@@ -1073,6 +1128,7 @@
         clearReceptorHitState();
         resultsEl.style.display = 'none';
         pauseOverlayEl.style.display = 'none';
+        if (countdownOverlayEl) countdownOverlayEl.style.display = 'none';
         gameContainer.style.display = 'none';
         menu.style.display = 'flex';
         if (topbarEl) topbarEl.style.display = 'flex';
