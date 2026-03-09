@@ -207,6 +207,7 @@
     const pauseMenuBtn = document.getElementById('pauseMenu');
     const countdownOverlayEl = document.getElementById('countdownOverlay');
     const countdownTextEl = document.getElementById('countdownText');
+    const countdownBarEl = document.getElementById('countdownBar');
     const ratedPlayHint = document.getElementById('ratedPlayHint');
     const resRatingEl = document.getElementById('resRating');
     const resSREl = document.getElementById('resSR');
@@ -357,12 +358,16 @@
         }
         if (!delaySec || delaySec <= 0) {
             countdownOverlayEl.style.display = 'none';
+            if (countdownBarEl) countdownBarEl.style.width = '0%';
             return;
         }
+        const total = delaySec;
         let remaining = delaySec;
         countdownOverlayEl.style.display = 'flex';
         const update = () => {
             if (remaining <= 0) {
+                countdownTextEl.textContent = '0.0';
+                if (countdownBarEl) countdownBarEl.style.width = '0%';
                 countdownOverlayEl.style.display = 'none';
                 if (countdownTimerId != null) {
                     clearInterval(countdownTimerId);
@@ -370,10 +375,15 @@
                 }
                 return;
             }
-            const secondsInt = Math.ceil(remaining);
-            countdownTextEl.textContent = String(secondsInt);
-            remaining -= 0.1;
+            const shown = Math.max(0, remaining);
+            countdownTextEl.textContent = shown.toFixed(1);
+            if (countdownBarEl && total > 0) {
+                const ratio = Math.max(0, Math.min(1, shown / total));
+                countdownBarEl.style.width = (ratio * 100).toFixed(1) + '%';
+            }
+            remaining = Math.max(0, +(remaining - 0.1).toFixed(2));
         };
+        if (countdownBarEl) countdownBarEl.style.width = '100%';
         update();
         countdownTimerId = setInterval(update, 100);
     }
