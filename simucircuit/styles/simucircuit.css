@@ -1,0 +1,288 @@
+/* Simucircuit - Circuit simulator */
+
+:root {
+    --bg-dark: #0a0a0a;
+    --workspace-bg: #111;
+    --grid-color: rgba(255, 255, 255, 0.06);
+    --accent: #00d4aa;
+    --wire-color: #00d4aa;
+    --comp-bg: rgba(0, 212, 170, 0.12);
+    --comp-border: #00d4aa;
+    --node-fill: #00d4aa;
+    --text: #e0e0e0;
+    --palette-bg: rgba(0, 0, 0, 0.6);
+    --palette-border: rgba(0, 212, 170, 0.5);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    height: 100%;
+    margin: 0;
+    overflow-x: hidden;
+}
+
+body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text);
+    min-height: 100vh;
+}
+
+.wrap {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 16px 20px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+}
+
+.topbar h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.topbar .home {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.topbar .home:hover {
+    text-decoration: underline;
+}
+
+/* Layout */
+.simu-layout {
+    display: flex;
+    gap: 24px;
+    min-height: 70vh;
+}
+
+/* Component palette */
+.palette {
+    width: 180px;
+    flex-shrink: 0;
+    background: var(--palette-bg);
+    border: 1px solid var(--palette-border);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.palette-title {
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--accent);
+    font-size: 0.9rem;
+}
+
+.palette-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    cursor: grab;
+    border: 1px solid transparent;
+    font-size: 0.9rem;
+}
+
+.palette-item:hover {
+    background: rgba(0, 212, 170, 0.15);
+    border-color: var(--palette-border);
+}
+
+.palette-item:active {
+    cursor: grabbing;
+}
+
+.palette-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.palette-icon.R { background: rgba(255, 180, 0, 0.3); color: #ffb400; }
+.palette-icon.C { background: rgba(100, 200, 255, 0.3); color: #64c8ff; }
+.palette-icon.V { background: rgba(255, 100, 100, 0.3); color: #ff6464; }
+.palette-icon.I { background: rgba(150, 100, 255, 0.3); color: #9664ff; }
+
+.palette-hint {
+    margin-top: 16px;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Workspace */
+.workspace-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.workspace-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.ws-btn {
+    padding: 8px 16px;
+    background: var(--comp-bg);
+    border: 1px solid var(--comp-border);
+    color: var(--accent);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.ws-btn:hover {
+    background: rgba(0, 212, 170, 0.25);
+}
+
+.ws-hint {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.workspace {
+    flex: 1;
+    min-height: 500px;
+    position: relative;
+    background: var(--workspace-bg);
+    background-image:
+        linear-gradient(var(--grid-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+    background-size: 20px 20px;
+    border: 1px solid var(--palette-border);
+    border-radius: 8px;
+}
+
+.wire-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.wire-layer .wire {
+    pointer-events: stroke;
+    stroke-width: 2;
+}
+
+.wire-layer .wire:hover {
+    stroke: #00ffcc;
+    stroke-width: 3;
+}
+
+.components-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.components-layer > * {
+    pointer-events: auto;
+}
+
+/* Component on canvas */
+.comp {
+    position: absolute;
+    width: 80px;
+    height: 44px;
+    background: var(--comp-bg);
+    border: 1px solid var(--comp-border);
+    border-radius: 6px;
+    cursor: move;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    user-select: none;
+}
+
+.comp.dragging {
+    opacity: 0.9;
+    z-index: 1000;
+}
+
+.comp .node {
+    position: absolute;
+    top: 50%;
+    width: 12px;
+    height: 12px;
+    margin-top: -6px;
+    border-radius: 50%;
+    background: var(--node-fill);
+    border: 2px solid var(--bg-dark);
+    cursor: crosshair;
+    pointer-events: auto;
+}
+
+.comp .node.node-a { left: -6px; }
+.comp .node.node-b { right: -6px; }
+
+.comp .node:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 8px var(--accent);
+}
+
+.comp .label {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.comp .value {
+    position: absolute;
+    bottom: 2px;
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Component type visuals */
+.comp.resistor .label::before { content: 'R'; }
+.comp.capacitor .label::before { content: 'C'; }
+.comp.vsource .label::before { content: 'V'; }
+.comp.isource .label::before { content: 'I'; }
+
+.comp.capacitor .label::before { content: 'C'; }
+.comp.vsource .label { font-size: 0.7rem; }
+.comp.isource .label { font-size: 0.7rem; }
+
+/* Temp wire while dragging */
+.wire-temp {
+    stroke: var(--wire-color);
+    stroke-width: 2;
+    stroke-dasharray: 6 4;
+    animation: dash 0.3s linear infinite;
+}
+
+@keyframes dash {
+    to { stroke-dashoffset: -10; }
+}

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simucircuit - Ethan Liu</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/simucircuit/styles/simucircuit.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="wrap">
+        <header class="topbar">
+            <h1>Simucircuit</h1>
+            <a class="home" href="/">← Back</a>
+        </header>
+
+        <div class="simu-layout">
+            <aside class="palette">
+                <div class="palette-title">Components</div>
+                <div class="palette-item" data-type="resistor" draggable="true">
+                    <span class="palette-icon R">R</span>
+                    <span>Resistor</span>
+                </div>
+                <div class="palette-item" data-type="capacitor" draggable="true">
+                    <span class="palette-icon C">C</span>
+                    <span>Capacitor</span>
+                </div>
+                <div class="palette-item" data-type="vsource" draggable="true">
+                    <span class="palette-icon V">V</span>
+                    <span>Voltage Source</span>
+                </div>
+                <div class="palette-item" data-type="isource" draggable="true">
+                    <span class="palette-icon I">I</span>
+                    <span>Current Source</span>
+                </div>
+                <div class="palette-hint">Drag onto canvas to add</div>
+            </aside>
+
+            <main class="workspace-wrap">
+                <div class="workspace-toolbar">
+                    <button type="button" id="btn-clear" class="ws-btn">Clear all</button>
+                    <span class="ws-hint">Connect: drag from one node to another</span>
+                </div>
+                <div id="workspace" class="workspace">
+                    <svg id="wire-layer" class="wire-layer" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <marker id="wire-marker" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                                <polygon points="0 0, 6 3, 0 6" fill="var(--wire-color)" />
+                            </marker>
+                        </defs>
+                    </svg>
+                    <div id="components-layer" class="components-layer"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="/simucircuit/src/simucircuit.js"></script>
+</body>
+</html>
