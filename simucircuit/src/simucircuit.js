@@ -28,7 +28,8 @@
     function getNodeCenter(compId, nodeName) {
         const comp = components.get(compId);
         if (!comp || !comp.el) return null;
-        const node = comp.el.querySelector('.node.' + nodeName);
+        // Nodes are rendered as .node.node-a / .node.node-b
+        const node = comp.el.querySelector('.node.node-' + nodeName);
         if (!node) return null;
         const r = workspace.getBoundingClientRect();
         const n = node.getBoundingClientRect();
@@ -96,62 +97,81 @@
         });
     }
 
+    let tempLine = null;
+    let wireStart = null;
+    let wireMoveHandler = null;
+
+    function beginGhostWire(startCenter) {
+        tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        tempLine.setAttribute('x1', startCenter.x);
+        tempLine.setAttribute('y1', startCenter.y);
+        tempLine.setAttribute('x2', startCenter.x);
+        tempLine.setAttribute('y2', startCenter.y);
+        tempLine.setAttribute('class', 'wire-temp');
+        wireLayer.appendChild(tempLine);
+
+        const r = workspace.getBoundingClientRect();
+        wireMoveHandler = function (e) {
+            const x = e.clientX - r.left;
+            const y = e.clientY - r.top;
+            if (!tempLine) return;
+            tempLine.setAttribute('x2', x);
+            tempLine.setAttribute('y2', y);
+        };
+        document.addEventListener('mousemove', wireMoveHandler);
+    }
+
+    function endGhostWire() {
+        if (wireMoveHandler) {
+            document.removeEventListener('mousemove', wireMoveHandler);
+            wireMoveHandler = null;
+        }
+        if (tempLine && tempLine.parentNode) {
+            tempLine.parentNode.removeChild(tempLine);
+        }
+        tempLine = null;
+    }
+
+    function handleNodeClick(compId, nodeName) {
+        const center = getNodeCenter(compId, nodeName);
+        if (!center) return;
+
+        // Start a new ghost wire
+        if (!wireStart) {
+            wireStart = { compId, nodeName };
+            beginGhostWire(center);
+            return;
+        }
+
+        // Clicking the same node cancels the ghost wire
+        if (wireStart.compId === compId && wireStart.nodeName === nodeName) {
+            wireStart = null;
+            endGhostWire();
+            return;
+        }
+
+        // Finish the wire on a second node
+        const existing = [...wires.values()].some(function (w) {
+            return (w.from.compId === wireStart.compId && w.from.node === wireStart.nodeName && w.to.compId === compId && w.to.node === nodeName) ||
+                (w.from.compId === compId && w.from.node === nodeName && w.to.compId === wireStart.compId && w.to.node === wireStart.nodeName);
+        });
+        if (!existing) {
+            addWire(wireStart.compId, wireStart.nodeName, compId, nodeName);
+        }
+        wireStart = null;
+        endGhostWire();
+    }
+
     function setupNodeWiring(comp) {
         ['a', 'b'].forEach(function (nodeName) {
             const node = comp.el.querySelector('.node.node-' + nodeName);
             if (!node) return;
-            node.addEventListener('mousedown', function (e) {
+            node.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                startWire(comp.id, nodeName, e);
+                handleNodeClick(comp.id, nodeName);
             });
         });
-    }
-
-    let tempLine = null;
-    let wireStart = null;
-
-    function startWire(compId, nodeName, e) {
-        const r = workspace.getBoundingClientRect();
-        const start = getNodeCenter(compId, nodeName);
-        if (!start) return;
-        wireStart = { compId, nodeName };
-        tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        tempLine.setAttribute('x1', start.x);
-        tempLine.setAttribute('y1', start.y);
-        tempLine.setAttribute('x2', start.x);
-        tempLine.setAttribute('y2', start.y);
-        tempLine.setAttribute('class', 'wire-temp');
-        wireLayer.appendChild(tempLine);
-
-        function move(e) {
-            const x = e.clientX - r.left;
-            const y = e.clientY - r.top;
-            tempLine.setAttribute('x2', x);
-            tempLine.setAttribute('y2', y);
-        }
-
-        function up(e) {
-            document.removeEventListener('mousemove', move);
-            document.removeEventListener('mouseup', up);
-            if (tempLine && tempLine.parentNode) tempLine.parentNode.removeChild(tempLine);
-            tempLine = null;
-
-            const target = findNodeAt(e.clientX, e.clientY);
-            if (target && (target.compId !== wireStart.compId || target.nodeName !== wireStart.nodeName)) {
-                const existing = [...wires.values()].some(function (w) {
-                    return (w.from.compId === wireStart.compId && w.from.node === wireStart.nodeName && w.to.compId === target.compId && w.to.node === target.nodeName) ||
-                        (w.from.compId === target.compId && w.from.node === target.nodeName && w.to.compId === wireStart.compId && w.to.node === wireStart.nodeName);
-                });
-                if (!existing) {
-                    addWire(wireStart.compId, wireStart.nodeName, target.compId, target.nodeName);
-                }
-            }
-            wireStart = null;
-        }
-
-        document.addEventListener('mousemove', move);
-        document.addEventListener('mouseup', up);
     }
 
     function findNodeAt(clientX, clientY) {
