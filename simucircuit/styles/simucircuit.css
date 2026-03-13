@@ -124,6 +124,7 @@ body {
 .palette-icon.C { background: rgba(100, 200, 255, 0.3); color: #64c8ff; }
 .palette-icon.V { background: rgba(255, 100, 100, 0.3); color: #ff6464; }
 .palette-icon.I { background: rgba(150, 100, 255, 0.3); color: #9664ff; }
+.palette-icon.G { background: rgba(220, 220, 220, 0.15); color: #dcdcdc; }
 
 .palette-hint {
     margin-top: 16px;
@@ -158,6 +159,14 @@ body {
 
 .ws-btn:hover {
     background: rgba(0, 212, 170, 0.25);
+}
+
+.ws-btn-primary {
+    background: rgba(0, 212, 170, 0.22);
+}
+
+.ws-btn-primary:hover {
+    background: rgba(0, 212, 170, 0.35);
 }
 
 .ws-hint {
@@ -285,4 +294,61 @@ body {
 
 @keyframes dash {
     to { stroke-dashoffset: -10; }
+}
+
+/* Source polarity labels */
+.comp .pol {
+    position: absolute;
+    top: -14px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    color: rgba(255, 255, 255, 0.8);
+    pointer-events: none;
+}
+
+.comp .pol.pol-a { left: 4px; }
+.comp .pol.pol-b { right: 4px; }
+
+.comp.vsource .pol {
+    color: rgba(255, 100, 100, 0.95);
+}
+
+.comp.isource .pol {
+    color: rgba(150, 100, 255, 0.95);
+}
+
+/* Ground visual */
+.comp.ground {
+    width: 66px;
+    height: 40px;
+    border-style: dashed;
+}
+
+.comp.ground .label {
+    color: rgba(220, 220, 220, 0.9);
+}
+
+.comp.ground .value { display: none; }
+.comp.ground .node.node-b { display: none; }
+
+/* Results panel */
+.sim-results {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--palette-border);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.55);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    min-height: 44px;
+    white-space: pre-wrap;
+}
+
+.sim-results.is-empty {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.sim-results .err {
+    color: rgba(255, 120, 120, 0.95);
 }

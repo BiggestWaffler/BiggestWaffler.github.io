@@ -34,12 +34,17 @@
                     <span class="palette-icon I">I</span>
                     <span>Current Source</span>
                 </div>
+                <div class="palette-item" data-type="ground" draggable="true">
+                    <span class="palette-icon G">⏚</span>
+                    <span>Ground</span>
+                </div>
                 <div class="palette-hint">Drag onto canvas to add</div>
             </aside>
 
             <main class="workspace-wrap">
                 <div class="workspace-toolbar">
                     <button type="button" id="btn-clear" class="ws-btn">Clear all</button>
+                    <button type="button" id="btn-run" class="ws-btn ws-btn-primary">Run simulation</button>
                     <span class="ws-hint">Connect: drag from one node to another</span>
                 </div>
                 <div id="workspace" class="workspace">
@@ -52,6 +57,7 @@
                     </svg>
                     <div id="components-layer" class="components-layer"></div>
                 </div>
+                <div id="sim-results" class="sim-results" aria-live="polite"></div>
             </main>
         </div>
     </div>
