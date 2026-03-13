@@ -169,6 +169,15 @@ body {
     background: rgba(0, 212, 170, 0.35);
 }
 
+.ws-btn-secondary {
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.ws-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
 .ws-hint {
     font-size: 0.85rem;
     color: rgba(255, 255, 255, 0.6);
@@ -206,6 +215,11 @@ body {
     stroke-width: 3;
 }
 
+.wire-layer .wire.wire-selected {
+    stroke: #ffb400;
+    stroke-width: 3;
+}
+
 .components-layer {
     position: absolute;
     top: 0;
@@ -234,6 +248,7 @@ body {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.75rem;
     user-select: none;
+    transform-origin: 50% 50%;
 }
 
 .comp.dragging {
@@ -260,6 +275,10 @@ body {
 .comp .node:hover {
     transform: scale(1.2);
     box-shadow: 0 0 8px var(--accent);
+}
+
+.comp.selected {
+    box-shadow: 0 0 0 2px rgba(0, 212, 170, 0.9);
 }
 
 .comp .label {
@@ -350,5 +369,160 @@ body {
 }
 
 .sim-results .err {
+    color: rgba(255, 120, 120, 0.95);
+}
+
+/* Context menu */
+.ctx-menu {
+    position: fixed;
+    z-index: 2000;
+    min-width: 160px;
+    background: rgba(10, 10, 10, 0.96);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 212, 170, 0.6);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    padding: 4px 0;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 0.85rem;
+}
+
+.ctx-menu.hidden {
+    display: none;
+}
+
+.ctx-menu-item {
+    padding: 6px 12px;
+    color: rgba(240, 240, 240, 0.9);
+    cursor: pointer;
+}
+
+.ctx-menu-item:hover {
+    background: rgba(0, 212, 170, 0.18);
+}
+
+.ctx-menu-sep {
+    height: 1px;
+    margin: 4px 0;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Modal + overlay */
+.simu-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    z-index: 1900;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.simu-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1950;
+}
+
+.simu-modal-inner {
+    width: min(420px, 90vw);
+    background: #050707;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 212, 170, 0.7);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.9);
+    padding: 14px 16px 10px;
+}
+
+.simu-modal-header {
+    margin-bottom: 8px;
+}
+
+.simu-modal-title {
+    margin: 0;
+    font-size: 1.05rem;
+    color: var(--accent);
+}
+
+.simu-modal-body {
+    font-size: 0.9rem;
+    color: rgba(240, 240, 240, 0.9);
+    margin-bottom: 12px;
+}
+
+.simu-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.simu-modal-btn {
+    font-size: 0.85rem;
+}
+
+.simu-modal-body p {
+    margin: 0 0 8px;
+}
+
+.simu-modal-body ul {
+    margin: 4px 0 0 16px;
+    padding: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+}
+
+.simu-modal-body li {
+    margin-bottom: 2px;
+}
+
+.simu-input {
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.8);
+    color: #f5f5f5;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+}
+
+.simu-input::placeholder {
+    color: rgba(200, 200, 200, 0.45);
+}
+
+.simu-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.simu-chip {
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(240, 240, 240, 0.9);
+    font-size: 0.75rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.simu-chip:hover {
+    background: rgba(0, 212, 170, 0.16);
+    border-color: rgba(0, 212, 170, 0.7);
+}
+
+.simu-help-note {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.simu-error {
+    margin-top: 4px;
+    font-size: 0.78rem;
     color: rgba(255, 120, 120, 0.95);
 }

@@ -6,10 +6,11 @@
     const NODE_R = 6;
 
     const defaults = {
-        resistor: { label: 'R', value: '1kΩ' },
-        capacitor: { label: 'C', value: '1µF' },
-        vsource: { label: 'V', value: '5V' },
-        isource: { label: 'I', value: '1A' },
+        // Values here are RAW strings the user would type (no Ω/V/A/F glyphs).
+        resistor: { label: 'R', value: '1k' },
+        capacitor: { label: 'C', value: '1u' },
+        vsource: { label: 'V', value: '5' },
+        isource: { label: 'I', value: '1' },
         ground: { label: 'GND', value: '' }
     };
 
@@ -21,6 +22,56 @@
     const workspace = document.getElementById('workspace');
     const wireLayer = document.getElementById('wire-layer');
     const componentsLayer = document.getElementById('components-layer');
+    let selectedCompId = null;
+    let selectedWireId = null;
+
+    // Simple context menu
+    const ctxMenu = document.createElement('div');
+    ctxMenu.id = 'simu-context-menu';
+    ctxMenu.className = 'ctx-menu hidden';
+    ctxMenu.innerHTML = [
+        '<div class="ctx-menu-item" data-action="edit">Edit value…</div>',
+        '<div class="ctx-menu-item" data-action="delete">Delete</div>',
+        '<div class="ctx-menu-sep"></div>',
+        '<div class="ctx-menu-item" data-action="rot-cw">Rotate 90° CW</div>',
+        '<div class="ctx-menu-item" data-action="rot-ccw">Rotate 90° CCW</div>',
+        '<div class="ctx-menu-item" data-action="flip-h">Flip horizontal</div>',
+        '<div class="ctx-menu-item" data-action="flip-v">Flip vertical</div>'
+    ].join('');
+    document.body.appendChild(ctxMenu);
+    let ctxMenuFor = null;
+
+    // Modal + overlay
+    const overlayEl = document.getElementById('simu-overlay');
+    const modalEl = document.getElementById('simu-modal');
+    const modalTitleEl = document.getElementById('simu-modal-title');
+    const modalBodyEl = document.getElementById('simu-modal-body');
+    const modalOkEl = document.getElementById('simu-modal-ok');
+    const modalCancelEl = document.getElementById('simu-modal-cancel');
+    let modalOkHandler = null;
+    let modalCancelHandler = null;
+
+    function closeModal() {
+        if (!modalEl || !overlayEl) return;
+        modalEl.classList.add('hidden');
+        overlayEl.classList.add('hidden');
+        modalOkHandler = null;
+        modalCancelHandler = null;
+    }
+
+    function openModal(opts) {
+        if (!modalEl || !overlayEl) return;
+        const { title, bodyHTML, okText, cancelText, showCancel = true, onOk, onCancel } = opts || {};
+        modalTitleEl.textContent = title || '';
+        modalBodyEl.innerHTML = bodyHTML || '';
+        modalOkEl.textContent = okText || 'OK';
+        modalCancelEl.textContent = cancelText || 'Cancel';
+        modalCancelEl.style.display = showCancel ? '' : 'none';
+        overlayEl.classList.remove('hidden');
+        modalEl.classList.remove('hidden');
+        modalOkHandler = onOk || null;
+        modalCancelHandler = onCancel || null;
+    }
 
     function getWorkspaceRect() {
         return workspace.getBoundingClientRect();
@@ -40,6 +91,18 @@
         };
     }
 
+    function formatDisplayValue(type, raw) {
+        const s = String(raw || '').trim();
+        if (!s) return '';
+        const last = s[s.length - 1];
+        if ('ΩVAＦFµu'.indexOf(last) !== -1) return s;
+        if (type === 'resistor') return s + 'Ω';
+        if (type === 'capacitor') return s + 'F';
+        if (type === 'vsource') return s + 'V';
+        if (type === 'isource') return s + 'A';
+        return s;
+    }
+
     function createComponentElement(type, x, y) {
         const id = 'c' + (++componentId);
         const d = defaults[type] || { label: '?', value: '' };
@@ -53,23 +116,109 @@
                 ? ('<span class="pol pol-a">+</span><span class="pol pol-b">−</span>')
                 : '';
 
+        const displayValue = formatDisplayValue(type, d.value);
+
         el.innerHTML =
             pol +
             '<span class="node node-a" data-node="a"></span>' +
             '<span class="label">' + d.label + '</span>' +
-            '<span class="value">' + d.value + '</span>' +
+            '<span class="value">' + displayValue + '</span>' +
             '<span class="node node-b" data-node="b"></span>';
-        return { id, type, x, y, el, valueText: d.value };
+        return { id, type, x, y, el, valueText: d.value, rot: 0, sx: 1, sy: 1 };
     }
 
     function addComponent(type, x, y) {
         const comp = createComponentElement(type, x, y);
-        components.set(comp.id, { ...comp, x, y });
+        // Store the SAME object we pass into setup functions so we can hang methods on it.
+        components.set(comp.id, comp);
         componentsLayer.appendChild(comp.el);
         setupComponentDrag(comp);
         setupNodeWiring(comp);
         setupComponentEdit(comp);
         return comp.id;
+    }
+
+    function setSelected(compId) {
+        if (selectedCompId && components.has(selectedCompId)) {
+            const prev = components.get(selectedCompId);
+            if (prev.el) prev.el.classList.remove('selected');
+        }
+        selectedCompId = compId;
+        if (compId && components.has(compId)) {
+            const comp = components.get(compId);
+            if (comp.el) comp.el.classList.add('selected');
+        }
+        // Selecting a component clears any wire selection
+        setSelectedWire(null);
+    }
+
+    function setSelectedWire(wireId) {
+        if (selectedWireId) {
+            const prevEl = wireLayer.querySelector('.wire[data-wire-id="' + selectedWireId + '"]');
+            if (prevEl) prevEl.classList.remove('wire-selected');
+        }
+        selectedWireId = wireId;
+        if (wireId) {
+            const el = wireLayer.querySelector('.wire[data-wire-id="' + wireId + '"]');
+            if (el) el.classList.add('wire-selected');
+        }
+        // Selecting a wire clears component selection
+        if (wireId) {
+            if (selectedCompId && components.has(selectedCompId)) {
+                const prev = components.get(selectedCompId);
+                if (prev.el) prev.el.classList.remove('selected');
+            }
+            selectedCompId = null;
+        }
+    }
+
+    function clearSelected() {
+        setSelected(null);
+        setSelectedWire(null);
+    }
+
+    function openContextMenu(x, y, compId) {
+        ctxMenuFor = compId;
+        ctxMenu.style.left = x + 'px';
+        ctxMenu.style.top = y + 'px';
+        ctxMenu.classList.remove('hidden');
+    }
+
+    function closeContextMenu() {
+        ctxMenuFor = null;
+        ctxMenu.classList.add('hidden');
+    }
+
+    function applyTransform(comp) {
+        const r = comp.rot || 0;
+        const sx = comp.sx || 1;
+        const sy = comp.sy || 1;
+        comp.el.style.transform = `rotate(${r}deg) scale(${sx}, ${sy})`;
+        redrawWires();
+    }
+
+    function deleteComponent(compId) {
+        const comp = components.get(compId);
+        if (!comp) return;
+        if (comp.el && comp.el.parentNode) comp.el.parentNode.removeChild(comp.el);
+        components.delete(compId);
+        // remove wires attached to this component
+        [...wires.entries()].forEach(function ([wid, w]) {
+            if (w.from.compId === compId || w.to.compId === compId) {
+                wires.delete(wid);
+            }
+        });
+        if (selectedCompId === compId) {
+            selectedCompId = null;
+        }
+        redrawWires();
+    }
+
+    function deleteWire(wireId) {
+        if (!wireId) return;
+        wires.delete(wireId);
+        setSelectedWire(null);
+        redrawWires();
     }
 
     function setupComponentDrag(comp) {
@@ -79,6 +228,7 @@
         el.addEventListener('mousedown', function (e) {
             if (e.target.classList.contains('node')) return;
             e.preventDefault();
+            setSelected(comp.id);
             const r = workspace.getBoundingClientRect();
             dx = e.clientX - (r.left + comp.x);
             dy = e.clientY - (r.top + comp.y);
@@ -106,23 +256,120 @@
     }
 
     function setupComponentEdit(comp) {
+        function edit() {
+            if (comp.type === 'ground') return;
+            const raw = (comp.valueText != null ? String(comp.valueText) : (comp.el.querySelector('.value')?.textContent || '')).trim();
+
+            const body = [
+                '<p>Enter a value for <strong>' + comp.type + '</strong>.</p>',
+                '<input id="simu-val-input" class="simu-input" placeholder="e.g. 1k, 10u, 5, 2A" value="' + raw.replace(/"/g, '&quot;') + '">',
+                '<div class="simu-chip-row">',
+                '<span class="simu-chip" data-insert="k">k (kilo)</span>',
+                '<span class="simu-chip" data-insert="M">M (mega)</span>',
+                '<span class="simu-chip" data-insert="u">u (micro)</span>',
+                '<span class="simu-chip" data-insert="n">n (nano)</span>',
+                '<span class="simu-chip" data-insert="p">p (pico)</span>',
+                '</div>',
+                '<div class="simu-help-note">You can type u for micro (µ). Units are inferred by component type (Ω/F/V/A). Unknown letters (like z) are not allowed.</div>',
+                '<div id="simu-val-error" class="simu-error" style="display:none;"></div>'
+            ].join('');
+
+            openModal({
+                title: 'Edit value',
+                bodyHTML: body,
+                okText: 'Save',
+                cancelText: 'Cancel',
+                showCancel: true,
+                onOk: function () {
+                    const input = document.getElementById('simu-val-input');
+                    const errEl = document.getElementById('simu-val-error');
+                    if (!input) return;
+                    const text = input.value.trim();
+                    if (!text) {
+                        errEl.textContent = 'Value cannot be empty.';
+                        errEl.style.display = '';
+                        return false;
+                    }
+                    const m = text.match(/^([+-]?\d*\.?\d+(?:e[+-]?\d+)?)([a-zA-ZµΩ]*)$/);
+                    if (!m) {
+                        errEl.textContent = 'Could not parse value. Try forms like 1k, 10u, 5, 2A.';
+                        errEl.style.display = '';
+                        return false;
+                    }
+                    const sufRaw = (m[2] || '');
+                    const suf = sufRaw.replace('Ω', '').trim();
+                    const allowed = new Set(['', 'k', 'K', 'm', 'u', 'µ', 'n', 'p', 'M', 'G', 'V', 'A', 'F']);
+                    const first = suf ? suf[0] : '';
+                    if (suf && !allowed.has(first) && !allowed.has(suf)) {
+                        errEl.textContent = 'Unknown unit "' + sufRaw + '". Allowed: k, M, m, u, n, p, V, A, F.';
+                        errEl.style.display = '';
+                        return false;
+                    }
+
+                    // Looks good; save raw text and update display.
+                    comp.valueText = text;
+                    const valueEl = comp.el.querySelector('.value');
+                    if (valueEl) valueEl.textContent = formatDisplayValue(comp.type, text);
+                    return true;
+                }
+            });
+
+            // Wire up chips + enter key
+            setTimeout(function () {
+                const input = document.getElementById('simu-val-input');
+                if (input) input.focus();
+                document.querySelectorAll('.simu-chip').forEach(function (chip) {
+                    chip.addEventListener('click', function () {
+                        if (!input) return;
+                        const ins = chip.getAttribute('data-insert') || '';
+                        const start = input.selectionStart || input.value.length;
+                        const end = input.selectionEnd || input.value.length;
+                        const v = input.value;
+                        input.value = v.slice(0, start) + ins + v.slice(end);
+                        input.focus();
+                        const pos = start + ins.length;
+                        input.setSelectionRange(pos, pos);
+                    });
+                });
+                if (input) {
+                    input.addEventListener('keydown', function (ev) {
+                        if (ev.key === 'Enter') {
+                            ev.preventDefault();
+                            if (modalOkHandler) {
+                                const ok = modalOkHandler();
+                                if (ok !== false) closeModal();
+                            }
+                        }
+                    });
+                }
+            }, 0);
+        }
+
         comp.el.addEventListener('dblclick', function (e) {
             e.preventDefault();
             e.stopPropagation();
-            if (comp.type === 'ground') return;
-            const current = comp.el.querySelector('.value')?.textContent || '';
-            const next = prompt('Set value (examples: 1k, 10u, 5V, 2A)', current);
-            if (next == null) return;
-            const v = next.trim();
-            comp.valueText = v;
-            const valueEl = comp.el.querySelector('.value');
-            if (valueEl) valueEl.textContent = v;
+            edit();
         });
+
+        comp.el.addEventListener('click', function (e) {
+            if (e.target.classList.contains('node')) return;
+            setSelected(comp.id);
+        });
+
+        comp.el.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            setSelected(comp.id);
+            openContextMenu(e.clientX, e.clientY, comp.id);
+        });
+
+        comp.editValue = edit;
     }
 
     let tempPath = null;
     let wireStart = null;
     let wireMoveHandler = null;
+    let ghostAnchors = [];
 
     function orthPathD(x1, y1, x2, y2) {
         // Simple L-shape: horizontal then vertical
@@ -131,21 +378,50 @@
         return `M ${x1} ${y1} L ${mx} ${my} L ${x2} ${y2}`;
     }
 
+    function pathDFromPoints(points) {
+        if (!points.length) return '';
+        let d = `M ${points[0].x} ${points[0].y}`;
+        for (let i = 1; i < points.length; i++) {
+            d += ` L ${points[i].x} ${points[i].y}`;
+        }
+        return d;
+    }
+
+    function orthSnap(prev, target) {
+        // Snap target so segment prev->snapped is axis-aligned, preferring the dominant axis.
+        const dx = target.x - prev.x;
+        const dy = target.y - prev.y;
+        if (Math.abs(dx) >= Math.abs(dy)) {
+            return { x: prev.x + dx, y: prev.y };
+        }
+        return { x: prev.x, y: prev.y + dy };
+    }
+
     function beginGhostWire(startCenter) {
         tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        tempPath.setAttribute('d', orthPathD(startCenter.x, startCenter.y, startCenter.x, startCenter.y));
+        ghostAnchors = [startCenter];
+        tempPath.setAttribute('d', pathDFromPoints(ghostAnchors));
         tempPath.setAttribute('class', 'wire-temp');
         tempPath.setAttribute('fill', 'none');
         wireLayer.appendChild(tempPath);
 
         const r = workspace.getBoundingClientRect();
         wireMoveHandler = function (e) {
-            const x = e.clientX - r.left;
-            const y = e.clientY - r.top;
+            let x = e.clientX - r.left;
+            let y = e.clientY - r.top;
             if (!tempPath || !wireStart) return;
-            const start = getNodeCenter(wireStart.compId, wireStart.nodeName);
-            if (!start) return;
-            tempPath.setAttribute('d', orthPathD(start.x, start.y, x, y));
+            const last = ghostAnchors[ghostAnchors.length - 1];
+            if (!last) return;
+            const dx = x - last.x;
+            const dy = y - last.y;
+            // Snap so the segment from last -> (x,y) is purely horizontal or vertical
+            if (Math.abs(dx) >= Math.abs(dy)) {
+                y = last.y;
+            } else {
+                x = last.x;
+            }
+            const pts = ghostAnchors.concat([{ x, y }]);
+            tempPath.setAttribute('d', pathDFromPoints(pts));
         };
         document.addEventListener('mousemove', wireMoveHandler);
     }
@@ -159,6 +435,7 @@
             tempPath.parentNode.removeChild(tempPath);
         }
         tempPath = null;
+        ghostAnchors = [];
     }
 
     function handleNodeClick(compId, nodeName) {
@@ -185,7 +462,9 @@
                 (w.from.compId === compId && w.from.node === nodeName && w.to.compId === wireStart.compId && w.to.node === wireStart.nodeName);
         });
         if (!existing) {
-            addWire(wireStart.compId, wireStart.nodeName, compId, nodeName);
+            // store intermediate pivot points (excluding the starting node)
+            const pivots = ghostAnchors.slice(1);
+            addWire(wireStart.compId, wireStart.nodeName, compId, nodeName, pivots);
         }
         wireStart = null;
         endGhostWire();
@@ -218,9 +497,15 @@
         return null;
     }
 
-    function addWire(fromComp, fromNode, toComp, toNode) {
+    function addWire(fromComp, fromNode, toComp, toNode, pivots) {
         const id = 'w' + (++wireId);
-        wires.set(id, { id, from: { compId: fromComp, node: fromNode }, to: { compId: toComp, node: toNode }, el: null });
+        wires.set(id, {
+            id,
+            from: { compId: fromComp, node: fromNode },
+            to: { compId: toComp, node: toNode },
+            pivots: Array.isArray(pivots) ? pivots.slice() : [],
+            el: null
+        });
         redrawWires();
     }
 
@@ -233,11 +518,38 @@
             const p2 = getNodeCenter(w.to.compId, w.to.node);
             if (!p1 || !p2) return;
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('d', orthPathD(p1.x, p1.y, p2.x, p2.y));
+            const pivots = w.pivots && w.pivots.length ? w.pivots : null;
+
+            if (pivots) {
+                // Recompute a Manhattan path from live node positions through stored pivot points.
+                const pts = [p1];
+                let last = { x: p1.x, y: p1.y };
+                pivots.forEach(function (pt) {
+                    const snapped = orthSnap(last, pt);
+                    pts.push(snapped);
+                    last = snapped;
+                });
+                // Final leg to p2: introduce an orthogonal corner then endpoint
+                const mid = orthSnap(last, p2);
+                if (mid.x !== last.x || mid.y !== last.y) {
+                    pts.push(mid);
+                }
+                pts.push({ x: p2.x, y: p2.y });
+                path.setAttribute('d', pathDFromPoints(pts));
+            } else {
+                path.setAttribute('d', orthPathD(p1.x, p1.y, p2.x, p2.y));
+            }
             path.setAttribute('class', 'wire');
             path.setAttribute('stroke', 'var(--wire-color)');
             path.setAttribute('stroke-width', '2');
             path.setAttribute('fill', 'none');
+            path.dataset.wireId = w.id;
+
+            path.addEventListener('click', function (e) {
+                e.stopPropagation();
+                setSelectedWire(w.id);
+            });
+
             wireLayer.appendChild(path);
         });
     }
@@ -267,12 +579,23 @@
 
     /* Clear */
     document.getElementById('btn-clear').addEventListener('click', function () {
-        components.forEach(function (c) {
-            if (c.el && c.el.parentNode) c.el.parentNode.removeChild(c.el);
+        openModal({
+            title: 'Clear all components?',
+            bodyHTML: '<p>This will remove all components and wires from the canvas.</p><p class="simu-help-note">This action cannot be undone.</p>',
+            okText: 'Clear all',
+            cancelText: 'Cancel',
+            showCancel: true,
+            onOk: function () {
+                components.forEach(function (c) {
+                    if (c.el && c.el.parentNode) c.el.parentNode.removeChild(c.el);
+                });
+                components.clear();
+                wires.clear();
+                wireLayer.querySelectorAll('.wire').forEach(function (el) { el.remove(); });
+                clearSelected();
+                closeContextMenu();
+            }
         });
-        components.clear();
-        wires.clear();
-        wireLayer.querySelectorAll('.wire').forEach(function (el) { el.remove(); });
     });
 
     /* Simulation (DC operating point) */
@@ -497,5 +820,151 @@
         } catch (e) {
             setResults(String(e && e.message ? e.message : e), true);
         }
+    });
+
+    // Help / keybinds modal
+    document.getElementById('btn-help').addEventListener('click', function () {
+        const body = [
+            '<p><strong>Keybinds</strong></p>',
+            '<ul>',
+            '<li>Click node → start/finish wire</li>',
+            '<li>Click empty workspace while drawing → add 90° pivot</li>',
+            '<li>Click component body → select</li>',
+            '<li>Delete / Backspace → delete selected component</li>',
+            '<li>Right-click component → context menu (Edit, Delete, Rotate, Flip)</li>',
+            '<li>Ctrl+R (Cmd+R on Mac) → rotate selected 90° clockwise</li>',
+            '<li>Double-click component → edit value</li>',
+            '</ul>',
+            '<p class="simu-help-note">Values: use k, M, m, u, n, p. Example: 1k, 10u, 5, 2A. u is treated as micro (µ).</p>'
+        ].join('');
+        openModal({
+            title: 'Simucircuit keybinds & tips',
+            bodyHTML: body,
+            okText: 'Close',
+            showCancel: false
+        });
+    });
+
+    // Modal OK / Cancel wiring
+    if (modalOkEl) {
+        modalOkEl.addEventListener('click', function () {
+            if (modalOkHandler) {
+                const keep = modalOkHandler();
+                if (keep === false) return;
+            }
+            closeModal();
+        });
+    }
+    if (modalCancelEl) {
+        modalCancelEl.addEventListener('click', function () {
+            if (modalCancelHandler) {
+                modalCancelHandler();
+            }
+            closeModal();
+        });
+    }
+
+    if (overlayEl) {
+        overlayEl.addEventListener('click', function () {
+            if (modalCancelHandler) modalCancelHandler();
+            closeModal();
+        });
+    }
+
+    // Global handlers: context menu actions, delete key, rotate shortcut, pivot clicks
+    ctxMenu.addEventListener('click', function (e) {
+        const item = e.target.closest('.ctx-menu-item');
+        if (!item) return;
+        const action = item.dataset.action;
+        const id = ctxMenuFor;
+        closeContextMenu();
+        if (!id || !components.has(id)) return;
+        const comp = components.get(id);
+        if (action === 'edit' && comp.editValue) {
+            comp.editValue();
+        } else if (action === 'delete') {
+            deleteComponent(id);
+        } else if (action === 'rot-cw') {
+            comp.rot = ((comp.rot || 0) + 90) % 360;
+            applyTransform(comp);
+        } else if (action === 'rot-ccw') {
+            comp.rot = ((comp.rot || 0) + 270) % 360;
+            applyTransform(comp);
+        } else if (action === 'flip-h') {
+            comp.sx = (comp.sx || 1) * -1;
+            applyTransform(comp);
+        } else if (action === 'flip-v') {
+            comp.sy = (comp.sy || 1) * -1;
+            applyTransform(comp);
+        }
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!ctxMenu.contains(e.target)) {
+            closeContextMenu();
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        const tag = e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        if (e.key === 'Escape') {
+            // If a modal is open, close it
+            if (modalEl && !modalEl.classList.contains('hidden')) {
+                if (modalCancelHandler) modalCancelHandler();
+                closeModal();
+                return;
+            }
+            // Cancel wire drawing
+            if (wireStart || tempPath) {
+                wireStart = null;
+                endGhostWire();
+                return;
+            }
+            // Clear selection
+            clearSelected();
+            closeContextMenu();
+        } else if ((e.key === 'Delete' || e.key === 'Backspace')) {
+            if (selectedCompId) {
+                e.preventDefault();
+                deleteComponent(selectedCompId);
+            } else if (selectedWireId) {
+                e.preventDefault();
+                deleteWire(selectedWireId);
+            }
+        } else if ((e.key === 'r' || e.key === 'R') && (e.ctrlKey || e.metaKey) && selectedCompId && components.has(selectedCompId)) {
+            e.preventDefault();
+            const comp = components.get(selectedCompId);
+            comp.rot = ((comp.rot || 0) + 90) % 360;
+            applyTransform(comp);
+        }
+    });
+
+    // Workspace click to add wire pivot when drawing
+    workspace.addEventListener('click', function (e) {
+        if (!wireStart || !tempPath) {
+            // Not drawing a wire: clicking empty workspace clears selection
+            if (e.target === workspace) {
+                clearSelected();
+                closeContextMenu();
+            }
+            return;
+        }
+        if (e.target !== workspace) return;
+        const r = workspace.getBoundingClientRect();
+        let x = e.clientX - r.left;
+        let y = e.clientY - r.top;
+        const last = ghostAnchors[ghostAnchors.length - 1];
+        if (!last) return;
+        const dx = x - last.x;
+        const dy = y - last.y;
+        if (Math.abs(dx) >= Math.abs(dy)) {
+            y = last.y;
+        } else {
+            x = last.x;
+        }
+        ghostAnchors.push({ x, y });
+        const pts = ghostAnchors.slice();
+        tempPath.setAttribute('d', pathDFromPoints(pts));
     });
 })();

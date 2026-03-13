@@ -45,6 +45,7 @@
                 <div class="workspace-toolbar">
                     <button type="button" id="btn-clear" class="ws-btn">Clear all</button>
                     <button type="button" id="btn-run" class="ws-btn ws-btn-primary">Run simulation</button>
+                    <button type="button" id="btn-help" class="ws-btn ws-btn-secondary">Keybinds / Help</button>
                     <span class="ws-hint">Connect: drag from one node to another</span>
                 </div>
                 <div id="workspace" class="workspace">
@@ -59,6 +60,21 @@
                 </div>
                 <div id="sim-results" class="sim-results" aria-live="polite"></div>
             </main>
+        </div>
+    </div>
+
+    <!-- Modal + Overlay reused for confirmations, value edit, and help -->
+    <div id="simu-overlay" class="simu-overlay hidden"></div>
+    <div id="simu-modal" class="simu-modal hidden" role="dialog" aria-modal="true" aria-labelledby="simu-modal-title">
+        <div class="simu-modal-inner">
+            <div class="simu-modal-header">
+                <h2 id="simu-modal-title" class="simu-modal-title"></h2>
+            </div>
+            <div id="simu-modal-body" class="simu-modal-body"></div>
+            <div class="simu-modal-footer">
+                <button type="button" id="simu-modal-cancel" class="ws-btn simu-modal-btn">Cancel</button>
+                <button type="button" id="simu-modal-ok" class="ws-btn ws-btn-primary simu-modal-btn">OK</button>
+            </div>
         </div>
     </div>
 
