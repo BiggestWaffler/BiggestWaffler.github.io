@@ -11,7 +11,9 @@
         capacitor: { label: 'C', value: '1u' },
         vsource: { label: 'V', value: '5' },
         isource: { label: 'I', value: '1' },
-        ground: { label: 'GND', value: '' }
+        ground: { label: 'GND', value: '' },
+        multimeter: { label: 'MM', value: '' },
+        scope: { label: 'SC', value: '' }
     };
 
     let componentId = 0;
@@ -40,6 +42,7 @@
     ].join('');
     document.body.appendChild(ctxMenu);
     let ctxMenuFor = null;
+    let lastToolReadings = new Map();
 
     // Modal + overlay
     const overlayEl = document.getElementById('simu-overlay');
@@ -112,7 +115,7 @@
         el.style.left = (x - COMP_WIDTH / 2) + 'px';
         el.style.top = (y - COMP_HEIGHT / 2) + 'px';
         const pol =
-            (type === 'vsource' || type === 'isource')
+            (type === 'vsource' || type === 'isource' || type === 'vsource_ac' || type === 'isource_ac')
                 ? ('<span class="pol pol-a">+</span><span class="pol pol-b">−</span>')
                 : '';
 
@@ -255,9 +258,109 @@
         });
     }
 
+    function openMultimeterModal(comp) {
+        const reading = lastToolReadings.get(comp.id);
+        let mode = comp.toolMode || 'dc-v';
+
+        function renderBody() {
+            let main = '';
+            if (!reading) {
+                main = '<div class="simu-help-note">Run simulation with this multimeter connected to see readings.</div>';
+            } else if (mode === 'dc-v' || mode === 'ac-v') {
+                main = `<div>V(a,b) = <strong>${reading.Vab.toFixed(6)} V</strong></div>
+                        <div class="simu-help-note">Va = ${reading.Va.toFixed(6)} V, Vb = ${reading.Vb.toFixed(6)} V</div>`;
+            } else {
+                main = '<div class="simu-help-note">Current measurement not implemented yet (only voltage).</div>';
+            }
+
+            return [
+                '<div class="simu-chip-row">',
+                `<span class="simu-chip ${mode === 'dc-v' ? 'active' : ''}" data-mode="dc-v">DC V</span>`,
+                `<span class="simu-chip ${mode === 'ac-v' ? 'active' : ''}" data-mode="ac-v">AC V</span>`,
+                `<span class="simu-chip ${mode === 'dc-a' ? 'active' : ''}" data-mode="dc-a">DC A</span>`,
+                `<span class="simu-chip ${mode === 'ac-a' ? 'active' : ''}" data-mode="ac-a">AC A</span>`,
+                '</div>',
+                `<div id="simu-tool-reading" style="margin-top:6px;">${main}</div>`
+            ].join('');
+        }
+
+        openModal({
+            title: `Multimeter ${comp.id}`,
+            bodyHTML: renderBody(),
+            okText: 'Close',
+            showCancel: false
+        });
+
+        setTimeout(function () {
+            document.querySelectorAll('.simu-chip[data-mode]').forEach(function (chip) {
+                chip.addEventListener('click', function () {
+                    mode = chip.getAttribute('data-mode') || 'dc-v';
+                    comp.toolMode = mode;
+                    const body = renderBody();
+                    modalBodyEl.innerHTML = body;
+                    // rebind chips
+                    setTimeout(function () {
+                        document.querySelectorAll('.simu-chip[data-mode]').forEach(function (chip2) {
+                            chip2.addEventListener('click', function () {
+                                mode = chip2.getAttribute('data-mode') || 'dc-v';
+                                comp.toolMode = mode;
+                                modalBodyEl.innerHTML = renderBody();
+                            });
+                        });
+                    }, 0);
+                });
+            });
+        }, 0);
+    }
+
+    function openScopeModal(comp) {
+        const reading = lastToolReadings.get(comp.id);
+        const V = reading ? reading.Vab : 0;
+        const level = Math.max(-1, Math.min(1, V / 5 || 0)); // simple scaling vs 5 V
+        const midY = 40;
+        const amp = 25 * level;
+        const y = midY - amp;
+
+        const svg = `
+<svg viewBox="0 0 260 80" width="100%" height="80">
+  <rect x="0" y="0" width="260" height="80" fill="#050707" stroke="rgba(255,255,255,0.2)" />
+  <line x1="0" y1="${midY}" x2="260" y2="${midY}" stroke="rgba(255,255,255,0.2)" stroke-dasharray="4 4" />
+  <polyline fill="none" stroke="#00b4ff" stroke-width="2"
+            points="0,${y} 40,${y} 80,${y} 120,${y} 160,${y} 200,${y} 240,${y} 260,${y}" />
+</svg>`;
+
+        const text = reading
+            ? `V(a,b) ≈ ${V.toFixed(6)} V (DC). AC modes are visualized as a flat line at the DC level in this version.`
+            : 'Run simulation with this scope connected to see a DC level. AC behavior is approximated as a flat line.';
+
+        const body = `${svg}<div class="simu-help-note" style="margin-top:6px;">${text}</div>`;
+
+        openModal({
+            title: `Scope ${comp.id}`,
+            bodyHTML: body,
+            okText: 'Close',
+            showCancel: false
+        });
+    }
+
     function setupComponentEdit(comp) {
+        // Tools have custom double-click behavior
+        if (comp.type === 'multimeter') {
+            comp.el.addEventListener('dblclick', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                openMultimeterModal(comp);
+            });
+        } else if (comp.type === 'scope') {
+            comp.el.addEventListener('dblclick', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                openScopeModal(comp);
+            });
+        }
+
         function edit() {
-            if (comp.type === 'ground') return;
+            if (comp.type === 'ground' || comp.type === 'multimeter' || comp.type === 'scope') return;
             const raw = (comp.valueText != null ? String(comp.valueText) : (comp.el.querySelector('.value')?.textContent || '')).trim();
 
             const body = [
@@ -719,17 +822,15 @@
             return;
         }
         if (groundRoots.size === 0) {
-            setResults('Add a Ground (GND) component and connect it to your circuit.', true);
+            setResults('Add at least one Ground (GND) component and connect it to your circuit.', true);
             return;
         }
-        if (groundRoots.size > 1) {
-            setResults('Multiple separate grounds detected. Connect all grounds together (one reference node).', true);
-            return;
-        }
+
+        // Choose an arbitrary ground root as reference, but treat ALL groundRoots as 0V.
         const gndRoot = [...groundRoots][0];
 
-        // Map non-ground nets to node indices
-        const nodeRoots = [...nets.keys()].filter(r => r !== gndRoot);
+        // Map non-ground nets to node indices (exclude any net that is a ground root)
+        const nodeRoots = [...nets.keys()].filter(r => !groundRoots.has(r));
         const nodeIndex = new Map(nodeRoots.map((r, i) => [r, i]));
 
         // Voltage sources add extra variables
@@ -751,11 +852,11 @@
 
         function nIdx(term) {
             const root = netByTerm.get(term);
-            if (!root || root === gndRoot) return -1;
+            if (!root || groundRoots.has(root)) return -1;
             return nodeIndex.get(root);
         }
 
-        // Stamp resistors + current sources + (capacitors ignored for DC)
+        // Stamp resistors + current sources + (capacitors ignored for DC, tools ignored)
         components.forEach(function (c, id) {
             const a = nIdx(id + ':a');
             const b = (c.type === 'ground') ? -1 : nIdx(id + ':b');
@@ -767,7 +868,7 @@
                 if (a >= 0) A[a][a] += g;
                 if (b >= 0) A[b][b] += g;
                 if (a >= 0 && b >= 0) { A[a][b] -= g; A[b][a] -= g; }
-            } else if (c.type === 'isource') {
+            } else if (c.type === 'isource' || c.type === 'isource_ac') {
                 const I = parseNumberWithSuffix(c.valueText || c.el.querySelector('.value')?.textContent);
                 if (!isFinite(I)) throw new Error(`Bad current source value on ${id} (use e.g. 2A)`);
                 // current from a(+) to b(-): inject -I into a, +I into b
@@ -778,7 +879,7 @@
             }
         });
 
-        // Stamp voltage sources (MNA)
+        // Stamp voltage sources (MNA) – DC and AC sources treated the same in this purely resistive DC solve
         vsrcs.forEach(function (id, k) {
             const c = components.get(id);
             const a = nIdx(id + ':a');
@@ -796,19 +897,50 @@
         const v = x.slice(0, N);
         const iv = x.slice(N);
 
-        let out = 'DC Operating Point\\n';
-        out += '-----------------\\n';
-        out += 'Node voltages (relative to GND):\\n';
-        nodeRoots.forEach(function (root, i) {
-            out += `- N${i + 1}: ${v[i].toFixed(6)} V\\n`;
-        });
-        if (M) {
-            out += '\\nVoltage source currents:\\n';
-            vsrcs.forEach(function (id, i) {
-                out += `- ${id}: ${iv[i].toFixed(6)} A\\n`;
-            });
+        function netVoltage(root) {
+            if (!root || groundRoots.has(root)) return 0;
+            const idx = nodeIndex.get(root);
+            if (idx == null) return 0;
+            return v[idx];
         }
-        out += '\\nNotes: Capacitors are treated as open (DC).';
+
+        // Probe tools: multimeters and scopes
+        const toolReadings = new Map();
+        const tools = [];
+        components.forEach(function (c, id) {
+            if (c.type === 'multimeter' || c.type === 'scope') {
+                const ra = netByTerm.get(id + ':a');
+                const rb = netByTerm.get(id + ':b');
+                const Va = netVoltage(ra);
+                const Vb = netVoltage(rb);
+                const Vab = Va - Vb;
+                const reading = {
+                    id,
+                    type: c.type,
+                    Va,
+                    Vb,
+                    Vab
+                };
+                tools.push(reading);
+                toolReadings.set(id, reading);
+            }
+        });
+
+        if (!tools.length) {
+            setResults('Simulation complete, but no tools placed. Drag a Multimeter or Scope from the Tools panel, connect it, then run again.', false);
+            return;
+        }
+
+        // Cache latest readings for interactive tools (multimeter/scope modals)
+        lastToolReadings = toolReadings;
+
+        let out = 'Tool Readings (DC)\\n';
+        out += '------------------\\n';
+        tools.forEach(function (t) {
+            const label = t.type === 'multimeter' ? 'Multimeter' : 'Scope';
+            out += `- ${label} ${t.id}: V(a,b) = ${t.Vab.toFixed(6)} V (Va=${t.Va.toFixed(6)} V, Vb=${t.Vb.toFixed(6)} V)\\n`;
+        });
+        out += '\\nNotes: All GND symbols are treated as 0V. Capacitors are open in DC.';
         setResults(out, false);
     }
 

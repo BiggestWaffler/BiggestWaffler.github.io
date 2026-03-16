@@ -87,6 +87,10 @@ body {
     font-size: 0.9rem;
 }
 
+.palette-title-tools {
+    margin-top: 18px;
+}
+
 .palette-item {
     display: flex;
     align-items: center;
@@ -125,6 +129,10 @@ body {
 .palette-icon.V { background: rgba(255, 100, 100, 0.3); color: #ff6464; }
 .palette-icon.I { background: rgba(150, 100, 255, 0.3); color: #9664ff; }
 .palette-icon.G { background: rgba(220, 220, 220, 0.15); color: #dcdcdc; }
+.palette-icon.VA { background: rgba(255, 160, 80, 0.3); color: #ffb46a; }
+.palette-icon.IA { background: rgba(200, 120, 255, 0.3); color: #e0a0ff; }
+.palette-icon.MM { background: rgba(0, 255, 200, 0.25); color: #00ffd5; }
+.palette-icon.S { background: rgba(0, 180, 255, 0.25); color: #00b4ff; }
 
 .palette-hint {
     margin-top: 16px;
