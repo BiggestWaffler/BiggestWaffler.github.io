@@ -524,6 +524,12 @@ body {
     border-color: rgba(0, 212, 170, 0.7);
 }
 
+.simu-chip.active {
+    background: rgba(0, 212, 170, 0.32);
+    border-color: rgba(0, 212, 170, 0.9);
+    color: #eaffff;
+}
+
 .simu-help-note {
     font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.55);

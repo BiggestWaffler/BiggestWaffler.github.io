@@ -11,6 +11,9 @@
         capacitor: { label: 'C', value: '1u' },
         vsource: { label: 'V', value: '5' },
         isource: { label: 'I', value: '1' },
+        // AC sources use: amplitude@freqHz (example: 5@60)
+        vsource_ac: { label: 'VA', value: '5@60' },
+        isource_ac: { label: 'IA', value: '1@60' },
         ground: { label: 'GND', value: '' },
         multimeter: { label: 'MM', value: '' },
         scope: { label: 'SC', value: '' }
@@ -260,15 +263,18 @@
 
     function openMultimeterModal(comp) {
         const reading = lastToolReadings.get(comp.id);
-        let mode = comp.toolMode || 'dc-v';
+            let mode = comp.toolMode || 'dc-v';
 
         function renderBody() {
             let main = '';
             if (!reading) {
                 main = '<div class="simu-help-note">Run simulation with this multimeter connected to see readings.</div>';
-            } else if (mode === 'dc-v' || mode === 'ac-v') {
-                main = `<div>V(a,b) = <strong>${reading.Vab.toFixed(6)} V</strong></div>
-                        <div class="simu-help-note">Va = ${reading.Va.toFixed(6)} V, Vb = ${reading.Vb.toFixed(6)} V</div>`;
+            } else if (mode === 'dc-v') {
+                main = `<div>DC V(a,b) = <strong>${reading.dc.Vab.toFixed(6)} V</strong></div>
+                        <div class="simu-help-note">Va = ${reading.dc.Va.toFixed(6)} V, Vb = ${reading.dc.Vb.toFixed(6)} V</div>`;
+            } else if (mode === 'ac-v') {
+                main = `<div>AC |V(a,b)| = <strong>${Math.abs(reading.ac.Vab).toFixed(6)} V</strong> @ ${reading.ac.freqHz} Hz</div>
+                        <div class="simu-help-note">|Va| = ${Math.abs(reading.ac.Va).toFixed(6)} V, |Vb| = ${Math.abs(reading.ac.Vb).toFixed(6)} V</div>`;
             } else {
                 main = '<div class="simu-help-note">Current measurement not implemented yet (only voltage).</div>';
             }
@@ -315,23 +321,46 @@
 
     function openScopeModal(comp) {
         const reading = lastToolReadings.get(comp.id);
-        const V = reading ? reading.Vab : 0;
-        const level = Math.max(-1, Math.min(1, V / 5 || 0)); // simple scaling vs 5 V
-        const midY = 40;
-        const amp = 25 * level;
-        const y = midY - amp;
+        const dcV = reading ? reading.dc.Vab : 0;
+        const acAmp = reading ? Math.abs(reading.ac.Vab) : 0;
+        const freqHz = reading ? reading.ac.freqHz : 60;
 
+        const W = 260;
+        const H = 80;
+        const midY = 40;
+        const pad = 6;
+
+        // scale: try to keep wave visible; base it on max(|dc|+acAmp, 1V)
+        const maxV = Math.max(Math.abs(dcV) + acAmp, 1);
+        const pxPerV = (H / 2 - pad) / maxV;
+
+        function yFor(v) {
+            return midY - v * pxPerV;
+        }
+
+        // Render 2 cycles
+        const cycles = 2;
+        const pts = [];
+        for (let i = 0; i <= 200; i++) {
+            const t = i / 200; // 0..1 across the viewport
+            const phase = 2 * Math.PI * cycles * t;
+            const v = dcV + acAmp * Math.sin(phase);
+            const x = (W * t);
+            const y = yFor(v);
+            pts.push(`${x.toFixed(2)},${y.toFixed(2)}`);
+        }
+
+        const trace = pts.join(' ');
         const svg = `
-<svg viewBox="0 0 260 80" width="100%" height="80">
-  <rect x="0" y="0" width="260" height="80" fill="#050707" stroke="rgba(255,255,255,0.2)" />
-  <line x1="0" y1="${midY}" x2="260" y2="${midY}" stroke="rgba(255,255,255,0.2)" stroke-dasharray="4 4" />
-  <polyline fill="none" stroke="#00b4ff" stroke-width="2"
-            points="0,${y} 40,${y} 80,${y} 120,${y} 160,${y} 200,${y} 240,${y} 260,${y}" />
+<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}">
+  <rect x="0" y="0" width="${W}" height="${H}" fill="#050707" stroke="rgba(255,255,255,0.2)" />
+  <line x1="0" y1="${midY}" x2="${W}" y2="${midY}" stroke="rgba(255,255,255,0.2)" stroke-dasharray="4 4" />
+  <polyline fill="none" stroke="#00b4ff" stroke-width="2" points="${trace}" />
 </svg>`;
 
         const text = reading
-            ? `V(a,b) ≈ ${V.toFixed(6)} V (DC). AC modes are visualized as a flat line at the DC level in this version.`
-            : 'Run simulation with this scope connected to see a DC level. AC behavior is approximated as a flat line.';
+            ? `DC V(a,b) = ${dcV.toFixed(6)} V. AC amplitude |V(a,b)| = ${acAmp.toFixed(6)} V @ ${freqHz} Hz.`
+            : 'Run simulation with this scope connected to see a trace.';
 
         const body = `${svg}<div class="simu-help-note" style="margin-top:6px;">${text}</div>`;
 
@@ -740,6 +769,16 @@
         return base * mult;
     }
 
+    function parseAcSpec(text) {
+        // amplitude@freqHz, e.g. "5@60", "2.5@1000", "1k@50"
+        const raw = String(text || '').trim();
+        const parts = raw.split('@').map(s => s.trim()).filter(Boolean);
+        if (parts.length === 0) return { amp: NaN, freq: NaN };
+        const amp = parseNumberWithSuffix(parts[0]);
+        const freq = parts.length >= 2 ? parseNumberWithSuffix(parts[1]) : 60;
+        return { amp, freq };
+    }
+
     function unionFind(items) {
         const parent = new Map(items.map(i => [i, i]));
         function find(x) {
@@ -815,19 +854,15 @@
         return M.map(row => row[n]);
     }
 
-    function runDcSim() {
+    function solveResistiveMna(opts) {
+        const { includeDcSources, includeAcSources } = opts || {};
         const { netByTerm, nets, groundRoots } = buildNets();
         if (nets.size === 0) {
-            setResults('No components.', true);
-            return;
+            throw new Error('No components.');
         }
         if (groundRoots.size === 0) {
-            setResults('Add at least one Ground (GND) component and connect it to your circuit.', true);
-            return;
+            throw new Error('Add at least one Ground (GND) component and connect it to your circuit.');
         }
-
-        // Choose an arbitrary ground root as reference, but treat ALL groundRoots as 0V.
-        const gndRoot = [...groundRoots][0];
 
         // Map non-ground nets to node indices (exclude any net that is a ground root)
         const nodeRoots = [...nets.keys()].filter(r => !groundRoots.has(r));
@@ -836,15 +871,25 @@
         // Voltage sources add extra variables
         const vsrcs = [];
         components.forEach(function (c, id) {
-            if (c.type === 'vsource') vsrcs.push(id);
+            if (c.type === 'vsource' && includeDcSources) vsrcs.push(id);
+            if (c.type === 'vsource_ac' && includeAcSources) vsrcs.push(id);
         });
 
         const N = nodeRoots.length;
         const M = vsrcs.length;
         const dim = N + M;
         if (dim === 0) {
-            setResults('Only ground present.', true);
-            return;
+            // No unknowns: everything is ground
+            return {
+                netByTerm,
+                groundRoots,
+                nodeIndex,
+                nodeRoots,
+                vsrcs,
+                vsrcCurrents: [],
+                nodeVoltages: [],
+                netVoltage: function () { return 0; }
+            };
         }
 
         const A = Array.from({ length: dim }, () => Array(dim).fill(0));
@@ -856,7 +901,7 @@
             return nodeIndex.get(root);
         }
 
-        // Stamp resistors + current sources + (capacitors ignored for DC, tools ignored)
+        // Stamp resistors + current sources + (capacitors ignored, tools ignored)
         components.forEach(function (c, id) {
             const a = nIdx(id + ':a');
             const b = (c.type === 'ground') ? -1 : nIdx(id + ':b');
@@ -868,9 +913,16 @@
                 if (a >= 0) A[a][a] += g;
                 if (b >= 0) A[b][b] += g;
                 if (a >= 0 && b >= 0) { A[a][b] -= g; A[b][a] -= g; }
-            } else if (c.type === 'isource' || c.type === 'isource_ac') {
+            } else if (c.type === 'isource' && includeDcSources) {
                 const I = parseNumberWithSuffix(c.valueText || c.el.querySelector('.value')?.textContent);
                 if (!isFinite(I)) throw new Error(`Bad current source value on ${id} (use e.g. 2A)`);
+                // current from a(+) to b(-): inject -I into a, +I into b
+                if (a >= 0) z[a] += (-I);
+                if (b >= 0) z[b] += (+I);
+            } else if (c.type === 'isource_ac' && includeAcSources) {
+                const spec = parseAcSpec(c.valueText || c.el.querySelector('.value')?.textContent);
+                if (!isFinite(spec.amp)) throw new Error(`Bad AC current source value on ${id} (use e.g. 1@60)`);
+                const I = spec.amp;
                 // current from a(+) to b(-): inject -I into a, +I into b
                 if (a >= 0) z[a] += (-I);
                 if (b >= 0) z[b] += (+I);
@@ -879,14 +931,21 @@
             }
         });
 
-        // Stamp voltage sources (MNA) – DC and AC sources treated the same in this purely resistive DC solve
+        // Stamp voltage sources (MNA)
         vsrcs.forEach(function (id, k) {
             const c = components.get(id);
             const a = nIdx(id + ':a');
             const b = nIdx(id + ':b');
             const row = N + k;
-            const V = parseNumberWithSuffix(c.valueText || c.el.querySelector('.value')?.textContent);
-            if (!isFinite(V)) throw new Error(`Bad voltage source value on ${id} (use e.g. 5V)`);
+            let V = NaN;
+            if (c.type === 'vsource') {
+                V = parseNumberWithSuffix(c.valueText || c.el.querySelector('.value')?.textContent);
+                if (!isFinite(V)) throw new Error(`Bad voltage source value on ${id} (use e.g. 5)`);
+            } else if (c.type === 'vsource_ac') {
+                const spec = parseAcSpec(c.valueText || c.el.querySelector('.value')?.textContent);
+                V = spec.amp;
+                if (!isFinite(V)) throw new Error(`Bad AC voltage source value on ${id} (use e.g. 5@60)`);
+            }
 
             if (a >= 0) { A[a][row] += 1; A[row][a] += 1; }
             if (b >= 0) { A[b][row] -= 1; A[row][b] -= 1; }
@@ -904,43 +963,71 @@
             return v[idx];
         }
 
-        // Probe tools: multimeters and scopes
+        return {
+            netByTerm,
+            groundRoots,
+            nodeIndex,
+            nodeRoots,
+            vsrcs,
+            nodeVoltages: v,
+            vsrcCurrents: iv,
+            netVoltage
+        };
+    }
+
+    function runSimulation() {
+        // DC solve from DC sources only
+        const dc = solveResistiveMna({ includeDcSources: true, includeAcSources: false });
+        // AC solve from AC sources only (amplitude), purely resistive => same phase everywhere
+        const ac = solveResistiveMna({ includeDcSources: false, includeAcSources: true });
+
+        // Determine a single frequency for display (take first AC source, default 60)
+        let freqHz = 60;
+        components.forEach(function (c) {
+            if (c.type === 'vsource_ac' || c.type === 'isource_ac') {
+                const spec = parseAcSpec(c.valueText || c.el.querySelector('.value')?.textContent);
+                if (isFinite(spec.freq)) freqHz = spec.freq;
+            }
+        });
+
         const toolReadings = new Map();
         const tools = [];
         components.forEach(function (c, id) {
-            if (c.type === 'multimeter' || c.type === 'scope') {
-                const ra = netByTerm.get(id + ':a');
-                const rb = netByTerm.get(id + ':b');
-                const Va = netVoltage(ra);
-                const Vb = netVoltage(rb);
-                const Vab = Va - Vb;
-                const reading = {
-                    id,
-                    type: c.type,
-                    Va,
-                    Vb,
-                    Vab
-                };
-                tools.push(reading);
-                toolReadings.set(id, reading);
-            }
+            if (c.type !== 'multimeter' && c.type !== 'scope') return;
+            const ra = dc.netByTerm.get(id + ':a');
+            const rb = dc.netByTerm.get(id + ':b');
+            const dcVa = dc.netVoltage(ra);
+            const dcVb = dc.netVoltage(rb);
+            const dcVab = dcVa - dcVb;
+
+            const acVa = ac.netVoltage(ra);
+            const acVb = ac.netVoltage(rb);
+            const acVab = acVa - acVb; // amplitude
+
+            const reading = {
+                id,
+                type: c.type,
+                dc: { Va: dcVa, Vb: dcVb, Vab: dcVab },
+                ac: { Va: acVa, Vb: acVb, Vab: acVab, freqHz }
+            };
+            tools.push(reading);
+            toolReadings.set(id, reading);
         });
+
+        lastToolReadings = toolReadings;
 
         if (!tools.length) {
             setResults('Simulation complete, but no tools placed. Drag a Multimeter or Scope from the Tools panel, connect it, then run again.', false);
             return;
         }
 
-        // Cache latest readings for interactive tools (multimeter/scope modals)
-        lastToolReadings = toolReadings;
-
-        let out = 'Tool Readings (DC)\\n';
-        out += '------------------\\n';
+        let out = 'Tool Readings\\n';
+        out += '------------\\n';
         tools.forEach(function (t) {
             const label = t.type === 'multimeter' ? 'Multimeter' : 'Scope';
-            out += `- ${label} ${t.id}: V(a,b) = ${t.Vab.toFixed(6)} V (Va=${t.Va.toFixed(6)} V, Vb=${t.Vb.toFixed(6)} V)\\n`;
+            out += `- ${label} ${t.id}: DC V(a,b)=${t.dc.Vab.toFixed(6)} V, AC |V(a,b)|=${Math.abs(t.ac.Vab).toFixed(6)} V @ ${t.ac.freqHz} Hz\\n`;
         });
-        out += '\\nNotes: All GND symbols are treated as 0V. Capacitors are open in DC.';
+        out += '\\nNotes: GND symbols are treated as 0V. Capacitors are open in DC.';
         setResults(out, false);
     }
 
@@ -948,7 +1035,7 @@
     setResults('Drop parts, connect wires, add GND, then click “Run simulation”.', false);
     document.getElementById('btn-run').addEventListener('click', function () {
         try {
-            runDcSim();
+            runSimulation();
         } catch (e) {
             setResults(String(e && e.message ? e.message : e), true);
         }
