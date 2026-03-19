@@ -79,14 +79,15 @@
                     </div>
                     <h3 class="project-title">FreshGuard</h3>
                     <p class="project-description">
-                        Smart fridge inventory tracker with barcode scanning, OCR, and expiration alerts. 
-                        Built with FastAPI, SQLite, and modern web technologies.
+                        Local-first fridge inventory tracker using Pi Camera barcode scanning + OCR to extract expiration dates,
+                        then computing fresh/warning/expired states. Built with FastAPI, PostgreSQL (production) and SQLite (testing),
+                        using OpenCV/Tesseract and an htmx + Tailwind UI for daily 48-hour expiration alerts (optional Sense HAT + piezo).
                     </p>
                     <div class="project-tech">
                         <span class="tech-tag">Python</span>
                         <span class="tech-tag">FastAPI</span>
-                        <span class="tech-tag">SQLite</span>
-                        <span class="tech-tag">HTML/CSS</span>
+                        <span class="tech-tag">PostgreSQL/SQLite</span>
+                        <span class="tech-tag">OpenCV + Tesseract</span>
                     </div>
                     <div class="project-footer">
                         <div class="project-stats">
@@ -104,8 +105,8 @@
                     </div>
                     <h3 class="project-title">IridiumNOW IDE</h3>
                     <p class="project-description">
-                        Full-stack IDE to simplify programming for the Iridium 9704 Development Kit using Arduino. 
-                        Automatically generates Arduino firmware code from visual block diagrams, ideal for students working with satellite-connected hardware.
+                        Full-stack IDE for the Iridium 9704 Development Kit (Arduino) that generates Arduino firmware from drag-and-drop block diagrams (Scratch-inspired).
+                        Includes a labeled, beginner-friendly sensor configuration workflow for satellite-connected hardware.
                     </p>
                     <div class="project-tech">
                         <span class="tech-tag">Python</span>
@@ -131,8 +132,8 @@
                     </div>
                     <h3 class="project-title">Pipelined CPU</h3>
                     <p class="project-description">
-                        Built a 32-bit 5-stage pipelined MIPS CPU (IF, ID, EXE, MEM, WB) with data forwarding and hazard management. 
-                        Demonstrated support for a wide range of MIPS instructions on FPGA.
+                        Implemented a 32-bit 5-stage pipelined MIPS CPU (IF, ID, EXE, MEM, WB) with full forwarding and hazard detection to eliminate data hazards.
+                        Validated execution of arithmetic, memory, and branch instructions on FPGA.
                     </p>
                     <div class="project-tech">
                         <span class="tech-tag">Verilog</span>
