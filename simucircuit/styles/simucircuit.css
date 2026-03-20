@@ -186,6 +186,21 @@ body {
     background: rgba(255, 255, 255, 0.1);
 }
 
+.ws-btn-danger {
+    background: rgba(255, 80, 80, 0.15);
+    border-color: rgba(255, 100, 100, 0.45);
+    color: #ffaaaa;
+}
+
+.ws-btn-danger:hover {
+    background: rgba(255, 80, 80, 0.28);
+}
+
+.ws-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 .ws-hint {
     font-size: 0.85rem;
     color: rgba(255, 255, 255, 0.6);
@@ -301,6 +316,13 @@ body {
     color: rgba(255, 255, 255, 0.7);
 }
 
+.comp .value-freq {
+    position: absolute;
+    bottom: -10px;
+    font-size: 0.58rem;
+    color: rgba(160, 220, 255, 0.85);
+}
+
 /* Component type visuals */
 .comp.resistor .label::before { content: 'R'; }
 .comp.capacitor .label::before { content: 'C'; }
@@ -343,6 +365,11 @@ body {
 
 .comp.isource .pol {
     color: rgba(150, 100, 255, 0.95);
+}
+
+.comp.multimeter .pol,
+.comp.scope .pol {
+    color: rgba(0, 255, 220, 0.95);
 }
 
 /* Ground visual */
@@ -533,6 +560,22 @@ body {
 .simu-help-note {
     font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.55);
+}
+
+.simu-scope-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    margin-bottom: 6px;
+    font-size: 0.75rem;
+}
+
+.simu-scope-control {
+    flex: 1;
+}
+
+.simu-scope-control input[type="range"] {
+    width: 100%;
 }
 
 .simu-error {

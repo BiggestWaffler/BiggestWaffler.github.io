@@ -11,9 +11,9 @@
         capacitor: { label: 'C', value: '1u' },
         vsource: { label: 'V', value: '5' },
         isource: { label: 'I', value: '1' },
-        // AC sources use: amplitude@freqHz (example: 5@60)
-        vsource_ac: { label: 'VA', value: '5@60' },
-        isource_ac: { label: 'IA', value: '1@60' },
+        // AC sources use separate amplitude and frequency fields.
+        vsource_ac: { label: 'VA', value: '5' },
+        isource_ac: { label: 'IA', value: '1' },
         ground: { label: 'GND', value: '' },
         multimeter: { label: 'MM', value: '' },
         scope: { label: 'SC', value: '' }
@@ -46,6 +46,10 @@
     document.body.appendChild(ctxMenu);
     let ctxMenuFor = null;
     let lastToolReadings = new Map();
+    let simRunning = false;
+    let simRafId = null;
+    let simTimeSec = 0;
+    let activeToolModal = null; // { type: 'multimeter'|'scope', compId }
 
     // Modal + overlay
     const overlayEl = document.getElementById('simu-overlay');
@@ -63,6 +67,7 @@
         overlayEl.classList.add('hidden');
         modalOkHandler = null;
         modalCancelHandler = null;
+        activeToolModal = null;
     }
 
     function openModal(opts) {
@@ -106,6 +111,8 @@
         if (type === 'capacitor') return s + 'F';
         if (type === 'vsource') return s + 'V';
         if (type === 'isource') return s + 'A';
+        if (type === 'vsource_ac') return s + 'V';
+        if (type === 'isource_ac') return s + 'A';
         return s;
     }
 
@@ -118,19 +125,32 @@
         el.style.left = (x - COMP_WIDTH / 2) + 'px';
         el.style.top = (y - COMP_HEIGHT / 2) + 'px';
         const pol =
-            (type === 'vsource' || type === 'isource' || type === 'vsource_ac' || type === 'isource_ac')
+            (type === 'vsource' || type === 'isource' || type === 'vsource_ac' || type === 'isource_ac' || type === 'multimeter' || type === 'scope')
                 ? ('<span class="pol pol-a">+</span><span class="pol pol-b">−</span>')
                 : '';
 
         const displayValue = formatDisplayValue(type, d.value);
+        const acFreq = (type === 'vsource_ac' || type === 'isource_ac') ? '<span class="value-freq">60Hz</span>' : '';
 
         el.innerHTML =
             pol +
             '<span class="node node-a" data-node="a"></span>' +
             '<span class="label">' + d.label + '</span>' +
             '<span class="value">' + displayValue + '</span>' +
+            acFreq +
             '<span class="node node-b" data-node="b"></span>';
-        return { id, type, x, y, el, valueText: d.value, rot: 0, sx: 1, sy: 1 };
+        return {
+            id,
+            type,
+            x,
+            y,
+            el,
+            valueText: d.value,
+            freqText: (type === 'vsource_ac' || type === 'isource_ac') ? '60' : '',
+            rot: 0,
+            sx: 1,
+            sy: 1
+        };
     }
 
     function addComponent(type, x, y) {
@@ -261,92 +281,86 @@
         });
     }
 
-    function openMultimeterModal(comp) {
+    function renderMultimeterBody(comp) {
         const reading = lastToolReadings.get(comp.id);
-            let mode = comp.toolMode || 'dc-v';
-
-        function renderBody() {
-            let main = '';
-            if (!reading) {
-                main = '<div class="simu-help-note">Run simulation with this multimeter connected to see readings.</div>';
-            } else if (mode === 'dc-v') {
-                main = `<div>DC V(a,b) = <strong>${reading.dc.Vab.toFixed(6)} V</strong></div>
-                        <div class="simu-help-note">Va = ${reading.dc.Va.toFixed(6)} V, Vb = ${reading.dc.Vb.toFixed(6)} V</div>`;
-            } else if (mode === 'ac-v') {
-                main = `<div>AC |V(a,b)| = <strong>${Math.abs(reading.ac.Vab).toFixed(6)} V</strong> @ ${reading.ac.freqHz} Hz</div>
-                        <div class="simu-help-note">|Va| = ${Math.abs(reading.ac.Va).toFixed(6)} V, |Vb| = ${Math.abs(reading.ac.Vb).toFixed(6)} V</div>`;
-            } else {
-                main = '<div class="simu-help-note">Current measurement not implemented yet (only voltage).</div>';
-            }
-
-            return [
-                '<div class="simu-chip-row">',
-                `<span class="simu-chip ${mode === 'dc-v' ? 'active' : ''}" data-mode="dc-v">DC V</span>`,
-                `<span class="simu-chip ${mode === 'ac-v' ? 'active' : ''}" data-mode="ac-v">AC V</span>`,
-                `<span class="simu-chip ${mode === 'dc-a' ? 'active' : ''}" data-mode="dc-a">DC A</span>`,
-                `<span class="simu-chip ${mode === 'ac-a' ? 'active' : ''}" data-mode="ac-a">AC A</span>`,
-                '</div>',
-                `<div id="simu-tool-reading" style="margin-top:6px;">${main}</div>`
-            ].join('');
+        const mode = comp.toolMode || 'dc-v';
+        let main = '';
+        if (!reading) {
+            main = '<div class="simu-help-note">Run simulation with this multimeter connected to see readings.</div>';
+        } else if (mode === 'dc-v') {
+            main = `<div>DC V(a,b) = <strong>${reading.dc.Vab.toFixed(6)} V</strong></div>
+                    <div class="simu-help-note">Va = ${reading.dc.Va.toFixed(6)} V, Vb = ${reading.dc.Vb.toFixed(6)} V</div>`;
+        } else if (mode === 'ac-v') {
+            main = `<div>AC |V(a,b)| = <strong>${Math.abs(reading.ac.Vab).toFixed(6)} V</strong> @ ${reading.ac.freqHz} Hz</div>
+                    <div class="simu-help-note">|Va| = ${Math.abs(reading.ac.Va).toFixed(6)} V, |Vb| = ${Math.abs(reading.ac.Vb).toFixed(6)} V</div>`;
+        } else if (mode === 'dc-a') {
+            main = '<div class="simu-help-note">DC current mode coming soon.</div>';
+        } else {
+            main = '<div class="simu-help-note">AC current mode coming soon.</div>';
         }
 
+        return [
+            '<div class="simu-chip-row">',
+            `<span class="simu-chip ${mode === 'dc-v' ? 'active' : ''}" data-mode="dc-v">DC V</span>`,
+            `<span class="simu-chip ${mode === 'ac-v' ? 'active' : ''}" data-mode="ac-v">AC V</span>`,
+            `<span class="simu-chip ${mode === 'dc-a' ? 'active' : ''}" data-mode="dc-a">DC A</span>`,
+            `<span class="simu-chip ${mode === 'ac-a' ? 'active' : ''}" data-mode="ac-a">AC A</span>`,
+            '</div>',
+            `<div id="simu-tool-reading" style="margin-top:6px;">${main}</div>`
+        ].join('');
+    }
+
+    function bindMultimeterModeEvents(comp) {
+        document.querySelectorAll('.simu-chip[data-mode]').forEach(function (chip) {
+            chip.addEventListener('click', function () {
+                comp.toolMode = chip.getAttribute('data-mode') || 'dc-v';
+                modalBodyEl.innerHTML = renderMultimeterBody(comp);
+                bindMultimeterModeEvents(comp);
+            });
+        });
+    }
+
+    function openMultimeterModal(comp) {
         openModal({
             title: `Multimeter ${comp.id}`,
-            bodyHTML: renderBody(),
+            bodyHTML: renderMultimeterBody(comp),
             okText: 'Close',
             showCancel: false
         });
-
+        activeToolModal = { type: 'multimeter', compId: comp.id };
         setTimeout(function () {
-            document.querySelectorAll('.simu-chip[data-mode]').forEach(function (chip) {
-                chip.addEventListener('click', function () {
-                    mode = chip.getAttribute('data-mode') || 'dc-v';
-                    comp.toolMode = mode;
-                    const body = renderBody();
-                    modalBodyEl.innerHTML = body;
-                    // rebind chips
-                    setTimeout(function () {
-                        document.querySelectorAll('.simu-chip[data-mode]').forEach(function (chip2) {
-                            chip2.addEventListener('click', function () {
-                                mode = chip2.getAttribute('data-mode') || 'dc-v';
-                                comp.toolMode = mode;
-                                modalBodyEl.innerHTML = renderBody();
-                            });
-                        });
-                    }, 0);
-                });
-            });
+            bindMultimeterModeEvents(comp);
         }, 0);
     }
 
-    function openScopeModal(comp) {
+    function renderScopeBody(comp) {
         const reading = lastToolReadings.get(comp.id);
         const dcV = reading ? reading.dc.Vab : 0;
         const acAmp = reading ? Math.abs(reading.ac.Vab) : 0;
         const freqHz = reading ? reading.ac.freqHz : 60;
+        const phase = 2 * Math.PI * freqHz * simTimeSec;
 
-        const W = 260;
-        const H = 80;
-        const midY = 40;
-        const pad = 6;
+        const W = 320;
+        const H = 120;
+        const midY = 60;
+        const pad = 8;
+        const vScale = comp.scopeVScale || 1;     // vertical gain
+        const tScale = comp.scopeTScale || 1;     // horizontal zoom
 
-        // scale: try to keep wave visible; base it on max(|dc|+acAmp, 1V)
-        const maxV = Math.max(Math.abs(dcV) + acAmp, 1);
+        const maxV = Math.max((Math.abs(dcV) + acAmp) / Math.max(vScale, 0.05), 1);
         const pxPerV = (H / 2 - pad) / maxV;
 
         function yFor(v) {
             return midY - v * pxPerV;
         }
 
-        // Render 2 cycles
-        const cycles = 2;
+        const cycles = 2 * tScale;
         const pts = [];
-        for (let i = 0; i <= 200; i++) {
-            const t = i / 200; // 0..1 across the viewport
-            const phase = 2 * Math.PI * cycles * t;
-            const v = dcV + acAmp * Math.sin(phase);
-            const x = (W * t);
-            const y = yFor(v);
+        for (let i = 0; i <= 240; i++) {
+            const t = i / 240;
+            const wave = dcV + acAmp * Math.sin(phase + 2 * Math.PI * cycles * t);
+            const x = W * t;
+            const y = yFor(wave);
             pts.push(`${x.toFixed(2)},${y.toFixed(2)}`);
         }
 
@@ -359,17 +373,49 @@
 </svg>`;
 
         const text = reading
-            ? `DC V(a,b) = ${dcV.toFixed(6)} V. AC amplitude |V(a,b)| = ${acAmp.toFixed(6)} V @ ${freqHz} Hz.`
+            ? `DC V(a,b) = ${dcV.toFixed(6)} V, AC |V(a,b)| = ${acAmp.toFixed(6)} V @ ${freqHz} Hz.`
             : 'Run simulation with this scope connected to see a trace.';
 
-        const body = `${svg}<div class="simu-help-note" style="margin-top:6px;">${text}</div>`;
+        return [
+            svg,
+            '<div class="simu-scope-controls">',
+            `<div class="simu-scope-control">Vertical: <input id="scope-vscale" type="range" min="0.25" max="4" step="0.25" value="${vScale}"></div>`,
+            `<div class="simu-scope-control">Horizontal: <input id="scope-tscale" type="range" min="0.5" max="4" step="0.25" value="${tScale}"></div>`,
+            '</div>',
+            `<div class="simu-help-note" style="margin-top:6px;">${text}</div>`
+        ].join('');
+    }
 
+    function bindScopeControlEvents(comp) {
+        const vEl = document.getElementById('scope-vscale');
+        const tEl = document.getElementById('scope-tscale');
+        if (vEl) {
+            vEl.addEventListener('input', function () {
+                comp.scopeVScale = parseFloat(vEl.value) || 1;
+                modalBodyEl.innerHTML = renderScopeBody(comp);
+                bindScopeControlEvents(comp);
+            });
+        }
+        if (tEl) {
+            tEl.addEventListener('input', function () {
+                comp.scopeTScale = parseFloat(tEl.value) || 1;
+                modalBodyEl.innerHTML = renderScopeBody(comp);
+                bindScopeControlEvents(comp);
+            });
+        }
+    }
+
+    function openScopeModal(comp) {
         openModal({
             title: `Scope ${comp.id}`,
-            bodyHTML: body,
+            bodyHTML: renderScopeBody(comp),
             okText: 'Close',
             showCancel: false
         });
+        activeToolModal = { type: 'scope', compId: comp.id };
+        setTimeout(function () {
+            bindScopeControlEvents(comp);
+        }, 0);
     }
 
     function setupComponentEdit(comp) {
@@ -390,6 +436,59 @@
 
         function edit() {
             if (comp.type === 'ground' || comp.type === 'multimeter' || comp.type === 'scope') return;
+
+            if (comp.type === 'vsource_ac' || comp.type === 'isource_ac') {
+                const rawAmp = (comp.valueText != null ? String(comp.valueText) : '').trim() || '1';
+                const rawFreq = (comp.freqText != null ? String(comp.freqText) : '').trim() || '60';
+                const bodyAc = [
+                    '<p>Edit AC source values.</p>',
+                    '<label class="simu-help-note">Amplitude</label>',
+                    '<input id="simu-ac-amp" class="simu-input" placeholder="e.g. 5, 1k, 2.5" value="' + rawAmp.replace(/"/g, '&quot;') + '">',
+                    '<label class="simu-help-note">Frequency (Hz)</label>',
+                    '<input id="simu-ac-freq" class="simu-input" placeholder="e.g. 60, 1k" value="' + rawFreq.replace(/"/g, '&quot;') + '">',
+                    '<div id="simu-val-error" class="simu-error" style="display:none;"></div>'
+                ].join('');
+
+                openModal({
+                    title: 'Edit AC source',
+                    bodyHTML: bodyAc,
+                    okText: 'Save',
+                    cancelText: 'Cancel',
+                    showCancel: true,
+                    onOk: function () {
+                        const ampEl = document.getElementById('simu-ac-amp');
+                        const freqEl = document.getElementById('simu-ac-freq');
+                        const errEl = document.getElementById('simu-val-error');
+                        const ampRaw = ampEl ? ampEl.value.trim() : '';
+                        const freqRaw = freqEl ? freqEl.value.trim() : '';
+                        const amp = parseNumberWithSuffix(ampRaw);
+                        const freq = parseNumberWithSuffix(freqRaw);
+                        if (!isFinite(amp)) {
+                            errEl.textContent = 'Invalid amplitude value.';
+                            errEl.style.display = '';
+                            return false;
+                        }
+                        if (!isFinite(freq) || freq <= 0) {
+                            errEl.textContent = 'Frequency must be a positive number.';
+                            errEl.style.display = '';
+                            return false;
+                        }
+                        comp.valueText = ampRaw;
+                        comp.freqText = freqRaw;
+                        const valueEl = comp.el.querySelector('.value');
+                        const freqLabelEl = comp.el.querySelector('.value-freq');
+                        if (valueEl) valueEl.textContent = formatDisplayValue(comp.type, ampRaw);
+                        if (freqLabelEl) freqLabelEl.textContent = `${freqRaw}Hz`;
+                        return true;
+                    }
+                });
+                setTimeout(function () {
+                    const ampEl = document.getElementById('simu-ac-amp');
+                    if (ampEl) ampEl.focus();
+                }, 0);
+                return;
+            }
+
             const raw = (comp.valueText != null ? String(comp.valueText) : (comp.el.querySelector('.value')?.textContent || '')).trim();
 
             const body = [
@@ -779,6 +878,17 @@
         return { amp, freq };
     }
 
+    function parseAcFromComponent(comp) {
+        const rawValue = String(comp.valueText || '').trim();
+        // Backward compatibility with old combined format in saved canvases.
+        if (rawValue.includes('@')) {
+            return parseAcSpec(rawValue);
+        }
+        const amp = parseNumberWithSuffix(rawValue);
+        const freq = parseNumberWithSuffix(comp.freqText || '60');
+        return { amp, freq };
+    }
+
     function unionFind(items) {
         const parent = new Map(items.map(i => [i, i]));
         function find(x) {
@@ -920,8 +1030,8 @@
                 if (a >= 0) z[a] += (-I);
                 if (b >= 0) z[b] += (+I);
             } else if (c.type === 'isource_ac' && includeAcSources) {
-                const spec = parseAcSpec(c.valueText || c.el.querySelector('.value')?.textContent);
-                if (!isFinite(spec.amp)) throw new Error(`Bad AC current source value on ${id} (use e.g. 1@60)`);
+                const spec = parseAcFromComponent(c);
+                if (!isFinite(spec.amp)) throw new Error(`Bad AC current source value on ${id} (set amplitude and frequency in Edit value).`);
                 const I = spec.amp;
                 // current from a(+) to b(-): inject -I into a, +I into b
                 if (a >= 0) z[a] += (-I);
@@ -942,9 +1052,9 @@
                 V = parseNumberWithSuffix(c.valueText || c.el.querySelector('.value')?.textContent);
                 if (!isFinite(V)) throw new Error(`Bad voltage source value on ${id} (use e.g. 5)`);
             } else if (c.type === 'vsource_ac') {
-                const spec = parseAcSpec(c.valueText || c.el.querySelector('.value')?.textContent);
+                const spec = parseAcFromComponent(c);
                 V = spec.amp;
-                if (!isFinite(V)) throw new Error(`Bad AC voltage source value on ${id} (use e.g. 5@60)`);
+                if (!isFinite(V)) throw new Error(`Bad AC voltage source value on ${id} (set amplitude and frequency in Edit value).`);
             }
 
             if (a >= 0) { A[a][row] += 1; A[row][a] += 1; }
@@ -985,7 +1095,7 @@
         let freqHz = 60;
         components.forEach(function (c) {
             if (c.type === 'vsource_ac' || c.type === 'isource_ac') {
-                const spec = parseAcSpec(c.valueText || c.el.querySelector('.value')?.textContent);
+                const spec = parseAcFromComponent(c);
                 if (isFinite(spec.freq)) freqHz = spec.freq;
             }
         });
@@ -1031,14 +1141,63 @@
         setResults(out, false);
     }
 
+    function refreshActiveToolModal() {
+        if (!activeToolModal) return;
+        const comp = components.get(activeToolModal.compId);
+        if (!comp) return;
+        if (activeToolModal.type === 'multimeter') {
+            modalBodyEl.innerHTML = renderMultimeterBody(comp);
+            bindMultimeterModeEvents(comp);
+        } else if (activeToolModal.type === 'scope') {
+            modalBodyEl.innerHTML = renderScopeBody(comp);
+            bindScopeControlEvents(comp);
+        }
+    }
+
+    function setSimButtons() {
+        const runBtn = document.getElementById('btn-run');
+        const stopBtn = document.getElementById('btn-stop');
+        if (runBtn) runBtn.disabled = simRunning;
+        if (stopBtn) stopBtn.disabled = !simRunning;
+    }
+
+    function stopSimulationLoop() {
+        simRunning = false;
+        if (simRafId != null) {
+            cancelAnimationFrame(simRafId);
+            simRafId = null;
+        }
+        setSimButtons();
+    }
+
+    function startSimulationLoop() {
+        if (simRunning) return;
+        simRunning = true;
+        setSimButtons();
+        function tick(ts) {
+            if (!simRunning) return;
+            simTimeSec = ts / 1000;
+            try {
+                runSimulation();
+                refreshActiveToolModal();
+            } catch (e) {
+                setResults(String(e && e.message ? e.message : e), true);
+                stopSimulationLoop();
+                return;
+            }
+            simRafId = requestAnimationFrame(tick);
+        }
+        simRafId = requestAnimationFrame(tick);
+    }
+
     if (resultsEl) resultsEl.classList.add('is-empty');
     setResults('Drop parts, connect wires, add GND, then click “Run simulation”.', false);
+    setSimButtons();
     document.getElementById('btn-run').addEventListener('click', function () {
-        try {
-            runSimulation();
-        } catch (e) {
-            setResults(String(e && e.message ? e.message : e), true);
-        }
+        startSimulationLoop();
+    });
+    document.getElementById('btn-stop').addEventListener('click', function () {
+        stopSimulationLoop();
     });
 
     // Help / keybinds modal
