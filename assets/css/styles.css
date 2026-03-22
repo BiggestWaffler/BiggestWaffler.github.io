@@ -1041,6 +1041,9 @@ body::before {
 
 .project-footer {
     margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
 .project-stats {
