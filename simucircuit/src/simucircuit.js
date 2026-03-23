@@ -294,9 +294,13 @@
             main = `<div>AC |V(a,b)| = <strong>${Math.abs(reading.ac.Vab).toFixed(6)} V</strong> @ ${reading.ac.freqHz} Hz</div>
                     <div class="simu-help-note">|Va| = ${Math.abs(reading.ac.Va).toFixed(6)} V, |Vb| = ${Math.abs(reading.ac.Vb).toFixed(6)} V</div>`;
         } else if (mode === 'dc-a') {
-            main = '<div class="simu-help-note">DC current mode coming soon.</div>';
+            const i = reading.dc.Iab || 0;
+            main = `<div>DC I(a→b) = <strong>${i.toFixed(6)} A</strong></div>
+                    <div class="simu-help-note">Positive means current flows from + terminal (a) to − terminal (b).</div>`;
         } else {
-            main = '<div class="simu-help-note">AC current mode coming soon.</div>';
+            const iac = Math.abs(reading.ac.Iab || 0);
+            main = `<div>AC |I(a→b)| = <strong>${iac.toFixed(6)} A</strong> @ ${reading.ac.freqHz} Hz</div>
+                    <div class="simu-help-note">Magnitude through multimeter branch.</div>`;
         }
 
         return [
@@ -978,11 +982,13 @@
         const nodeRoots = [...nets.keys()].filter(r => !groundRoots.has(r));
         const nodeIndex = new Map(nodeRoots.map((r, i) => [r, i]));
 
-        // Voltage sources add extra variables
+        // Voltage sources add extra variables.
+        // Multimeters are stamped as 0V ideal sources so they can be placed in series.
         const vsrcs = [];
         components.forEach(function (c, id) {
             if (c.type === 'vsource' && includeDcSources) vsrcs.push(id);
             if (c.type === 'vsource_ac' && includeAcSources) vsrcs.push(id);
+            if (c.type === 'multimeter') vsrcs.push(id);
         });
 
         const N = nodeRoots.length;
@@ -998,6 +1004,7 @@
                 vsrcs,
                 vsrcCurrents: [],
                 nodeVoltages: [],
+                sourceCurrentById: new Map(),
                 netVoltage: function () { return 0; }
             };
         }
@@ -1055,6 +1062,8 @@
                 const spec = parseAcFromComponent(c);
                 V = spec.amp;
                 if (!isFinite(V)) throw new Error(`Bad AC voltage source value on ${id} (set amplitude and frequency in Edit value).`);
+            } else if (c.type === 'multimeter') {
+                V = 0; // ideal ammeter branch
             }
 
             if (a >= 0) { A[a][row] += 1; A[row][a] += 1; }
@@ -1073,6 +1082,11 @@
             return v[idx];
         }
 
+        const sourceCurrentById = new Map();
+        vsrcs.forEach(function (id, i) {
+            sourceCurrentById.set(id, iv[i] || 0);
+        });
+
         return {
             netByTerm,
             groundRoots,
@@ -1081,6 +1095,7 @@
             vsrcs,
             nodeVoltages: v,
             vsrcCurrents: iv,
+            sourceCurrentById,
             netVoltage
         };
     }
@@ -1109,16 +1124,18 @@
             const dcVa = dc.netVoltage(ra);
             const dcVb = dc.netVoltage(rb);
             const dcVab = dcVa - dcVb;
+            const dcIab = dc.sourceCurrentById && dc.sourceCurrentById.has(id) ? dc.sourceCurrentById.get(id) : 0;
 
             const acVa = ac.netVoltage(ra);
             const acVb = ac.netVoltage(rb);
             const acVab = acVa - acVb; // amplitude
+            const acIab = ac.sourceCurrentById && ac.sourceCurrentById.has(id) ? ac.sourceCurrentById.get(id) : 0;
 
             const reading = {
                 id,
                 type: c.type,
-                dc: { Va: dcVa, Vb: dcVb, Vab: dcVab },
-                ac: { Va: acVa, Vb: acVb, Vab: acVab, freqHz }
+                dc: { Va: dcVa, Vb: dcVb, Vab: dcVab, Iab: dcIab },
+                ac: { Va: acVa, Vb: acVb, Vab: acVab, Iab: acIab, freqHz }
             };
             tools.push(reading);
             toolReadings.set(id, reading);
@@ -1135,7 +1152,11 @@
         out += '------------\\n';
         tools.forEach(function (t) {
             const label = t.type === 'multimeter' ? 'Multimeter' : 'Scope';
-            out += `- ${label} ${t.id}: DC V(a,b)=${t.dc.Vab.toFixed(6)} V, AC |V(a,b)|=${Math.abs(t.ac.Vab).toFixed(6)} V @ ${t.ac.freqHz} Hz\\n`;
+            if (t.type === 'multimeter') {
+                out += `- ${label} ${t.id}: DC V=${t.dc.Vab.toFixed(6)} V, DC I=${(t.dc.Iab || 0).toFixed(6)} A, AC |V|=${Math.abs(t.ac.Vab).toFixed(6)} V, AC |I|=${Math.abs(t.ac.Iab || 0).toFixed(6)} A @ ${t.ac.freqHz} Hz\\n`;
+            } else {
+                out += `- ${label} ${t.id}: DC V(a,b)=${t.dc.Vab.toFixed(6)} V, AC |V(a,b)|=${Math.abs(t.ac.Vab).toFixed(6)} V @ ${t.ac.freqHz} Hz\\n`;
+            }
         });
         out += '\\nNotes: GND symbols are treated as 0V. Capacitors are open in DC.';
         setResults(out, false);
